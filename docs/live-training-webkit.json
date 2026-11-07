@@ -1,8 +1,8 @@
 {
   "engine": "webkit",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "75e05e89e128a4",
-  "testedAt": "2026-11-07T00:50:53.542Z",
+  "build": "66d5448b286fc3",
+  "testedAt": "2026-11-07T01:15:33.004Z",
   "checks": [
     "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
     "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",
@@ -13,11 +13,18 @@
     "guided sight-reading uses selected C5 and retries wrong pitches and short holds immediately",
     "continuous sight-reading keeps time and separates pitch errors from short holds",
     "sight-reading pauses on disconnect, rechecks, rotates and resumes with its score intact",
-    "missing MIDI does not block touch rhythm, metronome or the original quiz"
+    "missing MIDI does not block touch rhythm, metronome or the original quiz",
+    "note selection keeps Save visible at both ends of the list on rotated phones and tablets",
+    "rhythm exposes Touch and MIDI switches before starting and while playing",
+    "long presses cancel native menus without interrupting the touch hold",
+    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note"
   ],
   "errors": [],
   "limits": [
     "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Audio could not start in this host; visual fallback verified.",
+    "Audio could not start in this host; visual fallback verified.",
+    "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",

@@ -1,8 +1,7 @@
 {
-  "url": "https://piano-quiz.pages.dev/",
-  "deploymentUrl": "https://d505dd0e.piano-quiz.pages.dev/",
-  "version": "75e05e89e128a4",
-  "testedAt": "2026-11-07T00:47:32.428Z",
+  "build": "66d5448b286fc3",
+  "origin": "https://piano-quiz.pages.dev/",
+  "testedAt": "2026-11-07T01:12:53.173Z",
   "result": "passed",
   "files": [
     {
@@ -108,12 +107,12 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "ea0721b4d4f252b93d2c4ce80f42d0c67b5716d2bc9852068d400fa1f672426c"
+      "sha256": "3cd889ac587fb58da2ccd4baa0a39e10d497d966b8a9c953fa8115487172991f"
     },
     {
       "path": "js/activities.js",
       "status": 200,
-      "sha256": "2569086cd6b2959cec39baffe9b32b4f9b80af0d4975c407b4f21ec5e9f557a3"
+      "sha256": "aa797384ebb08a8527f2caaa5e4e492b39f47734bdf3be9bffc0fd94859d3872"
     },
     {
       "path": "js/app.js",
@@ -173,7 +172,7 @@
     {
       "path": "js/training.js",
       "status": 200,
-      "sha256": "c17ce742bc13a46623d033d91378eae76acb3d24c57449e1975eb87d6d4ff5d9"
+      "sha256": "36d943d0e0c46709a2e347aab2ddfd3da4ed55e43db621b8f9334c321da47885"
     },
     {
       "path": "js/viewport.js",
@@ -188,21 +187,23 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "aeec12ada738559458d17461704c3c7937039deee79db99dbd9d4fc68daf391b"
+      "sha256": "e0a0b99280463652cc3c10521b09bd87861868cae397ac9bd5c6a14294f4d81b"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "e22dde5bb27657eb63878bc4436c8abc72943fb394dc1cf567dad9bf5e62e0c3"
+      "sha256": "f0883963226b71f27c87469a1ae9c3ad09be7d9f28e58fe036a3f819ea04e1cd"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "f736363292df830fc66aa9a6e24d79ccc7a243c6578b2fb0a470211a07e59f48"
+      "sha256": "e60684a26c98d0aef186bbeeff7c2c0becb5793ba3a87d8733446067663b516c"
     }
   ],
   "headers": {
-    "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
-    "permissionsPolicy": "microphone=(), camera=(), midi=(self)"
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    "permissions-policy": "microphone=(), camera=(), midi=(self)",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "same-origin"
   }
 }

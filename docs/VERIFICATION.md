@@ -3,9 +3,9 @@
 Published and tested on 2026-11-07 (Europe/Warsaw).
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `75e05e89e128a4`
-- Production deployment: `d505dd0e-ec98-49fd-b361-b2922b92ec23`
-- Immutable URL: https://d505dd0e.piano-quiz.pages.dev/
+- Release: `66d5448b286fc3`
+- Production deployment: `788f585f-8d19-4cae-a308-f2c5f31c23db`
+- Immutable URL: https://788f585f.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Results
@@ -16,9 +16,9 @@ See [asset verification](live-assets.json).
 
 | Engine | Quiz | Viewport / rotation | MIDI | Training | Offline updates |
 | --- | --- | --- | --- | --- | --- |
-| Chromium | 20 passed | 10 passed | 6 passed + native loopback | 10 passed | 4 passed |
-| Firefox | 20 passed | 10 passed | 6 passed | 10 passed | 4 passed |
-| WebKit | 20 passed | 10 passed | 6 passed | 10 passed | 4 passed |
+| Chromium | 20 passed | 10 passed | 6 passed + native loopback | 14 passed | 4 passed |
+| Firefox | 20 passed | 10 passed | 6 passed | 14 passed | 4 passed |
+| WebKit | 20 passed | 10 passed | 6 passed | 14 passed | 4 passed |
 
 Reports record the exact build, origin and test time, with no uncaught page errors:
 [live quiz](live-chromium.json), [viewport](live-viewport-chromium.json),
@@ -26,7 +26,7 @@ Reports record the exact build, origin and test time, with no uncaught page erro
 and [updates](update-chromium.json). Matching Firefox and WebKit reports use the
 same filenames with their engine names.
 
-**66 unit tests passed**, including audio preparation and cancellation, MIDI
+**71 unit tests passed**, including audio preparation and cancellation, MIDI
 lifecycle and timestamps, exact written-note pools, all chord qualities, octave
 selection, review accounting, save compatibility, offline caches, phrase generation,
 audio/performance clock mapping, stable scoring targets, half-note duration checks,
@@ -53,7 +53,7 @@ physical keyboard transport latency.
 
 ## Metronome, rhythm and sight-reading
 
-Ten training scenarios per engine verify:
+Fourteen training scenarios per engine verify:
 
 - Scheduled, accented metronome clicks; pause, resume, mute and saved setup.
 - Activity switching preserves the unfinished quiz.
@@ -68,11 +68,22 @@ Ten training scenarios per engine verify:
 - Disconnect, Recheck, rotation and resume preserve sight-reading configuration;
   reload returns to setup without automatically starting audio or MIDI.
 - Missing MIDI leaves the quiz, metronome and touch rhythm available.
+- Save remains visible and receives touches at either end of the note picker,
+  across phone/tablet portrait and landscape profiles.
+- Home and live Touch/MIDI selectors switch the active input with explicit labels.
+- Long presses retain the hold; context-menu events are cancelled. Chromium also
+  uses a real browser touch sequence. This does not prove physical Android menus.
+- Beginner MIDI attacks and shorter-but-valid holds score correctly, remain
+  pending until release, and get a full read-ahead count-in before the next bar.
 
 The shared clock schedules Web Audio ahead; animation frames do not schedule sound.
 Output mapping settles during count-in and is frozen before the exercise. Timing
 uses original input timestamps. Guided exercises wait for valid pitch and duration;
-continuous exercises keep moving. Pause restarts the interrupted bar with a count-in,
+continuous exercises keep moving within each played bar. Beginner timing and
+a full-bar read-ahead count-in between bars are defaults; Strict timing and
+uninterrupted Flow are optional. Green appears only after a correct release;
+the hold meter and release cue remain visible in both input modes. Pause restarts
+the interrupted bar with a count-in,
 retaining completed-bar results. Training preferences/results are separate from
 quiz review history. Mixed clefs alternate between phrases; exact note selections
 and octave ranges are retained.
@@ -86,8 +97,8 @@ Safe areas are simulated. Consecutive rotations use real browser touch taps on
 Pause, Resume and Settings. A simulated 96px visible-height reduction keeps action
 rows inside the visible area and aligned across pause and feedback.
 
-Main screens do not scroll; dialogs can scroll. Short landscape exercise views
-show the current bar so notation stays readable. All fourteen themes and Device
+Main screens do not scroll; dialogs can scroll. Small phone and short landscape
+exercise views show the current bar so notation stays readable. All fourteen themes and Device
 preference, non-selectable text, pinch/double-click guards, exact sharp/flat
 selection, higher C5 notation, saved rounds and background interruption are covered.
 

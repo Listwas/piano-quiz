@@ -1,8 +1,8 @@
 {
   "engine": "chromium",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "75e05e89e128a4",
-  "testedAt": "2026-11-07T00:48:06.413Z",
+  "build": "66d5448b286fc3",
+  "testedAt": "2026-11-07T01:13:42.341Z",
   "checks": [
     "unsupported or denied MIDI can switch to saved tap mode without blocking practice",
     "MIDI mode hides tap controls, and hotplug, device selection and disconnect work",
