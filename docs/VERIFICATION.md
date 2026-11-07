@@ -3,26 +3,26 @@
 Published and tested on 2026-11-07 (Europe/Warsaw).
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `ac33e1e774c0e1`
-- Production deployment: `c7a5f5f4-38b3-427f-85ab-5b874eae57f1`
-- Immutable URL: https://c7a5f5f4.piano-quiz.pages.dev/
+- Release: `a8fde080222148`
+- Production deployment: `a64fde56-aa66-413e-a149-c13caa294694`
+- Immutable URL: https://a64fde56.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Latest UI update
 
-Release `ac33e1e774c0e1` removes the input selector and status row from the active
-Rhythm screen. Touch/MIDI selection stays on Home, leaving more room for notation.
+Release `a8fde080222148` shows exactly one bar at a time in Rhythm and Sight-reading,
+on every screen size. The next bar appears during its existing count-in. Rhythm
+input selection remains on Home.
 
-All 71 unit tests passed. Six focused rhythm scenarios passed in each of Chromium,
-Firefox and WebKit against the local build, covering touch holds, MIDI holds,
-rotation, unavailable MIDI, Home input selection and bar count-ins. The input
-selection scenario also passed on production in all three engines. Reports:
-[local Chromium](training-focused-chromium.json),
-[local Firefox](training-focused-firefox.json),
-[local WebKit](training-focused-webkit.json),
-[live Chromium](live-training-focused-chromium.json),
-[live Firefox](live-training-focused-firefox.json),
-[live WebKit](live-training-focused-webkit.json).
+All 71 unit tests and all 14 training scenarios passed in each of Chromium,
+Firefox and WebKit against the local build. The checks verify one rendered bar,
+rotation, touch and MIDI holds, guided and continuous reading, bar transitions,
+count-ins, reconnects and note-picker controls. Reports:
+[Chromium](training-chromium.json), [Firefox](training-firefox.json),
+[WebKit](training-webkit.json).
+
+The one-bar transition and count-in scenario also passed on production in
+Chromium: [live check](live-training-focused-chromium.json).
 
 ## Full regression baseline
 

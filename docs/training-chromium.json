@@ -1,0 +1,27 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "a8fde080222148",
+  "testedAt": "2026-11-07T01:28:17.442Z",
+  "checks": [
+    "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
+    "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",
+    "metronome controls remain visible and touchable through phone/tablet rotation",
+    "rhythm touch holds distinguish a one-beat release from a required two-beat half note",
+    "rhythm score and touch pad fit rotating phone and tablet layouts",
+    "rhythm MIDI accepts different keys and scores their physical hold lengths",
+    "guided sight-reading uses selected C5 and retries wrong pitches and short holds immediately",
+    "continuous sight-reading keeps time and separates pitch errors from short holds",
+    "sight-reading pauses on disconnect, rechecks, rotates and resumes with its score intact",
+    "missing MIDI does not block touch rhythm, metronome or the original quiz",
+    "note selection keeps Save visible at both ends of the list on rotated phones and tablets",
+    "rhythm input is selected on Home and leaves the exercise screen clear",
+    "long presses cancel native menus without interrupting the touch hold",
+    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed"
+}

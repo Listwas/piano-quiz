@@ -434,7 +434,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
  #hold-coach{display:flex;align-items:center;gap:10px;max-width:none;font-size:10px}
  #hold-progress{margin:0;flex:1}
 }
-:root[data-short-viewport] #exercise-score .measure+.measure{display:none}
 :root[data-short-viewport] #training-screen:not([data-activity=metronome]) .training-heading{min-height:40px}
 
 /* Keep the note choices scrollable while Save stays in reach. */
@@ -470,7 +469,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
  .dialog-actions{padding-top:6px}
 }
 @media(orientation:landscape) and (max-height:500px){
- #exercise-score .measure+.measure{display:none}
  #training-input-row{display:flex;align-items:center;gap:10px}
  #training-input-status{flex:1;margin:0;text-align:right}
  #training-sight-tools{flex:1}
@@ -481,5 +479,4 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
  #training-screen:not([data-activity=metronome]) #training-body{gap:6px}
  #training-touchpad{height:60px;margin-bottom:6px}
  #training-screen:not([data-activity=metronome]) #training-footnote{min-height:28px;font-size:10px}
- #exercise-score .measure+.measure{display:none}
 }

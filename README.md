@@ -88,8 +88,8 @@ Your keyboard supplies the piano sound; the app supplies the beat.
 Use **Choose notes** directly on Home or above the score to change your melody
 notes. **Save practice** stays visible while you browse the choices.
 
-The current and next bar stay visible. Small screens show the
-current bar to keep the notation readable. You can pause and retry the interrupted
+One bar fills the score area on every screen. The next bar appears during its
+count-in, giving you time to read before playing. You can pause and retry the interrupted
 bar with a fresh count-in. Continuous reading also uses the **Between bars**
 setting: a count-in by default, or no break when you choose **Keep playing**.
 Recent results save on this device and appear on Home.
@@ -97,7 +97,7 @@ Recent results save on this device and appear on Home.
 <details>
 <summary><strong>Take a look at the new practice modes</strong></summary>
 
-<p align="center"><img src="docs/images/metronome-chromium.png" width="260" alt="Metronome with beat lights and tempo controls"> <img src="docs/images/sight-guided-chromium.png" width="260" alt="Guided sight-reading with two bars of music and a hold-length coach"></p>
+<p align="center"><img src="docs/images/metronome-chromium.png" width="260" alt="Metronome with beat lights and tempo controls"> <img src="docs/images/sight-guided-chromium.png" width="260" alt="Guided sight-reading with one bar of music and a hold-length coach"></p>
 
 </details>
 

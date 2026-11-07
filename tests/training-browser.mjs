@@ -30,6 +30,7 @@ async function running(page){
 async function setupSight(page,style){
  await page.locator('#customize-button').click();await page.locator('[data-preset="none"]').click();await page.locator('[data-note="C"]').click();await page.locator('[data-range-clef="treble"][data-octave="4"]').click();await page.locator('[data-range-clef="treble"][data-octave="5"]').click();await page.locator('#apply-button').click();
  await page.selectOption('#activity-select','sight');await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('200');await page.selectOption('#training-bars','2');await page.selectOption('#training-pace','flow');await page.selectOption('#training-style',style);await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
+ assert.equal(await page.locator('.measure').count(),1);
  assert.ok((await page.locator('[data-event]').evaluateAll(elements=>elements.every(n=>n.dataset.rest==='true'||n.dataset.midi==='72'))));
 }
 const profiles=[{width:430,height:932,top:59,bottom:34},{width:932,height:430,left:59,right:59,bottom:21},{width:320,height:568},{width:800,height:1280},{width:1280,height:800},{width:1024,height:600}];
@@ -64,7 +65,9 @@ try{
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].filter(n=>n.dataset.rest==='false').map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   const pad=await page.locator('#training-touchpad').boundingBox();await page.mouse.move(pad.x+pad.width/2,pad.y+pad.height/2);
-  assert.equal(data.events.length,4,'Both initial bars must be visible during count-in');
+  assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
+  // The deterministic fixture contains two half notes in each of its two bars.
+  data.events.push(...data.events.map(event=>({...event,beat:event.beat+4})));
   async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
   for(let i=0;i<data.events.length;i++){const event=data.events[i];await until(data.start+event.beat*300);await page.mouse.down();await until(data.start+(event.beat+(i===0?1:event.duration))*300);await page.mouse.up();}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
@@ -75,6 +78,7 @@ try{
   for(const size of profiles){await page.setViewportSize({width:size.width,height:size.height});await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
    const rects=await page.locator('#training-screen').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(rects.scroll<=rects.height+1,JSON.stringify({size,rects}));
    for(const selector of ['#training-toggle','#training-touchpad','#training-back']){const b=await page.locator(selector).boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
+   assert.equal(await page.locator('.measure').count(),1);
    assert.ok((await page.locator('.measure').first().boundingBox()).height>=30,JSON.stringify({size,measure:await page.locator('.measure').first().boundingBox()}));
   }
   await page.screenshot({path:`docs/images/rhythm-${engine}.png`});
@@ -83,7 +87,9 @@ try{
   const page=await setup(true,true);await page.selectOption('#activity-select','rhythm');await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('200');await page.selectOption('#training-bars','2');await page.selectOption('#training-pace','flow');await page.selectOption('#training-input','midi');await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
-  assert.equal(data.events.length,4,'Both initial bars must be visible during count-in');
+  assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
+  // The deterministic fixture contains two half notes in each of its two bars.
+  data.events.push(...data.events.map(event=>({...event,beat:event.beat+4})));
   async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
   for(let i=0;i<data.events.length;i++){const event=data.events[i],pitch=[35,92,11,80][i];await until(data.start+event.beat*300);await page.evaluate(pitch=>window.trainingMidi.send([0x90,pitch,100]),pitch);await until(data.start+(event.beat+event.duration)*300);await page.evaluate(pitch=>window.trainingMidi.send([0x80,pitch,0]),pitch);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,100);assert.equal(result.pitch,null);
@@ -95,14 +101,16 @@ try{
   await press(60);await release(60);assert.equal(await page.locator('.score-event.current').getAttribute('data-event'),'0');
   await press(72);await page.waitForTimeout(300);await release(72);assert.match(await page.locator('#training-live-status').innerText(),/Too short/);assert.equal(await page.locator('.score-event.current').getAttribute('data-event'),'0');
   await page.screenshot({path:`docs/images/sight-guided-${engine}.png`});
-  for(let i=0;i<4;i++){await press(72);await page.waitForTimeout(600);await release(72);}
+  for(let i=0;i<4;i++){if(i===2){assert.equal(await page.locator('.measure').count(),1);assert.equal(await page.locator('.measure').getAttribute('data-bar'),'1');}await press(72);await page.waitForTimeout(600);await release(72);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.retries,2);assert.equal(result.pitch,75);assert.equal(result.holds,75);assert.equal(result.onset,null);
  });
  await check('continuous sight-reading keeps time and separates pitch errors from short holds',async()=>{
   const page=await setup(true,true);await setupSight(page,'continuous');
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration),midi:Number(n.dataset.midi)}))}));
-  assert.equal(data.events.length,4,'Both initial bars must be visible during count-in');
+  assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
+  // The deterministic fixture contains two half notes in each of its two bars.
+  data.events.push(...data.events.map(event=>({...event,beat:event.beat+4})));
   async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
   for(let i=0;i<data.events.length;i++){const event=data.events[i],pitch=i===1?60:event.midi;await until(data.start+event.beat*300);await page.evaluate(pitch=>window.trainingMidi.send([0x90,pitch,100]),pitch);await until(data.start+(event.beat+(i===0?1:event.duration))*300);await page.evaluate(pitch=>window.trainingMidi.send([0x80,pitch,0]),pitch);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.pitch,75,JSON.stringify({result,data,log:await page.evaluate(()=>window.midiLog),start:await page.locator('#exercise-score').getAttribute('data-start-time')}));assert.equal(result.holds,75);assert.equal(result.onset,100);assert.equal(result.extras,0);
@@ -167,11 +175,13 @@ try{
   await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('200');await page.selectOption('#training-bars','2');await page.locator('#training-form button[type=submit]').click();
   await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
+  assert.equal(await page.locator('.measure').count(),1);
   const start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
   async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
   async function press(at,duration){await until(at);await page.evaluate(()=>window.trainingMidi.send([0x90,60,100]));assert.equal(await page.locator('.score-event.holding').count(),1);assert.equal(await page.locator('.score-event.holding.correct').count(),0);await until(at+duration);await page.evaluate(()=>window.trainingMidi.send([0x80,60,0]));}
   await press(start+80,490);await press(start+600+80,490);
   await until(start+1300);assert.match(await page.locator('#training-live-status').innerText(),/Read bar 2.*count in/);
+  assert.equal(await page.locator('.measure').count(),1);
   assert.equal(await page.locator('.measure').first().getAttribute('data-bar'),'1');assert.equal(await page.locator('.score-event.missed').count(),0);
   await press(start+2400+80,490);await press(start+3000+80,490);
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');

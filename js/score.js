@@ -43,5 +43,5 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
 }
 
 export function renderScore(phrase, bar, results, current) {
-  return [bar,bar+1].filter(index=>index<phrase.bars).map(index=>renderMeasure(phrase,index,results,current)).join('');
+  return renderMeasure(phrase,bar,results,current);
 }

@@ -42,7 +42,8 @@ versus expected beat lengths on a bad release. Only unreleased notes are failed
 when the exercise ends. Slightly early first attacks use the same window.
 
 Practice pacing inserts one unscored, full-bar count-in between played bars.
-The session's expected-time and position functions include these gaps, so the
+The score renders only the current bar at every viewport size. The session's
+expected-time and position functions include these gaps, so the
 next measure appears before its first deadline and cannot be marked missed
 during preparation. Resume starts at the interrupted bar without carrying its
 previous gaps. Flow pacing omits gaps; Guided waits on every note as before.
