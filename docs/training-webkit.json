@@ -1,8 +1,8 @@
 {
   "engine": "webkit",
   "origin": "http://127.0.0.1:8421/",
-  "build": "4841977d1ebe7a",
-  "testedAt": "2026-11-07T11:43:13.686Z",
+  "build": "7b4d29b330ec0d",
+  "testedAt": "2026-11-07T12:13:35.783Z",
   "checks": [
     "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
     "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",
@@ -17,11 +17,13 @@
     "note selection keeps Save visible at both ends of the list on rotated phones and tablets",
     "rhythm input is selected on Home and leaves the exercise screen clear",
     "long presses cancel native menus without interrupting the touch hold",
-    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note"
+    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note",
+    "four rhythm levels save, introduce their own note values, and keep a single readable bar"
   ],
   "errors": [],
   "limits": [
     "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",
     "Audio could not start in this host; visual fallback verified.",

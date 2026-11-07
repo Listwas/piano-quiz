@@ -1,10 +1,10 @@
 {
   "engine": "webkit",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "ac33e1e774c0e1",
-  "testedAt": "2026-11-07T01:26:21.346Z",
+  "build": "7b4d29b330ec0d",
+  "testedAt": "2026-11-07T12:16:09.661Z",
   "checks": [
-    "rhythm input is selected on Home and leaves the exercise screen clear"
+    "four rhythm levels save, introduce their own note values, and keep a single readable bar"
   ],
   "errors": [],
   "limits": [
@@ -12,5 +12,5 @@
     "Audio could not start in this host; visual fallback verified."
   ],
   "result": "passed",
-  "filter": "rhythm input"
+  "filter": "four rhythm levels"
 }
