@@ -25,6 +25,7 @@ export class BeatClock {
     Object.assign(this, { context, bpm, meter, countIn, step: 60 / bpm, nextTick: 0, running: true });
     this.barOrigin = countIn;
     this.anchor = context ? context.currentTime + .12 : this.now() + 120;
+    this.performanceAnchor = null;
     this.pending = null;
     this.schedule();
     this.timer = setInterval(() => this.schedule(), 25);
@@ -38,7 +39,13 @@ export class BeatClock {
     return true;
   }
 
-  get startTime() { return this.context ? outputTime(this.context, this.anchor, this.now()) : this.anchor; }
+  get startTime() {
+    const projected = this.context ? outputTime(this.context, this.anchor, this.now()) : this.anchor;
+    // Let the output clock settle during count-in, then keep scoring targets
+    // stable. A changing output estimate must not move a note under the player.
+    if (this.performanceAnchor === null || this.now() < this.performanceAnchor + this.countIn * this.step * 1000 - 200) this.performanceAnchor = projected;
+    return this.performanceAnchor;
+  }
   get exerciseStart() { return this.startTime + this.countIn * this.step * 1000; }
   beatAt(time) { return (time - this.startTime) / (this.step * 1000) - this.countIn; }
 
@@ -55,10 +62,12 @@ export class BeatClock {
     while (this.anchor + this.nextTick * this.step * unit < now + .1 * unit) {
       if (this.pending && this.nextTick > this.countIn && (this.nextTick - this.barOrigin) % this.meter === 0) {
         const boundary = this.anchor + this.nextTick * this.step * unit;
+        const performanceBoundary = this.startTime + this.nextTick * this.step * 1000;
         Object.assign(this, this.pending);
         this.pending = null;
         this.step = 60 / this.bpm;
         this.anchor = boundary - this.nextTick * this.step * unit;
+        this.performanceAnchor = performanceBoundary - this.nextTick * this.step * 1000;
         this.barOrigin = this.nextTick;
       }
       const time = this.anchor + this.nextTick * this.step * unit;
@@ -66,7 +75,7 @@ export class BeatClock {
       if (time >= now - .02 * unit) {
         const accent = (this.nextTick - this.barOrigin) % this.meter === 0;
         this.onScheduled({ beat, time, accent });
-        if (this.context && !this.muted) this.click(time, accent);
+        if (this.context && !this.muted && this.volume > 0) this.click(time, accent);
       }
       this.nextTick++;
     }

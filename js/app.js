@@ -137,7 +137,6 @@ function resume() {
 function renderQuestion() {
   clearTimeout(nextTimer);
   midi.phrase.resetPhrase();
-  midi.phrase.setActive(canAcceptMidi());
   const round = state.active;
   if (isMidiMode() && round?.feedback?.answer) {
     if (round.feedback.correct) advance(round, state.history);
@@ -145,6 +144,7 @@ function renderQuestion() {
     queuePersist();
   }
   if (!round?.current) { finish(); return; }
+  midi.phrase.setActive(canAcceptMidi());
   clearTimeout(midiCueTimer);
   document.querySelector('.score-card').classList.remove('midi-correct', 'midi-wrong');
   $('midi-action-hint').classList.remove('midi-mistake');

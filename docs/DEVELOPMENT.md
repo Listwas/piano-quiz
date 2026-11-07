@@ -29,6 +29,19 @@ can still claim it. Rest checks use physical key intervals with boundary grace.
 Pause discards the interrupted bar and its extra/retry counters, retaining prior
 bars. Touch uses pointer capture and cancellation pauses the exercise.
 
+## Sight-reading
+
+Single-voice phrases use only selected written note names and octave groups.
+Mixed clefs alternate per generated phrase. Guided practice waits for the right
+pitch and a valid physical hold/release, retrying the same note otherwise.
+Continuous practice claims the nearest unclaimed onset inside its tolerance and
+keeps moving. Onsets and note lengths are independent scores. The clock maps audio
+output into the performance time domain during count-in, then freezes that mapping
+200 ms before the exercise, preventing output estimates from moving scoring targets.
+Generated note values are whole, half, quarter and eighth notes, with corresponding
+rests. Score rendering reuses the existing clef paths; notation uses SVG shapes
+and explicit accidental cancellation. No Unicode musical-plane font is required.
+
 ## Architecture
 
 - `js/quiz.js`: pool enumeration, written-name grading, scheduling, round state,
@@ -66,6 +79,7 @@ npm run test:browser # Chromium
 npm run test:update # isolated real service-worker update test
 npm run test:midi # MIDI API/device simulation plus native Chromium virtual loopback
 npm run test:viewport # safe areas, zoom guards, rotations and real touch targets
+npm run test:training # metronome, rhythm holds, guided/continuous reading, MIDI and rotation
 ```
 
 Tests use Playwright and are always headless. Chromium defaults to
@@ -172,11 +186,13 @@ port on disconnect. A missing selected device waits for reconnection rather than
 switching silently to another keyboard. Failed opens and cancelled permission
 requests cannot reattach a stale input. `Permissions-Policy` allows `midi=(self)`.
 
-`MidiPhrase` tracks held keys separately per MIDI channel and accumulates the
+`MidiPhrase` handles chord input and tracks held keys separately per MIDI channel and accumulates the
 notes in an overlapping gesture until all physical keys are released. Velocity-zero
 Note On is Note Off. Sustain is ignored for phrase capture; All Notes Off and All
 Sound Off cancel the phrase. Pauses, feedback, dialogs, hidden pages, input
-changes, and new questions reset capture and require held keys to release first.
+changes, and new questions reset chord capture and require its held keys to release
+first. Single-note questions instead accept every fresh normalized Note On, even
+when another key is still held.
 The quiz stores MIDI answers as `{ source: 'midi', notes: [...] }`; grading checks
 the exact set of displayed MIDI pitches including octave. Touch grading retains
 strict written spelling. MIDI never infers an enharmonic name from a key press.
@@ -198,10 +214,10 @@ The browser suite checks saved choices, real computed colors, and at least 4.5:1
 contrast for body text and primary button text in every explicit palette on a dark
 device preference. Global user-select and iOS callout styles prevent selection;
 the browser suite double-clicks a heading to verify no text is selected.
-Separate feedback panels have been removed. Correct notation stays green for
-450 ms in MIDI mode or 900 ms in Tap names, then advances. Wrong played notation
-is red for 2000 ms with a short shake before the same question becomes available
-again. Skip reveals the target briefly and advances. `answer-status` announces
+Separate feedback panels have been removed. Touch answers retain 900 ms green
+feedback and 2000 ms red retry feedback. MIDI advances or retries immediately;
+120 ms green and 180 ms red cues never block input or replace the target. Skip
+reveals the target briefly and advances. `answer-status` announces
 outcomes without relying on color; reduced-motion preferences disable the shake.
 
 

@@ -11,10 +11,13 @@ export function normalizeTraining(raw) {
   }
   return settings;
 }
+function validTrainingResult(result) {
+  return result?.version === 1 && ['rhythm','sight'].includes(result.activity) && ['guided','continuous'].includes(result.style) && ['pitch','onset','holds'].every(key => result[key] === null || Number.isFinite(result[key]) && result[key] >= 0 && result[key] <= 100) && ['total','extras','retries','missed','restTotal','restErrors','at'].every(key => Number.isFinite(result[key]) && result[key] >= 0);
+}
 export function loadTraining(storage) {
   try {
     const raw = JSON.parse((storage ?? globalThis.localStorage).getItem(TRAINING_KEY));
-    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: raw?.lastResult?.version === 1 ? raw.lastResult : null };
+    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: validTrainingResult(raw?.lastResult) ? raw.lastResult : null };
   } catch { return { activity: 'quiz', settings: normalizeTraining(), lastResult: null }; }
 }
 export function saveTraining(state) {
@@ -104,7 +107,7 @@ export class ExerciseSession {
       const target = candidates[0];
       if (!target) { this.extraAt(time); this.feedback = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs) ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; return; }
       const error = time - this.expected(target), pitch = this.phrase.rhythm || event.note === target.tone.midi;
-      const result = { pitch, onset:true, duration:null, error, on:time, status:'holding' };
+      const result = { pitch, onset:true, duration:null, error, on:time, status:pitch ? 'holding' : 'wrong' };
       this.results.set(target.id, result); this.holding.set(key, { target, result });
       this.feedback = !pitch ? 'Different note — keep following the beat.' : Math.abs(error) < 30 ? 'On the beat. Hold…' : `${error < 0 ? 'Early' : 'Late'} by ${Math.round(Math.abs(error))} ms. Hold…`;
     } else {
@@ -145,6 +148,7 @@ export class ExerciseSession {
     this.results.set(target.id, { ...attempt, onset:null, status:'correct' });
     this.feedback = 'Good hold ✓';
     this.currentIndex++; this.guidedRestStart = null;
+    if (this.current?.rest) this.feedback = 'Rest — keep the keys released.';
     this.done = !this.current;
   }
   tick(now) {

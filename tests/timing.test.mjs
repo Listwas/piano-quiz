@@ -40,3 +40,15 @@ test('training settings reject corrupt options and inaccessible storage', () => 
   assert.equal(settings.bpm,200);assert.equal(settings.meter,4);assert.equal(settings.bars,4);assert.equal(settings.offset,-250);assert.equal(settings.volume,1);assert.equal(settings.style,'guided');
   assert.equal(loadTraining({getItem(){throw Error('blocked');}}).activity,'quiz');
 });
+
+test('count-in settles the audio mapping, then scoring targets stop moving', async()=>{
+ const oldRAF=globalThis.requestAnimationFrame,oldCancel=globalThis.cancelAnimationFrame;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
+ let now=1000,estimate=1000;
+ const context={state:'running',currentTime:0,getOutputTimestamp:()=>({contextTime:0,performanceTime:estimate})};
+ const clock=new BeatClock({prepare:async()=>context,now:()=>now});
+ try{
+  clock.muted=true;await clock.start({bpm:200,meter:4,countIn:4});assert.equal(clock.exerciseStart,2320);
+  now=2200;estimate=1500;assert.equal(clock.exerciseStart,2320);
+  now=2500;estimate=1800;assert.equal(clock.exerciseStart,2320);
+ }finally{clock.stop();globalThis.requestAnimationFrame=oldRAF;globalThis.cancelAnimationFrame=oldCancel;}
+});

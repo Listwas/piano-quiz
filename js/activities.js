@@ -73,7 +73,9 @@ export class Activities {
     $('practice-detail').textContent = this.supported ? `${this.settings.bpm} BPM · ${this.settings.meter}/4 · ${detail}` : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
     $('customize-button').textContent = 'Set up ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
-    $('resume-note').hidden = true;
+    const recent = this.state.lastResult;
+    $('resume-note').hidden = recent?.activity !== this.activity;
+    if (recent?.activity === this.activity) $('resume-note').textContent = `Last practice: ${recent.onset === null ? `${recent.pitch}% pitch` : `${recent.onset}% on the beat`} · ${recent.holds}% note lengths`;
   }
 
   configure() {
@@ -110,7 +112,7 @@ export class Activities {
     $('live-bpm').value = this.settings.bpm;
     $('live-meter').value = this.settings.meter;
     this.renderedMeter = this.clock.running ? this.clock.meter : this.settings.meter;
-    $('training-beats').innerHTML = Array.from({ length:this.renderedMeter }, (_,i) => `<span data-beat="${i}" aria-hidden="true"></span>`).join('');
+    $('training-beats').innerHTML = Array.from({ length:this.renderedMeter }, (_,i) => `<span data-beat="${i}" class="${this.lastBeat === i ? 'active' : ''}" aria-hidden="true"></span>`).join('');
     $('training-toggle').textContent = this.starting ? 'Starting…' : this.clock.running ? 'Pause' : this.completed ? 'Try another' : this.requiresMidi && !this.midi.status.connected ? 'Connect MIDI' : this.paused ? 'Resume' : 'Start';
     $('training-toggle').disabled = this.starting || !this.supported;
     $('metronome-display').hidden = exercise;
@@ -137,7 +139,11 @@ export class Activities {
     }
     this.drawSignature = null;
     this.refresh();
-    if (this.exercise) this.draw(performance.now());
+    if (this.exercise) {
+      this.session.startTime = Infinity;
+      delete $('exercise-score').dataset.startTime;
+      this.draw(performance.now());
+    }
     if (this.requiresMidi && !this.midi.status.connected) {
       this.starting = false; this.paused = true; this.refresh();
       this.message(this.supported ? 'Connect your keyboard, then tap Resume to begin.' : 'Web MIDI is unavailable in this browser. Rhythm can use touch input.',true);
@@ -148,8 +154,10 @@ export class Activities {
     const running = await this.clock.start({ ...this.settings, countIn:this.exercise ? this.settings.meter : 0, visualOnly:this.visualOnly });
     if (request !== this.request) return;
     this.starting = false;
-    if (this.session) this.session.startTime = this.clock.exerciseStart;
-    if (this.session) $('exercise-score').dataset.startTime = this.session.startTime;
+    if (this.session && running) {
+      this.session.startTime = this.clock.exerciseStart;
+      $('exercise-score').dataset.startTime = this.session.startTime;
+    }
     this.refresh();
     if (!this.active) return;
     $('training-visual').hidden = Boolean(running);

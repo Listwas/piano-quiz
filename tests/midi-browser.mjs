@@ -219,6 +219,14 @@ try {
     await play(page, [60]);
     assert.equal((await state(page)).active.retrying, true, 'A partial chord must not pass');
     await settled(page);
+    await page.evaluate(key => {
+      const saved=JSON.parse(localStorage.getItem(key)), round=saved.active;
+      round.feedback={item:round.current,correct:false,answer:{source:'midi',notes:[60]},elapsed:100,at:Date.now()};
+      localStorage.setItem(key,JSON.stringify(saved));
+    },key);
+    await page.reload();await connect(page);await page.locator('#start-button').click();await ready(page);
+    notes=(await state(page)).active.current.tones.map(tone=>tone.midi);
+    await play(page,notes);assert.equal((await state(page)).active.retrying,false,'Legacy chord feedback must not leave capture inactive');
     await page.evaluate(() => window.midiTest.remove('a'));
     assert.match(await page.locator('#quiz-midi-status').innerText(), /not connected/);
     assert.equal(await page.locator('#midi-recheck-quiz').isVisible(), true);

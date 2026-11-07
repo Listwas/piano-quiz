@@ -19,8 +19,8 @@ function unlock() {
     master.gain.value = 0.3;
     master.connect(context.destination);
   }
-  if (context.state !== 'running') return context.resume().then(() => context.state === 'running', () => false);
-  return Promise.resolve(true);
+  // Resume also orders correctly after a suspend queued by a quick mode switch.
+  return context.resume().then(() => context.state === 'running', () => false);
 }
 
 export function stopAudio() {

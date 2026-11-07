@@ -76,3 +76,15 @@ test('playback waits for a delayed audio-context resume instead of dropping the 
     assert.equal(started, true);
   } finally { Object.assign(globalThis, old); }
 });
+
+test('audio preparation resumes after a suspend queued by an immediate activity switch', async()=>{
+ let queue=Promise.resolve();
+ class Context {
+  state='running';createGain(){return {gain:{value:0},connect(){}};}
+  suspend(){queue=queue.then(()=>{this.state='suspended';});return queue;}
+  resume(){queue=queue.then(()=>{this.state='running';});return queue;}
+ }
+ const old=globalThis.window;globalThis.window={AudioContext:Context};
+ try{const audio=await import('../js/audio.js?activity-switch');assert.ok(await audio.prepareAudio());audio.suspendAudio();assert.ok(await audio.prepareAudio());}
+ finally{globalThis.window=old;}
+});
