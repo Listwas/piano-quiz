@@ -1,8 +1,8 @@
 {
   "engine": "firefox",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "4841977d1ebe7a",
-  "testedAt": "2026-11-07T11:46:36.818Z",
+  "build": "2ee1ed845ae73c",
+  "testedAt": "2026-11-07T14:24:04.098Z",
   "checks": [
     "iphone-14-pro-max: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
     "iphone-14-pro-max-landscape: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",

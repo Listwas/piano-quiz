@@ -1,7 +1,7 @@
 {
   "engine": "chromium",
-  "build": "4841977d1ebe7a",
-  "testedAt": "2026-11-07T11:46:09.461Z",
+  "build": "2ee1ed845ae73c",
+  "testedAt": "2026-11-07T14:22:46.881Z",
   "checks": [
     "first install activates without offering a stale update prompt",
     "new service worker waits and offers Update without interrupting feedback",
