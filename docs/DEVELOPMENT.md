@@ -21,8 +21,31 @@ the unfinished quiz intact.
 ## Rhythm practice
 
 Rhythm generation uses durations in quarter-note beats, fills bars
-exactly, and includes at least one sounded note in each bar. Simple uses quarter
-and half notes; Mixed adds whole/eighth notes and rests. The pure session model
+exactly, and includes at least one sounded note in each bar. Four levels use
+cached duration-pattern catalogs: Starter (quarters/halves), Steady (whole notes
+and rests too), Moving (eighth-note pairs), and Challenge (dotted values and
+syncopation). Moving only starts longer values on whole beats, so its eighths
+remain paired. Each higher level introduces its new skill in the first bar.
+
+Each new bar selects a least-used duration pattern and avoids the two most recent
+patterns when possible. This visits every available pattern before repeating,
+then distributes necessary repeats evenly. Starter has five 4/4 patterns and
+three 3/4 patterns, so an eight-bar exercise necessarily repeats some. Rest
+placement varies separately and cannot silence an entire bar. A small per-visit
+history keyed by activity/level/meter carries the last two patterns across new
+exercises; it is not persistent user history. Retrying a failed bar keeps its
+original music.
+
+Melodies prefer nearby selected pitches, spread practice across those pitches,
+and avoid immediate repeats and repeated two-note oscillations when alternatives
+exist. Widely separated selected octaves remain usable. Single-pitch pools retain
+that exact written pitch while rhythmic variety stays independent.
+
+Dotted quarter and half notes/rests use 1.5 and 3 quarter-note beats. Dots are SVG
+circles; dotted half noteheads stay open. Rest dots occupy the third staff space,
+following [Open University's notation examples](https://www.open.edu/openlearn/history-the-arts/music/an-introduction-music-theory/content-section-4.1).
+Legacy `simple` and `mixed` preferences map to Starter and Challenge; `steady` and
+`eighths` are additional validated settings. The pure session model
 grades original press timestamps and matching physical releases separately.
 A missed marker is provisional: a delayed message with an in-window timestamp
 can still claim it. Rest checks use physical key intervals with boundary grace.

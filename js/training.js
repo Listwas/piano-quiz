@@ -6,7 +6,7 @@ export function normalizeTraining(raw) {
   const settings = { ...TRAINING_DEFAULTS };
   if (raw && typeof raw === 'object') {
     for (const [key, min, max] of [['bpm',40,200],['offset',-250,250],['volume',0,1]]) if (Number.isFinite(raw[key])) settings[key] = Math.max(min, Math.min(max, key === 'volume' ? raw[key] : Math.round(raw[key])));
-    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
+    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','steady','eighths','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
     if (typeof raw.muted === 'boolean') settings.muted = raw.muted;
   }
   return settings;
@@ -24,33 +24,86 @@ export function saveTraining(state) {
   try { localStorage.setItem(TRAINING_KEY, JSON.stringify(state)); return true; } catch { return false; }
 }
 
-export function generatePhrase(settings, quizSettings, { rhythm = false, clefIndex = 0, random = Math.random } = {}) {
+export const RHYTHM_LEVELS = {
+  simple: { name:'Starter', values:[2,1], restChance:0, paired:false },
+  steady: { name:'Steady', values:[4,2,1], restChance:.3, paired:false },
+  eighths: { name:'Moving', values:[2,1,.5], restChance:.3, paired:true },
+  mixed: { name:'Challenge', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
+};
+const patternCache = new Map();
+function rhythmPatterns(level, meter) {
+  const key = `${level}:${meter}`;
+  if (!patternCache.has(key)) {
+    const config = RHYTHM_LEVELS[level], patterns = [];
+    function fill(position, values) {
+      if (position === meter) { patterns.push(values); return; }
+      for (const value of config.values) {
+        if (value > meter-position || config.paired && position % 1 !== 0 && value !== .5) continue;
+        fill(position+value,[...values,value]);
+      }
+    }
+    fill(0,[]); patternCache.set(key,patterns);
+  }
+  return patternCache.get(key);
+}
+const patternKey = values => values.join(',');
+
+export function generatePhrase(settings, quizSettings, { rhythm = false, clefIndex = 0, random = Math.random, previousPhrase = null } = {}) {
   const clef = quizSettings.clef === 'mixed' ? clefIndex % 2 ? 'bass' : 'treble' : quizSettings.clef;
   const pool = rhythm ? [] : poolFor({ ...quizSettings, mode:'notes', clef });
   if (!rhythm && !pool.length) throw new Error('Choose at least one note and octave first.');
-  const events = [];
-  let previous;
+  const level = RHYTHM_LEVELS[settings.complexity] ? settings.complexity : 'simple';
+  const config = RHYTHM_LEVELS[level], patterns = rhythmPatterns(level,settings.meter);
+  const pick = items => items[Math.min(items.length-1,Math.floor(random()*items.length))];
+  const usage = new Map(), pitchUsage = new Map(), events = [];
+  const history = previousPhrase?.complexity === level && previousPhrase.meter === settings.meter && previousPhrase.rhythm === rhythm
+    ? previousPhrase.patterns?.slice(-2) || [] : [];
+  const chosen = [];
+  let previous, beforePrevious, previousStart;
   for (let bar = 0; bar < settings.bars; bar++) {
-    let position = 0, sounded = false;
-    while (position < settings.meter) {
-      const values = (settings.complexity === 'mixed' ? [4,2,1,.5] : [2,1]).filter(value => value <= settings.meter - position);
-      const durationBeats = values[Math.min(values.length - 1, Math.floor(random() * values.length))];
-      const rest = settings.complexity === 'mixed' && sounded && random() < .22;
-      let tone = null;
-      if (!rest) {
-        if (!rhythm) {
-          const nearby = previous ? pool.filter(item => Math.abs(item.tones[0].midi - previous.midi) <= 7 && item.tones[0].midi !== previous.midi) : pool;
-          const choices = nearby.length ? nearby : pool;
-          tone = choices[Math.min(choices.length - 1, Math.floor(random() * choices.length))].tones[0];
-          previous = tone;
-        }
-        sounded = true;
+    const least = Math.min(...patterns.map(values=>usage.get(patternKey(values)) || 0));
+    let candidates = patterns.filter(values=>(usage.get(patternKey(values)) || 0) === least);
+    const fresh = candidates.filter(values=>!history.includes(patternKey(values)));
+    if (fresh.length) candidates = fresh;
+    if (bar === 0) {
+      const featured = candidates.filter(values=>level === 'steady' ? values.length > 1 : level === 'eighths' ? values.includes(.5) : level === 'mixed' ? values.some(value=>[1.5,3].includes(value)) : true);
+      if (featured.length) candidates = featured;
+    }
+    const values = pick(candidates), signature = patternKey(values);
+    usage.set(signature,(usage.get(signature) || 0)+1);
+    history.push(signature); if (history.length > 2) history.shift();
+    chosen.push(signature);
+    const rests = new Set();
+    if (values.length > 1 && (level === 'steady' && bar === 0 || random() < config.restChance)) {
+      const places = values.map((_,i)=>i).filter(i=>level === 'mixed' || i > 0);
+      rests.add(pick(places));
+      if (level === 'mixed' && values.length > 3 && random() < .25) {
+        const extra = places.filter(i=>!rests.has(i) && !rests.has(i-1) && !rests.has(i+1));
+        if (extra.length) rests.add(pick(extra));
       }
-      events.push({ id:events.length, bar, beat:bar * settings.meter + position, durationBeats, rest, tone, clef });
+    }
+    let position = 0, barStart;
+    for (let index = 0; index < values.length; index++) {
+      const durationBeats = values[index], rest = rests.has(index);
+      let tone = null;
+      if (!rest && !rhythm) {
+        const different = previous ? pool.filter(item=>item.tones[0].midi !== previous.midi) : pool;
+        const nearby = previous ? different.filter(item=>Math.abs(item.tones[0].midi-previous.midi) <= 7) : different;
+        let choices = nearby.length ? nearby : different.length ? different : pool;
+        const varied = choices.filter(item=>item.tones[0].midi !== (barStart ? beforePrevious?.midi : previousStart?.midi));
+        if (varied.length) choices = varied;
+        const leastPlayed = Math.min(...choices.map(item=>pitchUsage.get(item.tones[0].midi) || 0));
+        choices = choices.filter(item=>(pitchUsage.get(item.tones[0].midi) || 0) === leastPlayed);
+        tone = pick(choices).tones[0];
+        pitchUsage.set(tone.midi,(pitchUsage.get(tone.midi) || 0)+1);
+        beforePrevious = previous; previous = tone; barStart ??= tone;
+      }
+      events.push({ id:events.length, bar, beat:bar*settings.meter+position, durationBeats, rest, tone, clef });
       position += durationBeats;
     }
+    previousStart = barStart;
   }
-  return { events, meter:settings.meter, bars:settings.bars, clef, rhythm, totalBeats:settings.meter * settings.bars };
+  return { events, meter:settings.meter, bars:settings.bars, clef, rhythm, complexity:level, patterns:chosen, totalBeats:settings.meter*settings.bars };
 }
 
 export const holdTolerance = (milliseconds, accuracy = 'strict') => accuracy === 'beginner' ? Math.min(milliseconds * .4, Math.max(140, milliseconds * .3)) : Math.max(60, milliseconds * .15);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining } from '../js/training.js';
+import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, RHYTHM_LEVELS } from '../js/training.js';
 import { copyDefaults } from '../js/quiz.js';
 import { makeTone } from '../js/notes.js';
 import { renderScore } from '../js/score.js';
@@ -10,7 +10,7 @@ const note=(session,type,n,timeStamp)=>session.input({type,note:n,channel:0,time
 
 test('generated rhythms fill every bar and melodies contain only selected pitches and spellings',()=>{
  let seed=42;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/2**32);
- for(const meter of [3,4])for(const complexity of ['simple','mixed'])for(const clef of ['treble','bass','mixed']){
+ for(const meter of [3,4])for(const complexity of Object.keys(RHYTHM_LEVELS))for(const clef of ['treble','bass','mixed']){
   const settings=normalizeTraining({meter,complexity,bars:8});const q={...copyDefaults(),clef,noteNames:['D♭'],octaves:{treble:[5],bass:[2]}};
   const p=generatePhrase(settings,q,{random,clefIndex:1});
   for(let bar=0;bar<8;bar++){const events=p.events.filter(e=>e.bar===bar);assert.equal(events.reduce((sum,e)=>sum+e.durationBeats,0),meter);assert.ok(events.some(e=>!e.rest));}
@@ -139,4 +139,56 @@ test('valid releases show a fully filled hold meter briefly without delaying the
  note(s,'on',60,1000);assert.ok(s.holdDisplay(2980).value<1);note(s,'off',60,2990);
  assert.equal(s.holdDisplay(2990).value,1);assert.equal(s.holdDisplay(3100).label,'Good release ✓');
  note(s,'on',61,3020);assert.equal(s.holdDisplay(3020).value,0);assert.equal(s.holding.size,1);
+});
+
+test('pattern bags spread repeats evenly and avoid adjacent duplicate bars, even with a constant random source',()=>{
+ for(const meter of [3,4])for(const complexity of Object.keys(RHYTHM_LEVELS))for(const value of [0,.49,.999999]){
+  const p=generatePhrase(normalizeTraining({meter,complexity,bars:8}),copyDefaults(),{rhythm:true,random:()=>value});
+  assert.ok(p.patterns.every((pattern,i)=>i===0||pattern!==p.patterns[i-1]),`${meter} ${complexity}`);
+  if(['simple','steady'].includes(complexity)){
+   const available=meter===3?3:complexity==='simple'?5:6;
+   assert.equal(new Set(p.patterns.slice(0,available)).size,available);
+   const counts=[...new Set(p.patterns)].map(pattern=>p.patterns.filter(item=>item===pattern).length);
+   assert.ok(Math.max(...counts)-Math.min(...counts)<=1);
+  }else assert.equal(new Set(p.patterns).size,8);
+ }
+});
+test('levels introduce rests, paired eighths and dotted values without exceeding a bar',()=>{
+ for(const meter of [3,4])for(const complexity of Object.keys(RHYTHM_LEVELS)){
+  const p=generatePhrase(normalizeTraining({meter,complexity,bars:8}),copyDefaults(),{rhythm:true,random:()=>0});
+  const first=p.events.filter(e=>e.bar===0);
+  assert.ok(p.events.every(e=>RHYTHM_LEVELS[complexity].values.includes(e.durationBeats)));
+  if(complexity==='simple')assert.equal(p.events.some(e=>e.rest),false);
+  if(complexity==='steady')assert.ok(first.some(e=>e.rest));
+  if(complexity==='eighths'){
+   assert.ok(first.some(e=>e.durationBeats===.5));
+   assert.ok(p.events.every(e=>e.beat%1===0||e.durationBeats===.5));
+  }
+  if(complexity==='mixed')assert.ok(first.some(e=>[1.5,3].includes(e.durationBeats)));
+ }
+});
+test('selected naturals and a single selected pitch still get varied rhythms and preserved spellings',()=>{
+ const settings=normalizeTraining({bars:8});
+ const naturals=generatePhrase(settings,copyDefaults(),{random:()=>0});
+ assert.equal(new Set(naturals.events.map(e=>e.tone.midi)).size,7);
+ assert.ok(naturals.events.every(e=>e.tone.alteration===0));
+ const one=generatePhrase(settings,{...copyDefaults(),noteNames:['D♭']},{random:()=>0});
+ assert.ok(one.events.every(e=>e.tone.name==='D♭'));
+ assert.equal(new Set(one.patterns).size,5);assert.deepEqual(one.patterns,naturals.patterns);
+ const wide=generatePhrase(settings,{...copyDefaults(),noteNames:['C'],octaves:{treble:[3,6],bass:[3]}},{random:()=>0});
+ assert.equal(new Set(wide.events.map(e=>e.tone.midi)).size,2);assert.ok(wide.events.every((e,i)=>i===0||e.tone.midi!==wide.events[i-1].tone.midi));
+});
+test('new phrases avoid the last two rhythm patterns from the preceding matching exercise',()=>{
+ for(const complexity of Object.keys(RHYTHM_LEVELS)){
+  const settings=normalizeTraining({bars:8,complexity});
+  const first=generatePhrase(settings,copyDefaults(),{rhythm:true,random:()=>0});
+  const second=generatePhrase(settings,copyDefaults(),{rhythm:true,random:()=>0,previousPhrase:first});
+  assert.ok(!first.patterns.slice(-2).includes(second.patterns[0]));
+  assert.equal(normalizeTraining({complexity}).complexity,complexity);
+ }
+});
+test('dotted notes and rests render their dots with the correct open or filled heads',()=>{
+ const p=phrase();p.events=[{...p.events[0],durationBeats:1.5},{...p.events[1],beat:1.5,durationBeats:.5},{...p.events[2],beat:2,durationBeats:1.5}];
+ let svg=renderScore(p,0,new Map(),0);assert.equal((svg.match(/class="score-dot"/g)||[]).length,2);assert.ok(!svg.includes('score-head-open'));
+ p.events=[{...p.events[0],durationBeats:3},{...p.events[1],beat:3,durationBeats:1}];svg=renderScore(p,0,new Map(),0);assert.match(svg,/score-head-open/);assert.match(svg,/score-dot/);
 });

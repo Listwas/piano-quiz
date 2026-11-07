@@ -66,7 +66,19 @@ Use the pad or any MIDI key. A half note lasts two
 beats; letting go after one beat counts as too short. The music keeps moving
 through mistakes, and the results show beat timing and note lengths separately.
 
-Start with **Simple** rhythms, or choose **Mixed** for eighth notes and rests.
+Choose a **Rhythm level** in **Set up**:
+
+| Level | What it adds |
+| --- | --- |
+| **Starter** | Quarter and half notes |
+| **Steady** | Longer holds and rests |
+| **Moving** | Pairs of eighth notes |
+| **Challenge** | Dotted notes, offbeats, and more rests |
+
+Bars use different patterns before repeating, with repeats spread apart. The
+same level choices apply to Sight-reading. Naturals, sharps, and flats control
+which pitches you practise; they do not limit the rhythm patterns. Selecting
+more notes also gives melodies more variety.
 The hold meter shows when to release; green appears after a correct release.
 A valid release briefly keeps the meter completely full before the next note.
 Beginner timing is more forgiving, and a full-bar count-in between bars gives

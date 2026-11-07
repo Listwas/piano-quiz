@@ -19,11 +19,16 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
   const notes = events.map(event => {
     const x = scoreX(event.beat % phrase.meter,phrase.meter);
     let drawing;
-    if (event.rest) drawing = rest(x,event.durationBeats);
+    const dotted = [1.5,3].includes(event.durationBeats);
+    if (event.rest) {
+      drawing = rest(x,event.durationBeats);
+      if (dotted) drawing += `<circle cx="${x+12}" cy="42" r="2" fill="currentColor" class="score-dot"/>`;
+    }
     else {
       const y = phrase.rhythm ? 48 : staffY(event.tone.staffStep,phrase.clef);
       const whole = event.durationBeats === 4;
       drawing = `<ellipse cx="${x}" cy="${y}" rx="${whole?8:6.5}" ry="4.7" transform="rotate(${whole?0:-20} ${x} ${y})" class="${event.durationBeats>=2?'score-head-open':'score-head'}"/>`;
+      if (dotted) drawing += `<circle cx="${x+12}" cy="${y%12===0?y-6:y}" r="2" fill="currentColor" class="score-dot"/>`;
       const up = y >= 48, stemX = x + (up ? 6 : -6), end = y + (up ? -31 : 31);
       if (!whole) drawing += `<path d="M${stemX} ${y}V${end}" fill="none" stroke="currentColor" stroke-width="1.3"/>`;
       if (event.durationBeats === .5) drawing += up ? `<path d="M${stemX} ${end}c0 9 15 10 5 25c4 -14 -5 -10 -5 -17z" fill="currentColor"/>` : `<path d="M${stemX} ${end}c0 -9 -15 -10 -5 -25c-4 14 5 10 5 17z" fill="currentColor"/>`;

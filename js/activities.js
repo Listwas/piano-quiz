@@ -15,6 +15,7 @@ export class Activities {
     this.lastBeat = null;
     this.request = 0;
     this.phraseIndex = 0;
+    this.phraseHistory = new Map();
     $('activity-select').value = this.state.activity;
     $('activity-select').onchange = event => {
       this.stop(); this.state.activity = event.target.value; saveTraining(this.state); renderHome();
@@ -172,7 +173,9 @@ export class Activities {
     this.active = true; this.paused = false; this.starting = true; this.completed = false; this.lastBeat = null;
     if (this.exercise && (!resume || !this.session)) {
       try {
-        this.phrase = generatePhrase(this.settings,this.getQuizSettings(),{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++});
+        const key = `${this.activity}:${this.settings.complexity}:${this.settings.meter}`;
+        this.phrase = generatePhrase(this.settings,this.getQuizSettings(),{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
+        this.phraseHistory.set(key,this.phrase);
         this.session = new ExerciseSession(this.phrase,{...this.settings,retryOnError:this.activity==='sight'});
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }

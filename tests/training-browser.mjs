@@ -67,12 +67,12 @@ try{
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].filter(n=>n.dataset.rest==='false').map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   const pad=await page.locator('#training-touchpad').boundingBox();await page.mouse.move(pad.x+pad.width/2,pad.y+pad.height/2);
   assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
-  // The deterministic fixture contains two half notes in each of its two bars.
-  data.events.push(...data.events.map(event=>({...event,beat:event.beat+4})));
-  async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
+  // The second bar varies: a half note followed by two quarters.
+  data.events.push({beat:4,duration:2},{beat:6,duration:1},{beat:7,duration:1});
+  async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(Math.ceil(delay));await page.waitForFunction(t=>performance.now()>=t,time,{polling:1});}
   for(let i=0;i<data.events.length;i++){const event=data.events[i];await until(data.start+event.beat*300);await page.mouse.down();await until(data.start+(event.beat+(i===0?1:event.duration))*300);await page.mouse.up();}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
-  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,75);assert.equal(result.total,4);assert.equal(result.extras,0);await page.screenshot({path:`docs/images/rhythm-results-${engine}.png`});
+  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,80);assert.equal(result.total,5);assert.equal(result.extras,0);await page.screenshot({path:`docs/images/rhythm-results-${engine}.png`});
  });
  await check('rhythm score and touch pad fit rotating phone and tablet layouts',async()=>{
   const page=await setup(true);await page.selectOption('#activity-select','rhythm');await page.locator('#start-button').click();await running(page);await page.locator('#training-toggle').click();
@@ -89,17 +89,17 @@ try{
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
-  // The deterministic fixture contains two half notes in each of its two bars.
-  data.events.push(...data.events.map(event=>({...event,beat:event.beat+4})));
-  async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
-  for(let i=0;i<data.events.length;i++){const event=data.events[i],pitch=[35,92,11,80][i];await until(data.start+event.beat*300);await page.evaluate(pitch=>window.trainingMidi.send([0x90,pitch,100]),pitch);await until(data.start+(event.beat+event.duration)*300);await page.evaluate(pitch=>window.trainingMidi.send([0x80,pitch,0]),pitch);}
+  // The second bar varies: a half note followed by two quarters.
+  data.events.push({beat:4,duration:2},{beat:6,duration:1},{beat:7,duration:1});
+  async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(Math.ceil(delay));await page.waitForFunction(t=>performance.now()>=t,time,{polling:1});}
+  for(let i=0;i<data.events.length;i++){const event=data.events[i],pitch=[35,92,11,80,60][i];await until(data.start+event.beat*300);await page.evaluate(pitch=>window.trainingMidi.send([0x90,pitch,100]),pitch);await until(data.start+(event.beat+event.duration)*300);await page.evaluate(pitch=>window.trainingMidi.send([0x80,pitch,0]),pitch);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,100);assert.equal(result.pitch,null);
  });
  await check('sight-reading resets the entire bar on wrong pitches and short holds, then waits for the downbeat',async()=>{
   const page=await setup(true,true);await setupSight(page);
   let start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
   const original=start;
-  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
+  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(Math.ceil(delay));await page.waitForFunction(t=>performance.now()>=t,time,{polling:1});}
   const press=note=>page.evaluate(note=>window.trainingMidi.send([0x90,note,100]),note);
   const release=note=>page.evaluate(note=>{window.trainingMidi.send([0x80,note,0]);return {value:document.getElementById('hold-progress').value,label:document.getElementById('hold-label').textContent};},note);
   await until(start);await press(72);await until(start+600);const full=await release(72);assert.equal(full.value,1);assert.equal(full.label,'Good release ✓');
@@ -113,21 +113,21 @@ try{
   await until(start);await press(72);await until(start+300);await release(72);
   assert.match(await page.locator('#training-live-status').innerText(),/Too short.*get ready/);assert.equal(await page.locator('.score-event.current').getAttribute('data-event'),'0');
   start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
-  for(let i=0;i<4;i++){await until(start+i*600);await press(72);await until(start+(i+1)*600);await release(72);}
+  for(const [beat,duration] of [[0,2],[2,2],[4,2],[6,1],[7,1]]){await until(start+beat*300);await press(72);await until(start+(beat+duration)*300);await release(72);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.retries,2);assert.equal(result.pitch,100);assert.equal(result.holds,100);assert.equal(result.onset,100);
  });
  await check('sight-reading retries missed beats while retaining already completed bars',async()=>{
   const page=await setup(true,true);await setupSight(page);
   let start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
-  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
+  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(Math.ceil(delay));await page.waitForFunction(t=>performance.now()>=t,time,{polling:1});}
   for(let i=0;i<2;i++){await until(start+i*600);await page.evaluate(()=>window.trainingMidi.send([0x90,72,100]));await until(start+(i+1)*600);await page.evaluate(()=>window.trainingMidi.send([0x80,72,0]));}
   await page.waitForFunction(()=>document.getElementById('training-live-status').textContent.includes('Missed note'));
   assert.equal(await page.locator('.measure').getAttribute('data-bar'),'1');assert.equal(await page.locator('.score-event.current').getAttribute('data-event'),'2');
   start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
-  for(let i=0;i<2;i++){await until(start+i*600);await page.evaluate(()=>window.trainingMidi.send([0x90,72,100]));await until(start+(i+1)*600);await page.evaluate(()=>window.trainingMidi.send([0x80,72,0]));}
+  for(const [beat,duration] of [[0,2],[2,1],[3,1]]){await until(start+beat*300);await page.evaluate(()=>window.trainingMidi.send([0x90,72,100]));await until(start+(beat+duration)*300);await page.evaluate(()=>window.trainingMidi.send([0x80,72,0]));}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);
-  assert.equal(result.retries,1);assert.equal(result.pitch,100);assert.equal(result.holds,100);assert.equal(result.onset,100);assert.equal(result.total,4);
+  assert.equal(result.retries,1);assert.equal(result.pitch,100);assert.equal(result.holds,100);assert.equal(result.onset,100);assert.equal(result.total,5);
  });
  await check('sight-reading pauses on disconnect, rechecks, rotates and resumes with its score intact',async()=>{
   const page=await setup(true,true);await setupSight(page);
@@ -191,15 +191,29 @@ try{
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
   assert.equal(await page.locator('.measure').count(),1);
   const start=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
-  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
+  async function until(time){const delay=await page.evaluate(t=>t-performance.now(),time);if(delay>0)await page.waitForTimeout(Math.ceil(delay));await page.waitForFunction(t=>performance.now()>=t,time,{polling:1});}
   async function press(at,duration){await until(at);await page.evaluate(()=>window.trainingMidi.send([0x90,60,100]));assert.equal(await page.locator('.score-event.holding').count(),1);assert.equal(await page.locator('.score-event.holding.correct').count(),0);await until(at+duration);await page.evaluate(()=>window.trainingMidi.send([0x80,60,0]));}
   await press(start+80,490);await press(start+600+80,490);
   await until(start+1300);assert.match(await page.locator('#training-live-status').innerText(),/Read bar 2.*count in/);
   assert.equal(await page.locator('.measure').count(),1);
   assert.equal(await page.locator('.measure').first().getAttribute('data-bar'),'1');assert.equal(await page.locator('.score-event.missed').count(),0);
-  await press(start+2400+80,490);await press(start+3000+80,490);
+  await press(start+2400+80,490);await press(start+3000+80,250);await press(start+3300+80,250);
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,100);assert.equal(result.missed,0);
+ });
+ await check('four rhythm levels save, introduce their own note values, and keep a single readable bar',async()=>{
+  const page=await setup(true);await page.selectOption('#activity-select','rhythm');
+  for(const level of ['simple','steady','eighths','mixed']){
+   await page.locator('#customize-button').click();await page.selectOption('#training-complexity',level);await page.selectOption('#training-bars','8');await page.locator('#training-form button[type=submit]').click();
+   await page.locator('#start-button').click();await running(page);assert.equal(await page.locator('.measure').count(),1);
+   const notes=await page.locator('[data-event]').evaluateAll(nodes=>nodes.map(n=>({duration:Number(n.dataset.duration),rest:n.dataset.rest==='true'})));
+   if(level==='simple')assert.ok(notes.every(n=>[1,2].includes(n.duration)&&!n.rest));
+   if(level==='steady')assert.ok(notes.some(n=>n.rest));
+   if(level==='eighths')assert.ok(notes.some(n=>n.duration===.5));
+   if(level==='mixed'){assert.ok(notes.some(n=>[1.5,3].includes(n.duration)));assert.ok(await page.locator('.score-dot').count());await page.screenshot({path:`docs/images/rhythm-challenge-${engine}.png`});}
+   await page.locator('#training-back').click();
+  }
+  await page.reload();await page.locator('#customize-button').click();assert.equal(await page.locator('#training-complexity').inputValue(),'mixed');
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}
