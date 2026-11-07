@@ -14,7 +14,7 @@ function unlock() {
   const Constructor = window.AudioContext || window.webkitAudioContext;
   if (!Constructor) return false;
   if (!context || context.state === 'closed') {
-    context = new Constructor();
+    context = new Constructor({ latencyHint: 'interactive' });
     master = context.createGain();
     master.gain.value = 0.3;
     master.connect(context.destination);
@@ -32,6 +32,17 @@ export function stopAudio() {
 export function suspendAudio() {
   stopAudio();
   if (context && context.state !== 'closed') void context.suspend().catch(() => {});
+}
+
+export async function prepareAudio() {
+  let timer;
+  try {
+    const ready = unlock();
+    if (!ready) return null;
+    const running = await Promise.race([ready, new Promise(resolve => { timer = setTimeout(() => resolve(false), 1800); })]);
+    return running && context.state === 'running' ? context : null;
+  } catch { return null; }
+  finally { clearTimeout(timer); }
 }
 
 export async function playItem(item) {

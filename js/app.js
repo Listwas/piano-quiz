@@ -6,6 +6,7 @@ import { renderStaff } from './staff.js';
 import { playItem, stopAudio, suspendAudio } from './audio.js';
 import { MidiKeyboard, tonesFromMidi } from './midi.js';
 import { fitViewport } from './viewport.js';
+import { Activities } from './activities.js';
 
 fitViewport();
 
@@ -23,6 +24,7 @@ let updating = false;
 let pendingWorker;
 let persistTimer;
 let midiCueTimer;
+let activities;
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const clefName = clef => ({ treble: 'Treble clef', bass: 'Bass clef', mixed: 'Mixed clefs' })[clef];
 const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: 'Notes & chords' })[mode];
@@ -64,7 +66,7 @@ function startClock() {
 function showScreen(name) {
   screen = name;
   document.querySelector('.app-shell').dataset.screen = name;
-  for (const id of ['home', 'quiz', 'result']) $(`${id}-screen`).hidden = name !== id;
+  for (const id of ['home', 'quiz', 'result', 'training']) $(`${id}-screen`).hidden = name !== id;
   window.scrollTo(0, 0);
 }
 
@@ -96,14 +98,17 @@ function renderHome() {
   const due = poolFor(settings).filter(item => state.history[item.id]?.due <= Date.now()).length;
   const stats = attempts ? [[attempts, 'answers practised'], [`${Math.round(correct / attempts * 100)}%`, 'all-time accuracy'], [due, 'ready for review']] : [['01', 'small daily habit'], ['10', 'questions to begin'], ['∞', 'room to grow']];
   $('progress-overview').innerHTML = stats.map(([value, label]) => `<div class="mini-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+  activities?.home();
 }
 
 function goHome() {
+  activities?.stop();
   pause(false);
   showScreen('home');
   renderHome();
 }
 function start() {
+  if (activities.activity !== 'quiz') { pause(false); showScreen('training'); void activities.start(); return; }
   if (!state.active) state.active = createRound(state.settings, state.history);
   paused = false;
   showScreen('quiz');
@@ -113,6 +118,7 @@ function start() {
   if (isMidiMode() && !midi.status.connected && !midi.wanted) void midi.connect();
 }
 function pause(render = true) {
+  if (screen === 'training') activities?.pause();
   midi.phrase.setActive(false);
   captureTime();
   clearTimeout(nextTimer);
@@ -273,6 +279,7 @@ function finish() {
 
 function openDialog(id) {
   if (screen === 'quiz' && !paused) pause();
+  if (screen === 'training') pause(false);
   $(id).showModal();
 }
 function openCustomize() {
@@ -333,8 +340,10 @@ function renderMidi(status) {
   if (isMidiMode() && !status.connected) captureTime();
   else startClock();
   renderMidiQuiz();
+  activities?.midiChanged(status);
 }
-const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
+const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (screen === 'training') { activities?.receive(event); return; } if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
+activities = new Activities({ goHome, openDialog, renderHome, getQuizSettings: () => state.settings, midi });
 document.querySelectorAll('[data-input-mode]').forEach(button => { button.onclick = () => setInputMode(button.dataset.inputMode); });
 $('midi-use-touch').onclick = () => setInputMode('touch');
 $('midi-connect').onclick = () => { setInputMode('midi'); void midi.connect(); };
@@ -364,7 +373,7 @@ $('pause-button').onclick = () => pause();
 $('resume-button').onclick = resume;
 for (const id of ['home-button', 'pause-home-button', 'result-home-button']) $(id).onclick = goHome;
 $('again-button').onclick = start;
-$('customize-button').onclick = openCustomize;
+$('customize-button').onclick = () => activities.activity === 'quiz' ? openCustomize() : activities.configure();
 $('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(); };
 $('about-button').onclick = () => openDialog('about-dialog');
 $('settings-button').onclick = () => {

@@ -12,7 +12,7 @@ chords on the staff, with short quizzes you can fit into your day.
 ## Start in a minute
 
 1. [Open the app](https://piano-quiz.pages.dev/).
-2. Tap **Choose notes** to pick your clef, notes, octaves, and chord types.
+2. Keep **Quiz** selected and tap **Choose notes** to pick your clef, notes, octaves, and chord types.
 3. Choose **Tap names** or **MIDI keyboard**, then tap **Let’s practise**.
 
 With tap answers, choose the letter and accidental, then **Check answer**. For
@@ -40,6 +40,13 @@ C5 sits in the third space. Keep C4–B4 selected if you want to practise both.
 
 Choosing C♯ does not add D♭ to the quiz. Tap answers check the written spelling;
 a MIDI keyboard checks the sounding pitch and octave.
+
+## Find your rhythm
+
+Choose **Metronome** from the activity selector on Home. Set a tempo from
+40–200 BPM and choose 3/4 or 4/4. The first beat is accented, and the beat lights
+help you follow along. Pause, resume, or mute the clicks whenever you need.
+Tempo changes during playback take effect at the next bar.
 
 ## Connect your keyboard
 

@@ -8,6 +8,16 @@ attempts advance immediately. Color cues are visual only. Chords retain release-
 phrase capture, with no post-answer lockout. Storage writes are coalesced outside the
 input callback, and page hide flushes progress. Touch feedback is unchanged.
 
+## Timing activities
+
+The metronome schedules Web Audio clicks 100 ms ahead with a 25 ms scheduling
+interval. Output timestamps map audio time to the MIDI/performance clock. The
+frame loop only renders the beat position; it does not schedule sound. Tempo and
+meter changes apply on a bar boundary. Pause stops scheduled oscillators as well
+as the scheduler. An explicit visual fallback is available if audio cannot start.
+Training preferences use their own storage key; selecting another activity keeps
+the unfinished quiz intact.
+
 ## Architecture
 
 - `js/quiz.js`: pool enumeration, written-name grading, scheduling, round state,

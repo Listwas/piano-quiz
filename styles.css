@@ -358,3 +358,44 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 .score-card.midi-correct{box-shadow:inset 0 0 0 3px var(--accent)}
 .score-card.midi-wrong{box-shadow:inset 0 0 0 3px var(--wrong)}
 #midi-action-hint.midi-mistake{color:var(--wrong)}
+
+/* Practice activities share the existing viewport and bottom action dock. */
+#activity-select{display:block;width:100%;max-width:230px;min-height:38px;margin-top:3px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:21px;font-weight:650;padding:0 24px 0 0;cursor:pointer}
+.app-shell[data-screen=training]>footer{display:none}
+#training-screen{display:flex;flex-direction:column;min-height:0}
+.training-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;min-height:48px}
+#training-body{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;overflow:hidden;padding:8px 0}
+#training-title{font-size:clamp(26px,4dvh,38px);letter-spacing:-.8px;text-align:center;flex-shrink:0}
+.beat-dots{display:flex;align-items:center;justify-content:center;gap:14px;min-height:20px;flex-shrink:0}
+.beat-dots span{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.beat-dots span.active{background:var(--accent);box-shadow:0 0 0 5px var(--accent-soft)}
+#metronome-display{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px}
+#metronome-number{font-family:Georgia,serif;font-size:clamp(70px,20dvh,170px);font-weight:400;line-height:1;color:var(--accent)}
+.tempo-controls{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px}
+.tempo-controls .secondary{width:48px;min-height:48px;padding:5px;font-size:24px}
+.tempo-controls input{width:75px;text-align:center}
+.tempo-controls select{width:75px}
+.tempo-controls :is(input,select),.training-fields :is(input:not([type=range]),select){height:48px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;padding:0 9px}
+#training-live-status{font-size:13px;line-height:1.4;min-height:38px;text-align:center;flex-shrink:0;max-width:100%}
+#training-actions{flex-shrink:0;padding-top:8px}
+.training-action-row{display:flex;gap:10px}
+.training-action-row>*{flex:1;min-width:0}
+#training-footnote{display:flex;align-items:center;justify-content:center;min-height:44px;text-align:center;font-size:11px}
+#training-visual{margin-bottom:8px}
+.training-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;margin:22px 0}
+.training-fields label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:8px;min-width:0}
+.training-fields input[type=range]{width:100%;height:48px;accent-color:var(--accent)}
+#training-form>.primary{margin-top:20px}
+@media(orientation:landscape) and (max-height:600px){
+ #training-body{gap:8px;padding:0}
+ #training-title{font-size:24px}
+ #metronome-display{flex-direction:row;gap:20px}
+ #metronome-number{font-size:clamp(52px,18dvh,90px)}
+ .tempo-controls{margin-top:0}
+ #training-live-status{min-height:20px;font-size:11px}
+ #training-footnote{min-height:32px}
+}
+:root[data-short-viewport] #training-body{gap:4px}
+:root[data-short-viewport] #training-title{font-size:22px}
+:root[data-short-viewport] #training-footnote{min-height:22px}
+@media(max-width:360px){#activity-select{font-size:19px}.training-heading{gap:3px}.training-heading .text-button{font-size:11px}}
