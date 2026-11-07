@@ -26,8 +26,8 @@
   ],
   "errors": [],
   "limits": [],
-  "build": "66d5448b286fc3",
-  "testedAt": "2026-11-07T01:14:33.796Z",
+  "build": "4841977d1ebe7a",
+  "testedAt": "2026-11-07T11:46:13.040Z",
   "audio": "real sample output signal and pause suspension verified",
   "result": "passed"
 }

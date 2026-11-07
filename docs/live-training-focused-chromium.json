@@ -1,15 +1,15 @@
 {
   "engine": "chromium",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "a8fde080222148",
-  "testedAt": "2026-11-07T01:30:36.532Z",
+  "build": "4841977d1ebe7a",
+  "testedAt": "2026-11-07T11:45:25.390Z",
   "checks": [
-    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note"
+    "sight-reading resets the entire bar on wrong pitches and short holds, then waits for the downbeat"
   ],
   "errors": [],
   "limits": [
     "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
   ],
   "result": "passed",
-  "filter": "beginner MIDI rhythm"
+  "filter": "sight-reading resets"
 }

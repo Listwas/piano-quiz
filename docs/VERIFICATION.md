@@ -1,151 +1,96 @@
 # Verification
 
-Published and tested on 2026-11-07 (Europe/Warsaw).
+Published on 2026-11-07 (Europe/Warsaw).
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `a8fde080222148`
-- Production deployment: `a64fde56-aa66-413e-a149-c13caa294694`
-- Immutable URL: https://a64fde56.piano-quiz.pages.dev/
+- Release: `4841977d1ebe7a`
+- Production deployment: `5e0b980a-1daf-45c4-aa57-f924cd73060e`
+- Immutable URL: https://5e0b980a.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
-## Latest UI update
+## Current results
 
-Release `a8fde080222148` shows exactly one bar at a time in Rhythm and Sight-reading,
-on every screen size. The next bar appears during its existing count-in. Rhythm
-input selection remains on Home.
+| Check | Chromium | Firefox | WebKit | Where |
+| --- | --- | --- | --- | --- |
+| Training | 14 passed | 14 passed | 14 passed | Local release build |
+| Quiz and Home UI | 20 passed | 20 passed | 20 passed | Production |
+| Viewport and rotation | 10 passed | 10 passed | 10 passed | Production |
+| Service-worker updates | 4 passed | 4 passed | 4 passed | Isolated two-version server |
+| Sight-reading retry and full hold meter | 1 passed | — | — | Production |
 
-All 71 unit tests and all 14 training scenarios passed in each of Chromium,
-Firefox and WebKit against the local build. The checks verify one rendered bar,
-rotation, touch and MIDI holds, guided and continuous reading, bar transitions,
-count-ins, reconnects and note-picker controls. Reports:
-[Chromium](training-chromium.json), [Firefox](training-firefox.json),
-[WebKit](training-webkit.json).
+**77 unit tests passed.** All reports above record this release hash and have no
+uncaught page errors. The full general browser suites include real service-worker
+installation and fresh offline reloads from production.
 
-The one-bar transition and count-in scenario also passed on production in
-Chromium: [live check](live-training-focused-chromium.json).
+Reports: [units](unit.json), [training](training-chromium.json),
+[live quiz and Home](live-chromium.json), [live viewport](live-viewport-chromium.json),
+[updates](update-chromium.json), [live bar retry](live-training-focused-chromium.json).
+Full training, general browser, viewport and update reports also exist for Firefox
+and WebKit using their engine names.
 
-## Full regression baseline
+All **39 served files** were fetched from production and compared byte for byte
+with `dist/`. Home returned HTTP 200; CSP and `midi=(self)` were checked.
+See [asset verification](live-assets.json). The 40-file release ZIP was reopened
+to verify members, CRC integrity and exact bytes; its size and SHA-256 are in
+[release.json](release.json).
 
-The comprehensive browser results below describe the preceding release
-`66d5448b286fc3`. This small UI update was checked separately as described above.
-The asset verification and archive metadata describe the current release.
+## Sight-reading and hold feedback
 
-All 39 served files were fetched from production and compared byte for byte with
-`dist/`. HTTP 200, CSP and the MIDI permissions policy were checked.
-See [asset verification](live-assets.json).
+Sight-reading always checks the metronome timing. Pitch errors, off-beat attacks,
+missed notes, short or long holds, and rest violations restart the entire failed
+bar. The same notes remain, earlier completed bars survive, and retry counts stay
+visible in results. Both pacing choices enforce these rules. Free per-note Guided
+reading is no longer exposed by the app.
 
-| Engine | Quiz | Viewport / rotation | MIDI | Training | Offline updates |
-| --- | --- | --- | --- | --- | --- |
-| Chromium | 20 passed | 10 passed | 6 passed + native loopback | 14 passed | 4 passed |
-| Firefox | 20 passed | 10 passed | 6 passed | 14 passed | 4 passed |
-| WebKit | 20 passed | 10 passed | 6 passed | 14 passed | 4 passed |
+The metronome continues without being restarted. The failed bar's new start is
+aligned to a future downbeat on that clock, with at least one beat to prepare.
+The countdown and header timer use that same deadline. Inputs during the retry
+wait cannot advance the bar. Pause, disconnect and resume replace a pending retry
+with a fresh count-in. Only one bar is rendered on every viewport size.
 
-Reports record the exact build, origin and test time, with no uncaught page errors:
-[live quiz](live-chromium.json), [viewport](live-viewport-chromium.json),
-[MIDI](live-midi-chromium.json), [training](live-training-chromium.json),
-and [updates](update-chromium.json). Matching Firefox and WebKit reports use the
-same filenames with their engine names.
+Tests verify rollback after an earlier correct note in the same bar, ignored keys
+during the countdown, matching retry/downbeat timestamps, and recovery after a
+short release. Missing the first note of the next bar restarts that bar while
+retaining the previous bar's results. Unit tests also cover attacks and held keys
+through rests, a release error across a barline, and beat grids in 3/4 and 4/4.
 
-**71 unit tests passed**, including audio preparation and cancellation, MIDI
-lifecycle and timestamps, exact written-note pools, all chord qualities, octave
-selection, review accounting, save compatibility, offline caches, phrase generation,
-audio/performance clock mapping, stable scoring targets, half-note duration checks,
-late-delivered input, rest violations, guided retries and interrupted-bar recovery.
-See [unit results](unit.json).
+A valid release displays a completely filled hold meter for 200 ms. A fresh attack
+clears that visual latch immediately, so it does not delay grading. Browser tests
+read 100% and the release label synchronously after the MIDI release. Explicit
+track/fill CSS gives the meter a consistent full-width appearance.
 
-## Responsive MIDI quiz
+## Home, mobile and compatibility
 
-Fresh single-note presses grade synchronously and advance or retry immediately.
-A wrong key followed immediately by the right key succeeds in the same browser
-script task. A fresh press can answer while another key is held; duplicate Note On
-and old releases do not answer again. First-attempt history remains independent
-of retries. Touch answers retain their readable feedback duration.
+The Home activity picker has a theme-colored background, rounded border, chevron,
+and visible keyboard focus. It remains a native select for keyboard and mobile
+interaction; the platform controls the mobile option popup. Other settings
+pickers retain their existing styling.
 
-Chords still collect a complete overlapping phrase until physical key release,
-then accept the next attempt without a feedback lockout. Tests cover sustain,
-channels, partial chords, saved legacy feedback, pause, dialogs and reconnects.
-Recheck recovers delayed closes, changed IDs and stale device lists. Native Chromium
-also grades C4 through ALSA **Midi Through Port-0** before and after real Recheck.
-Only that virtual output is used by tests; the app opens no MIDI output or SysEx.
+Coverage includes iPhone 14 Pro Max portrait and landscape, Honor MagicPad 2
+portrait and landscape, a 320 × 568 phone, compact tablet windows and desktop.
+Safe areas and visible-height changes are simulated. Rotation checks use browser
+touch input on Pause, Resume and Settings. Main screens do not scroll, settings
+can scroll, and note-picker Save remains visible. All fourteen palettes, exact
+sharp/flat selections, higher octaves, saved rounds and explicit updates remain
+covered.
 
-These establish the absence of intentional application delays; they do not measure
-physical keyboard transport latency.
+Current MIDI training uses a simulated browser MIDI device with real DOM event
+routing and timestamps. Protocol, reconnect, channel and sustain handling are
+also covered by unit tests. Earlier native Chromium **Midi Through Port-0**
+loopback evidence remains in the older MIDI reports; it is not counted as a new
+physical MIDI test for this release.
 
-## Metronome, rhythm and sight-reading
-
-Fourteen training scenarios per engine verify:
-
-- Scheduled, accented metronome clicks; pause, resume, mute and saved setup.
-- Activity switching preserves the unfinished quiz.
-- Phone/tablet rotation keeps metronome controls touchable.
-- Real browser pointer press/releases distinguish a half note held for one beat
-  from its required two beats; other correctly held notes score correctly.
-- Rhythm notation and its pad fit rotating phone/tablet layouts.
-- Simulated MIDI rhythm accepts different pitches and scores physical holds.
-- Guided C5 sight-reading retries a wrong pitch and an early release, then advances
-  after a valid two-beat hold; first-try pitch and duration scores remain separate.
-- Continuous C5 reading keeps time and separates wrong pitches from short holds.
-- Disconnect, Recheck, rotation and resume preserve sight-reading configuration;
-  reload returns to setup without automatically starting audio or MIDI.
-- Missing MIDI leaves the quiz, metronome and touch rhythm available.
-- Save remains visible and receives touches at either end of the note picker,
-  across phone/tablet portrait and landscape profiles.
-- Home and live Touch/MIDI selectors switch the active input with explicit labels.
-- Long presses retain the hold; context-menu events are cancelled. Chromium also
-  uses a real browser touch sequence. This does not prove physical Android menus.
-- Beginner MIDI attacks and shorter-but-valid holds score correctly, remain
-  pending until release, and get a full read-ahead count-in before the next bar.
-
-The shared clock schedules Web Audio ahead; animation frames do not schedule sound.
-Output mapping settles during count-in and is frozen before the exercise. Timing
-uses original input timestamps. Guided exercises wait for valid pitch and duration;
-continuous exercises keep moving within each played bar. Beginner timing and
-a full-bar read-ahead count-in between bars are defaults; Strict timing and
-uninterrupted Flow are optional. Green appears only after a correct release;
-the hold meter and release cue remain visible in both input modes. Pause restarts
-the interrupted bar with a count-in,
-retaining completed-bar results. Training preferences/results are separate from
-quiz review history. Mixed clefs alternate between phrases; exact note selections
-and octave ranges are retained.
-
-## Mobile, offline and screenshots
-
-Viewport coverage includes iPhone 14 Pro Max portrait (430 × 932) and landscape
-(932 × 430), a 320 × 568 phone, Honor MagicPad 2 portrait (800 × 1280) and landscape
-(1280 × 800), compact tablet windows (1024 × 600), and desktop (1440 × 900).
-Safe areas are simulated. Consecutive rotations use real browser touch taps on
-Pause, Resume and Settings. A simulated 96px visible-height reduction keeps action
-rows inside the visible area and aligned across pause and feedback.
-
-Main screens do not scroll; dialogs can scroll. Small phone and short landscape
-exercise views show the current bar so notation stays readable. All fourteen themes and Device
-preference, non-selectable text, pinch/double-click guards, exact sharp/flat
-selection, higher C5 notation, saved rounds and background interruption are covered.
-
-Each engine installs the production HTTPS service worker and continues a quiz after
-a fresh offline reload. The isolated update suite serves two worker versions and
-checks waiting activation, preserved rounds/history and replacement of the old cache.
-The 40-file release ZIP is reopened to verify members, CRC integrity and exact bytes;
-its size and SHA-256 are recorded in [release.json](release.json).
-
-Authentic browser captures:
-
-- [Quiz](images/gameplay.png)
-- [Metronome](images/metronome-chromium.png)
-- [Rhythm](images/rhythm-chromium.png)
-- [Rhythm results](images/rhythm-results-chromium.png)
-- [Guided sight-reading](images/sight-guided-chromium.png)
-- [Tablet sight-reading](images/sight-tablet-chromium.png)
-- [Tablet MIDI](images/rotation-tablet-midi-webkit.png)
-- [Themes](images/themes.png)
+Screenshots: [Home](images/home.png), [bar retry countdown](images/sight-guided-chromium.png),
+[tablet sight-reading](images/sight-tablet-chromium.png), [rhythm](images/rhythm-chromium.png).
+These are authentic browser captures.
 
 ## Limits
 
-These are automated headless browser tests. Physical iPhone 14 Pro Max, Honor
-MagicPad 2, USB/Bluetooth MIDI hardware, system bars, and acoustic timing have not
-been measured. Native MIDI loopback is not a physical keyboard test.
+Tests run headlessly. Physical iPhone, Honor tablet, USB/Bluetooth MIDI transport,
+Android menus, system bars and acoustic timing have not been measured. Browser
+emulation and virtual MIDI do not establish physical-device latency.
 
-Chromium and Firefox verify a real piano sample produces a nonzero audio signal.
-WebKit's Linux audio backend cannot start in this environment; the app's explicit
-visual-beat fallback and graceful unavailable-audio message are verified. This
-does not establish physical Safari audio playback or MIDI compatibility.
+Chromium and Firefox verify actual sample output. WebKit's Linux audio backend
+cannot start in this host; the app's explicit visual-beat fallback and unavailable
+audio message are verified instead. Physical Safari audio and MIDI compatibility
+are not established by the simulated MIDI tests.

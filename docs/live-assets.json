@@ -1,7 +1,7 @@
 {
-  "build": "a8fde080222148",
+  "build": "4841977d1ebe7a",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-07T01:30:37.543Z",
+  "testedAt": "2026-11-07T11:46:21.156Z",
   "result": "passed",
   "files": [
     {
@@ -107,12 +107,12 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "e0a6d5d10a3983c6cfd2786297a46c2629dc9652bda289c2d75d0c27712f2380"
+      "sha256": "0e031b0b573b21f67050b74e002be10a7d410eaf0148defeacb0fc96b8ea489f"
     },
     {
       "path": "js/activities.js",
       "status": 200,
-      "sha256": "6917d11b5980940a3b049330dfbf9273be8fcec5fb314d3c83010ff60ea37259"
+      "sha256": "0bd0c67b49453d488ff67f1d58a1200e779fa900bf972e15e531cef0bc435c82"
     },
     {
       "path": "js/app.js",
@@ -167,12 +167,12 @@
     {
       "path": "js/timing.js",
       "status": 200,
-      "sha256": "5adcc152ba30a37929d8d3d2bbeb3b1855d0aea4407d9802d7e21c07a64b0552"
+      "sha256": "f96f85ac1446d0eb5fe47ca6e26fefaeffd10f537eede839544371388632a6e6"
     },
     {
       "path": "js/training.js",
       "status": 200,
-      "sha256": "36d943d0e0c46709a2e347aab2ddfd3da4ed55e43db621b8f9334c321da47885"
+      "sha256": "f3c59e25461882d64d89d45142b9322a9db737e3346a001a87a5a20102107059"
     },
     {
       "path": "js/viewport.js",
@@ -187,17 +187,17 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "0072b77a41bac076c645ee6736f3231f38937f95874279e4c2ce8c0677c1b178"
+      "sha256": "c54343d502a20117bdf50a9606ff82acb138daf143acac8bad71eafba16f1659"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "3788cc273c828d927fe6fec0a260b3c5a17cafc8b8ef587291505ee6c43a66d1"
+      "sha256": "e098414ada08b47ea00f1264f5cb094eb92df64cf9b1dba297ba8d0d88a1f348"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "60c1b917146fbdd17a2aa6f9de619e846eeffd086eb805a4ca24e2e44b19e11d"
+      "sha256": "4c9f5c406bf4668dcac7e428714996a74057c556529873e7adc9b1fc0f8c5f82"
     }
   ],
   "headers": {
