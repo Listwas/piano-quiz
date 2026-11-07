@@ -98,3 +98,45 @@ test('only unreleased final notes fail at the end; valid releases stay correct',
  s.tick(7000);assert.equal(s.done,true);assert.equal(s.results.get(0).status,'correct');assert.equal(s.results.get(1).status,'wrong');
  assert.equal(s.position(5500).beat,4);assert.equal(s.position(5500).preparing,false);
 });
+
+test('sight-reading rolls back the entire failed bar and ignores keys during its retry count-in',()=>{
+ const p=phrase();p.bars=2;p.totalBeats=8;p.events.push(...p.events.map(e=>({...e,id:e.id+3,bar:1,beat:e.beat+4})));
+ const s=new ExerciseSession(p,{retryOnError:true});s.startTime=1000;
+ note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',62,3000);note(s,'off',62,4000);
+ s.tick(5100);note(s,'on',60,5000);note(s,'off',60,7000);note(s,'on',63,7000);
+ assert.equal(s.failure.reason,'Wrong note');assert.equal(s.failure.bar,1);
+ s.retryBar(7000,9000);assert.equal(s.startBar,1);assert.equal(s.current.id,3);assert.equal(s.results.has(3),false);assert.equal(s.results.get(0).status,'correct');assert.equal(s.barFailures,1);
+ note(s,'off',63,7100);note(s,'on',60,8500);note(s,'off',60,8600);s.tick(8900);
+ assert.equal(s.results.has(3),false);assert.equal(s.failure,null);assert.equal(s.startTime,9000);
+ note(s,'on',60,9000);note(s,'off',60,11000);assert.equal(s.results.get(3).status,'correct');
+});
+test('timed sight-reading rejects off-beat, missed, too-short and too-long notes',()=>{
+ for(const scenario of ['offbeat','missed','short','long']){
+  const s=new ExerciseSession(phrase(),{retryOnError:true});s.startTime=1000;
+  if(scenario==='offbeat')note(s,'on',60,1400);
+  if(scenario==='missed')s.tick(1140);
+  if(scenario==='short'){note(s,'on',60,1000);note(s,'off',60,2000);}
+  if(scenario==='long'){note(s,'on',60,1000);s.tick(3350);}
+  assert.ok(s.failure,scenario);assert.equal(s.failure.bar,0);s.retryBar(3400,5000);assert.equal(s.current.id,0);assert.equal(s.results.size,0);assert.equal(s.holding.size,0);
+ }
+});
+test('sight-reading detects both attacks and held keys during rests',()=>{
+ for(const held of [false,true]){
+  const s=new ExerciseSession(phrase(),{retryOnError:true});s.startTime=1000;
+  note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',62,3000);
+  if(!held){note(s,'off',62,4000);note(s,'on',60,4200);}else s.tick(4120);
+  assert.equal(s.failure.reason,'Played during a rest');
+ }
+});
+test('a previous-bar release mistake restarts that bar even after the cursor crosses the barline',()=>{
+ const p=phrase();p.events=p.events.filter(e=>!e.rest);p.events[1].durationBeats=2;p.bars=2;p.totalBeats=8;p.events.push(...p.events.map(e=>({...e,id:e.id+2,bar:1,beat:e.beat+4})));
+ const s=new ExerciseSession(p,{retryOnError:true});s.startTime=1000;
+ note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',62,3000);s.tick(5020);note(s,'off',62,5350);
+ assert.equal(s.failure.bar,0);s.retryBar(5350,9000);assert.equal(s.current.id,0);assert.equal(s.results.size,0);
+});
+test('valid releases show a fully filled hold meter briefly without delaying the next attack',()=>{
+ const s=new ExerciseSession(phrase(true));s.startTime=1000;
+ note(s,'on',60,1000);assert.ok(s.holdDisplay(2980).value<1);note(s,'off',60,2990);
+ assert.equal(s.holdDisplay(2990).value,1);assert.equal(s.holdDisplay(3100).label,'Good release ✓');
+ note(s,'on',61,3020);assert.equal(s.holdDisplay(3020).value,0);assert.equal(s.holding.size,1);
+});

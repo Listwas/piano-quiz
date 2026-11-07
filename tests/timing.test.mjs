@@ -52,3 +52,13 @@ test('count-in settles the audio mapping, then scoring targets stop moving', asy
   now=2500;estimate=1800;assert.equal(clock.exerciseStart,2320);
  }finally{clock.stop();globalThis.requestAnimationFrame=oldRAF;globalThis.cancelAnimationFrame=oldCancel;}
 });
+
+test('retry downbeats stay aligned to the running metronome in 3/4 and 4/4',()=>{
+ for(const meter of [3,4]){
+  const clock=new BeatClock({now:()=>1000});Object.assign(clock,{context:null,anchor:1000,performanceAnchor:1000,step:.5,countIn:meter,meter});
+  const start=clock.exerciseStart;
+  assert.equal(clock.nextDownbeat(start+750),start+meter*500);
+  assert.equal(clock.nextDownbeat(start+meter*500),start+meter*1000);
+  assert.equal(clock.nextDownbeat(start+meter*1000+10),start+meter*1500);
+ }
+});

@@ -41,7 +41,7 @@ export class Activities {
     $('training-form').onsubmit = event => {
       event.preventDefault();
       const old = this.settings;
-      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','style','input','pace','accuracy'].map(key => [key,$(`training-${key}`).value])) });
+      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','input','pace','accuracy'].map(key => [key,$(`training-${key}`).value])) });
       $('training-dialog').close(); saveTraining(this.state); renderHome();
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
@@ -106,7 +106,7 @@ export class Activities {
     $('resume-note').textContent = 'Your unfinished round is ready when you are.';
     if (quiz) { $('customize-button').innerHTML = 'Choose notes <span aria-hidden="true">↗</span>'; return; }
     $('practice-title').textContent = labels[this.activity];
-    const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? this.settings.style === 'guided' ? 'Guided · MIDI keyboard' : 'Continuous · MIDI keyboard' : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
+    const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? 'MIDI keyboard · retry each bar' : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
     $('practice-detail').textContent = this.supported ? `${this.settings.bpm} BPM · ${this.settings.meter}/4 · ${detail}` : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
     $('customize-button').textContent = 'Set up ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
@@ -118,11 +118,11 @@ export class Activities {
   configure() {
     this.pause();
     $('training-setup-title').textContent = `${labels[this.activity]} setup`;
-    for (const key of ['bpm','meter','volume','offset','bars','complexity','style','input','pace','accuracy']) $(`training-${key}`).value = this.settings[key];
+    for (const key of ['bpm','meter','volume','offset','bars','complexity','input','pace','accuracy']) $(`training-${key}`).value = this.settings[key];
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Uses your selected notes, octaves and clefs. Guided waits for you on every note. Continuous uses the Between bars setting. Notes turn green only after a correct hold and release.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    $('training-setup-help').textContent = this.activity === 'sight' ? 'Play your selected notes on the beat. A wrong pitch, missed beat, bad hold or rest mistake restarts the whole bar on the next downbeat. Watch the countdown and release cue.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
     this.openDialog('training-dialog');
   }
 
@@ -168,11 +168,12 @@ export class Activities {
 
   async start(resume = false) {
     const request = ++this.request;
+    this.sessionOffset = 0;
     this.active = true; this.paused = false; this.starting = true; this.completed = false; this.lastBeat = null;
     if (this.exercise && (!resume || !this.session)) {
       try {
         this.phrase = generatePhrase(this.settings,this.getQuizSettings(),{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++});
-        this.session = new ExerciseSession(this.phrase,{...this.settings,guided:this.activity==='sight'&&this.settings.style==='guided'});
+        this.session = new ExerciseSession(this.phrase,{...this.settings,retryOnError:this.activity==='sight'});
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }
     this.drawSignature = null;
@@ -211,10 +212,11 @@ export class Activities {
       for (const dot of $('training-beats').children) dot.classList.toggle('active', Number(dot.dataset.beat) === index);
     }
     if (!this.exercise || !this.session || this.completed) return;
-    this.session.startTime = startTime;
-    $('exercise-score').dataset.startTime = startTime;
-    if (beat < 0) { this.message(`Get ready · ${Math.max(1,Math.ceil(-beat))}`); return; }
+    this.session.startTime = startTime + this.sessionOffset;
+    $('exercise-score').dataset.startTime = this.session.startTime;
+    if (time < this.session.startTime) { this.draw(time); this.countdown(time); return; }
     this.session.tick(time);
+    if (this.retryFailure(time)) return;
     if (this.session.done) { this.finish(); return; }
     this.draw(time);
     const position = this.session.position(time);
@@ -222,7 +224,7 @@ export class Activities {
       this.message(`Read bar ${position.bar+1} · count in ${Math.ceil(position.remaining)}`);
       return;
     }
-    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Different|Try |Between|Rest here|Rest means/.test(this.session.feedback));
+    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : this.activity === 'sight' ? 'Follow the beat. Complete this bar to move on.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Different|Try |Between|Rest here|Rest means/.test(this.session.feedback));
   }
 
   draw(time) {
@@ -242,12 +244,10 @@ export class Activities {
       if (visible) cursor.setAttribute('transform',`translate(${scoreX(Math.max(0,Math.min(this.phrase.meter,progress-bar*this.phrase.meter)),this.phrase.meter)} 0)`);
     }
     const held = [...this.session.holding.values()][0];
-    const target = held?.target ?? this.session.current;
-    const elapsed = held ? (time-this.session.offset-held.result.on)/this.session.beatMs : target?.rest ? progress-target.beat : 0;
-    $('hold-progress').value = target ? Math.min(1,Math.max(0,elapsed)/target.durationBeats) : 0;
-    const releasing = held && elapsed >= target.durationBeats;
-    $('hold-label').textContent = releasing ? 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}`;
-    $('training-touchpad').textContent = held ? releasing ? 'Release now' : 'Keep holding…' : 'Press and hold';
+    const coach = this.session.holdDisplay(time);
+    $('hold-progress').value = coach.value;
+    $('hold-label').textContent = coach.label;
+    $('training-touchpad').textContent = held ? coach.releasing ? 'Release now' : 'Keep holding…' : 'Press and hold';
     for (const measure of $('exercise-score').children) {
       for (const note of measure.querySelectorAll('[data-event]')) {
         const holding = [...this.session.holding.values()].some(value => value.target.id === Number(note.dataset.event));
@@ -260,10 +260,29 @@ export class Activities {
   receive(event, source = 'midi') {
     if (!this.active || !this.exercise || !this.clock.running || document.hidden || document.querySelector('dialog[open]') || source === 'midi' && !this.requiresMidi) return;
     if (event.type === 'reset') { this.pause('Keyboard notes reset. Resume to retry this bar.'); return; }
-    this.session.startTime = this.clock.exerciseStart;
+    this.session.startTime = this.clock.exerciseStart + this.sessionOffset;
     this.session.input(event);
+    if (this.retryFailure(performance.now())) return;
+    if (performance.now() < this.session.startTime) { this.draw(performance.now()); this.countdown(performance.now()); return; }
     if (this.session.done) this.finish();
     else { this.draw(performance.now()); if (this.session.feedback) this.message(this.session.feedback); }
+  }
+
+  countdown(time) {
+    const count = Math.max(1, Math.ceil((this.session.startTime-time)/this.session.beatMs));
+    const retry = this.session.retryReason;
+    this.message(retry ? `${retry} · get ready to play in ${count} beat${count === 1 ? '' : 's'}` : `Get ready · ${count}`, Boolean(retry));
+    if (retry) $('training-progress').textContent = `${this.settings.bpm} BPM · Retry in ${count}`;
+  }
+  retryFailure(time) {
+    if (!this.session?.failure) return false;
+    const start = this.clock.nextDownbeat(time + this.session.beatMs);
+    this.session.retryBar(time,start);
+    this.sessionOffset = start-this.clock.exerciseStart;
+    $('exercise-score').dataset.startTime = start;
+    this.drawSignature = null;
+    this.draw(time); this.countdown(time);
+    return true;
   }
 
   pause(message = 'Paused. Resume starts this bar with a count-in.') {
@@ -286,7 +305,7 @@ export class Activities {
     this.clock.stop(); this.completed = true; this.paused = false;
     this.state.lastResult = result; saveTraining(this.state); this.refresh();
     const metrics = [[result.pitch,'Pitch'],[result.onset,'On the beat'],[result.holds,'Note lengths']].filter(([value])=>value!==null);
-    $('training-summary').innerHTML = `<div class="training-metrics">${metrics.map(([value,label])=>`<div><strong>${value}%</strong><span>${label}</span></div>`).join('')}</div><p class="muted">${result.total} notes · ${result.missed} missed · ${result.extras} extra</p><p class="small muted">${result.style==='guided'?`${result.retries} retries · first-try pitch and note lengths`:`${result.restErrors} rest mistakes${result.meanError===null?'':` · average ${Math.abs(result.meanError)} ms ${result.meanError<0?'early':'late'}`}`}</p>`;
+    $('training-summary').innerHTML = `<div class="training-metrics">${metrics.map(([value,label])=>`<div><strong>${value}%</strong><span>${label}</span></div>`).join('')}</div><p class="muted">${result.total} notes · ${result.missed} missed · ${result.extras} extra</p><p class="small muted">${result.style==='guided'?`${result.retries} retries · first-try pitch and note lengths`:`${this.activity==='sight'?`${result.retries} bar retries · `:''}${result.restErrors} rest mistakes${result.meanError===null?'':` · average ${Math.abs(result.meanError)} ms ${result.meanError<0?'early':'late'}`}`}</p>`;
     this.message('Every little practice counts. Try again at your own pace.');
   }
 }

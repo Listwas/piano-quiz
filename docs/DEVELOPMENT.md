@@ -39,14 +39,19 @@ onset spacing), and ±30% of note length or 140 ms for holds (capped at 40% for 
 Attacks remain pending until release; only validated notes turn green. The
 hold meter uses actual press time, with an explicit release cue and measured
 versus expected beat lengths on a bad release. Only unreleased notes are failed
-when the exercise ends. Slightly early first attacks use the same window.
+when the exercise ends. Sight-reading also fails an overdue hold during play.
+A valid release latches the meter at 100% for 200 ms; a fresh attack clears the
+latch immediately, without input delay. Progress uses explicit themed browser
+track/fill styles so its full value reaches the end of the track. Slightly early
+first attacks use the same window.
 
 Practice pacing inserts one unscored, full-bar count-in between played bars.
 The score renders only the current bar at every viewport size. The session's
 expected-time and position functions include these gaps, so the
 next measure appears before its first deadline and cannot be marked missed
 during preparation. Resume starts at the interrupted bar without carrying its
-previous gaps. Flow pacing omits gaps; Guided waits on every note as before.
+previous gaps. Flow pacing omits gaps between successful bars. In Sight-reading, mistakes
+still retry the bar with either pacing choice.
 
 The note picker has its own scrolling choices and a fixed header/action footer,
 including validation errors. Save stays visible at any list position.
@@ -54,10 +59,16 @@ including validation errors. Save stays visible at any list position.
 ## Sight-reading
 
 Single-voice phrases use only selected written note names and octave groups.
-Mixed clefs alternate per generated phrase. Guided practice waits for the right
-pitch and a valid physical hold/release, retrying the same note otherwise.
-Continuous practice claims the nearest unclaimed onset inside its tolerance and
-keeps moving. Onsets and note lengths are independent scores. The clock maps audio
+Mixed clefs alternate per generated phrase. Sight-reading always grades onset
+timing, pitch and physical hold/release. A failed pitch, onset, release, missing
+note or violated rest resets all results in the failed bar. Completed earlier
+bars survive; the retry count persists. The existing metronome keeps running.
+`nextDownbeat()` selects a restart on its original bar grid, and a session offset
+remaps the failed bar to that beat. The on-screen countdown and timer use the
+same target. Input during the wait cannot claim a note. Pausing or disconnecting
+cancels that countdown and resumes with a fresh count-in. The old per-note
+`guided` model flag remains internal compatibility code; the app never passes
+it. Onsets and note lengths are independent scores. The clock maps audio
 output into the performance time domain during count-in, then freezes that mapping
 200 ms before the exercise, preventing output estimates from moving scoring targets.
 Generated note values are whole, half, quarter and eighth notes, with corresponding
@@ -101,7 +112,7 @@ npm run test:browser # Chromium
 npm run test:update # isolated real service-worker update test
 npm run test:midi # MIDI API/device simulation plus native Chromium virtual loopback
 npm run test:viewport # safe areas, zoom guards, rotations and real touch targets
-npm run test:training # metronome, rhythm holds, guided/continuous reading, MIDI and rotation
+npm run test:training # metronome, rhythm holds, timed bar retries, MIDI and rotation
 ```
 
 Tests use Playwright and are always headless. Chromium defaults to

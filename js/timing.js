@@ -48,6 +48,10 @@ export class BeatClock {
   }
   get exerciseStart() { return this.startTime + this.countIn * this.step * 1000; }
   beatAt(time) { return (time - this.startTime) / (this.step * 1000) - this.countIn; }
+  nextDownbeat(time = this.now()) {
+    const beat = this.beatAt(time);
+    return this.exerciseStart + (Math.floor((beat + .000001) / this.meter) + 1) * this.meter * this.step * 1000;
+  }
 
   change(bpm, meter) {
     if (!this.running) { this.bpm = bpm; this.meter = meter; return; }

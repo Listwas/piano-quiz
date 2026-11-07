@@ -57,8 +57,8 @@ export const holdTolerance = (milliseconds, accuracy = 'strict') => accuracy ===
 export const heldCorrectly = (actual, expected, accuracy) => Math.abs(actual - expected) <= holdTolerance(expected, accuracy);
 
 export class ExerciseSession {
-  constructor(phrase, { bpm = 60, offset = 0, guided = false, pace = 'flow', accuracy = 'strict' } = {}) {
-    Object.assign(this, { phrase, bpm, offset, guided, accuracy, gapBeats:!guided && pace === 'practice' ? phrase.meter : 0, beatMs:60000 / bpm, startTime:0, startBar:0, currentIndex:0, done:false, feedback:'', guidedRestStart:null });
+  constructor(phrase, { bpm = 60, offset = 0, guided = false, pace = 'flow', accuracy = 'strict', retryOnError = false } = {}) {
+    Object.assign(this, { phrase, bpm, offset, guided, accuracy, retryOnError, gapBeats:!guided && pace === 'practice' ? phrase.meter : 0, beatMs:60000 / bpm, startTime:0, startBar:0, currentIndex:0, done:false, feedback:'', guidedRestStart:null, failure:null, retryReason:'', barFailures:0, lastHold:null });
     this.extraBars = []; this.retryBars = [];
     this.results = new Map();
     this.attempts = new Map();
@@ -68,7 +68,25 @@ export class ExerciseSession {
     this.pastRests = new Map();
   }
   get extras() { return this.extraBars.length; }
-  get retries() { return this.retryBars.length; }
+  get retries() { return this.retryBars.length + this.barFailures; }
+  fail(reason, time, bar) { if (this.retryOnError && !this.failure) this.failure = { reason, time, bar }; }
+  retryBar(now, startTime) {
+    const failure = this.failure;
+    if (!failure) return;
+    this.restartBar(now, failure.bar);
+    this.barFailures++;
+    this.startTime = startTime;
+    this.retryReason = failure.reason;
+  }
+  holdDisplay(now) {
+    const held = [...this.holding.values()][0];
+    const target = held?.target ?? this.current;
+    if (!held && this.lastHold && now - this.lastHold.at < 200) return { value:1, label:'Good release ✓', releasing:false };
+    const elapsed = held ? (now-this.offset-held.result.on)/this.beatMs : target?.rest ? this.progress(now)-target.beat : 0;
+    const releasing = Boolean(held && elapsed >= target.durationBeats);
+    return { value:target ? Math.min(1,Math.max(0,elapsed)/target.durationBeats) : 0, releasing,
+      label:releasing ? 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}` };
+  }
   extraAt(time) { this.extraBars.push(this.guided ? this.current?.bar ?? this.phrase.bars-1 : Math.min(this.phrase.bars-1,this.position(time).bar)); }
   expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter + (event.bar - this.startBar) * this.gapBeats) * this.beatMs; }
   position(now) {
@@ -99,7 +117,7 @@ export class ExerciseSession {
     return this.presses.some(press => press.on < start + length - grace && (press.off ?? now) > start + grace);
   }
   input(event) {
-    if (this.done || event.type === 'reset') return;
+    if (this.done || this.failure || event.type === 'reset') return;
     const time = event.timeStamp - this.offset, key = `${event.channel}:${event.note}`;
     if (event.type === 'on') {
       if (this.keys.has(key)) return;
@@ -110,14 +128,18 @@ export class ExerciseSession {
       this.keys.get(key).off = time; this.keys.delete(key);
     }
     const first = this.phrase.events.find(e => e.bar === this.startBar && !e.rest);
+    if (this.retryReason && time < this.startTime) return;
+    if (time >= this.startTime) this.retryReason = '';
     if (time < this.startTime - (this.guided || !first ? 0 : this.window(first))) return;
     if (this.guided) { this.guidedInput(event, key, time); return; }
     if (event.type === 'on') {
+      this.lastHold = null;
       const candidates = this.phrase.events.filter(e => !e.rest && e.bar >= this.startBar && (!this.results.has(e.id) || this.results.get(e.id).status === 'missed') && Math.abs(time - this.expected(e)) <= this.window(e));
       candidates.sort((a,b) => Math.abs(time - this.expected(a)) - Math.abs(time - this.expected(b)) || a.beat - b.beat);
       const target = candidates[0];
-      if (!target) { if (this.position(time).preparing) return; this.extraAt(time); this.feedback = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs) ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; return; }
+      if (!target) { if (this.position(time).preparing) return; this.extraAt(time); const rest = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs); this.feedback = rest ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; this.fail(rest ? 'Played during a rest' : 'Off the beat',event.timeStamp,this.position(time).bar); return; }
       const error = time - this.expected(target), pitch = this.phrase.rhythm || event.note === target.tone.midi;
+      if (!pitch && this.retryOnError) { this.fail('Wrong note',event.timeStamp,target.bar); return; }
       const result = { pitch, onset:true, duration:null, error, on:time, status:pitch ? 'holding' : 'wrong' };
       this.results.set(target.id, result); this.holding.set(key, { target, result });
       this.feedback = !pitch ? 'Different note — keep following the beat.' : `Key received · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}.`;
@@ -130,6 +152,8 @@ export class ExerciseSession {
       if (!result.duration) this.feedback = this.durationFeedback(time - result.on, target.durationBeats * this.beatMs);
       else if (result.pitch) this.feedback = 'Good hold ✓';
       this.holding.delete(key);
+      if (result.pitch && result.duration) this.lastHold = { at:event.timeStamp };
+      if (!result.duration) this.fail(time-result.on < target.durationBeats*this.beatMs ? 'Too short' : 'Too long',event.timeStamp,target.bar);
     }
   }
   guidedInput(event, key, time) {
@@ -166,7 +190,8 @@ export class ExerciseSession {
     return `${actual < expected ? 'Too short' : 'Too long'} · held ${(actual / this.beatMs).toFixed(1)} of ${(expected / this.beatMs).toFixed(1)} beats.`;
   }
   tick(now) {
-    if (this.done || now < this.startTime) return;
+    if (this.done || this.failure || now < this.startTime) return;
+    this.retryReason = '';
     if (this.guided) {
       const target = this.current;
       if (!target) { this.done = true; return; }
@@ -184,9 +209,16 @@ export class ExerciseSession {
       return;
     }
     for (const event of this.phrase.events) {
-      if (event.rest || event.bar < this.startBar) continue;
+      if (event.bar < this.startBar) continue;
+      if (event.rest) {
+        if (this.retryOnError && now > this.expected(event)+Math.min(100,event.durationBeats*this.beatMs/4) && this.restFailed(event,now-this.offset)) { this.fail('Played during a rest',now,event.bar); return; }
+        continue;
+      }
+      if (this.retryOnError && !this.results.has(event.id) && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('Missed note',now,event.bar); return; }
       if (!this.results.has(event.id) && now > this.expected(event) + this.window(event) + Math.max(0,this.offset)) this.results.set(event.id, { pitch:false, onset:false, duration:false, status:'missed' });
       const result = this.results.get(event.id);
+      if (this.retryOnError && result?.status === 'missed' && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('Missed note',now,event.bar); return; }
+      if (this.retryOnError && result?.duration === null && now-this.offset-result.on > event.durationBeats*this.beatMs+holdTolerance(event.durationBeats*this.beatMs,this.accuracy)) { this.fail('Too long',now,event.bar); return; }
       if (result?.duration === null && result.pitch && now - this.offset - result.on >= event.durationBeats * this.beatMs) this.feedback = 'Release now.';
     }
     const { beat } = this.position(now);
@@ -205,9 +237,9 @@ export class ExerciseSession {
     const began = target.rest ? this.guidedRestStart : [...this.holding.values()][0]?.result.on;
     return target.beat + (began === null || began === undefined ? 0 : Math.min(target.durationBeats, Math.max(0,now - (target.rest ? 0 : this.offset) - began) / this.beatMs));
   }
-  restartBar(now) {
-    let bar = this.guided ? this.current?.bar ?? this.phrase.bars - 1 : Math.floor(Math.max(0,this.progress(now)) / this.phrase.meter);
-    for (const {target} of this.holding.values()) bar = Math.min(bar, target.bar);
+  restartBar(now, failedBar) {
+    let bar = failedBar ?? (this.guided ? this.current?.bar ?? this.phrase.bars - 1 : Math.floor(Math.max(0,this.progress(now)) / this.phrase.meter));
+    if (failedBar === undefined) for (const {target} of this.holding.values()) bar = Math.min(bar, target.bar);
     bar = Math.min(this.phrase.bars - 1,bar);
     for (const event of this.phrase.events) {
       if (event.bar >= bar) { this.results.delete(event.id); this.attempts.delete(event.id); }
@@ -216,6 +248,7 @@ export class ExerciseSession {
     this.extraBars = this.extraBars.filter(value=>value<bar); this.retryBars = this.retryBars.filter(value=>value<bar);
     this.keys.clear(); this.holding.clear(); this.presses = []; this.startBar = bar;
     this.currentIndex = this.phrase.events.findIndex(e => e.bar === bar); this.guidedRestStart = null; this.done = false;
+    this.failure = null; this.retryReason = ''; this.feedback = ''; this.lastHold = null;
     return bar;
   }
   summary(now = performance.now()) {

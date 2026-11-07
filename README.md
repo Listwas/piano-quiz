@@ -68,6 +68,7 @@ through mistakes, and the results show beat timing and note lengths separately.
 
 Start with **Simple** rhythms, or choose **Mixed** for eighth notes and rests.
 The hold meter shows when to release; green appears after a correct release.
+A valid release briefly keeps the meter completely full before the next note.
 Beginner timing is more forgiving, and a full-bar count-in between bars gives
 you time to read ahead. In **Set up**, choose **Strict** timing or **Keep playing**
 when you want a challenge, and adjust the tempo and exercise length.
@@ -80,24 +81,25 @@ Choose **Sight-reading** and use your MIDI keyboard to play short melodies.
 The exercise uses the notes, octaves, and clefs you chose in **Choose notes**.
 Your keyboard supplies the piano sound; the app supplies the beat.
 
-- **Guided** waits for the correct pitch and hold. If C needs two beats but you
-  release it after one, try C again. A valid hold and release moves you to D.
-- **Continuous** keeps the score moving at your chosen tempo. Keep playing
-  through mistakes; pitch, beat timing, and note lengths get separate scores.
+Play each note on the metronome beat and hold it for its full value. A wrong
+pitch, missed beat, short or long hold, or rest mistake resets the whole bar.
+The metronome keeps going while **“Wrong note · get ready to play in … beats”**
+counts you back in on a downbeat. Completed bars stay completed, and the results
+show how many bar retries you needed.
 
 Use **Choose notes** directly on Home or above the score to change your melody
 notes. **Save practice** stays visible while you browse the choices.
 
 One bar fills the score area on every screen. The next bar appears during its
 count-in, giving you time to read before playing. You can pause and retry the interrupted
-bar with a fresh count-in. Continuous reading also uses the **Between bars**
+bar with a fresh count-in. Sight-reading also uses the **Between bars**
 setting: a count-in by default, or no break when you choose **Keep playing**.
 Recent results save on this device and appear on Home.
 
 <details>
 <summary><strong>Take a look at the new practice modes</strong></summary>
 
-<p align="center"><img src="docs/images/metronome-chromium.png" width="260" alt="Metronome with beat lights and tempo controls"> <img src="docs/images/sight-guided-chromium.png" width="260" alt="Guided sight-reading with one bar of music and a hold-length coach"></p>
+<p align="center"><img src="docs/images/metronome-chromium.png" width="260" alt="Metronome with beat lights and tempo controls"> <img src="docs/images/sight-guided-chromium.png" width="260" alt="Sight-reading bar retry with a countdown and a hold-length coach"></p>
 
 </details>
 
