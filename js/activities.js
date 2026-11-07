@@ -26,6 +26,11 @@ export class Activities {
     $('training-visual').onclick = () => { this.visualOnly = true; void this.start(this.active && !this.completed); };
     $('training-recheck').onclick = () => { this.pause('Rechecking your keyboard…'); void midi.recheck(); };
     $('training-notes').onclick = () => { $('training-dialog').close(); openNotes(); };
+    $('home-training-notes').onclick = openNotes;
+    $('live-training-notes').onclick = () => { this.pause(); openNotes(); };
+    document.querySelectorAll('[data-training-input]').forEach(button => {
+      button.onclick = () => this.changeInput(button.dataset.trainingInput);
+    });
     const tempo = value => {
       this.settings.bpm = Math.max(40, Math.min(200, Math.round(Number(value)) || 60));
       this.clock.change(this.settings.bpm, this.settings.meter); saveTraining(this.state); this.refresh();
@@ -36,7 +41,7 @@ export class Activities {
     $('training-form').onsubmit = event => {
       event.preventDefault();
       const old = this.settings;
-      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','style','input'].map(key => [key,$(`training-${key}`).value])) });
+      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','style','input','pace','accuracy'].map(key => [key,$(`training-${key}`).value])) });
       $('training-dialog').close(); saveTraining(this.state); renderHome();
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
@@ -53,6 +58,11 @@ export class Activities {
     };
     $('training-touchpad').onpointercancel = () => this.pause('Touch was interrupted. Resume to retry this bar.');
     $('training-touchpad').onlostpointercapture = () => { if (this.pointer !== undefined) this.pause('Touch was interrupted. Resume to retry this bar.'); };
+    $('training-touchpad').oncontextmenu = event => event.preventDefault();
+    $('training-touchpad').onselectstart = event => event.preventDefault();
+    // Android can start its long-press gesture independently of Pointer Events.
+    // Keep the pointer stream for grading while cancelling the native gesture.
+    $('training-touchpad').addEventListener('touchstart', event => event.preventDefault(), { passive:false });
   }
 
   get activity() { return this.state.activity; }
@@ -61,11 +71,39 @@ export class Activities {
   get requiresMidi() { return this.activity === 'sight' || this.activity === 'rhythm' && this.settings.input === 'midi'; }
   get supported() { return !this.requiresMidi || this.midi.status.state !== 'unsupported'; }
 
+  inputStatus() {
+    const status = this.midi.status;
+    if (!this.requiresMidi) return status.connected ? 'Touch mode · MIDI is connected; select MIDI keyboard to use it.' : 'Touch mode · press and hold the pad below.';
+    return status.connected ? `MIDI mode · connected to ${status.selectedName}` : status.state === 'unsupported' ? 'MIDI unavailable in this browser.' : 'MIDI mode · keyboard not connected.';
+  }
+  inputControls() {
+    $('home-training-input').hidden = this.activity !== 'rhythm';
+    $('home-sight-tools').hidden = this.activity !== 'sight';
+    $('training-input-row').hidden = !this.exercise;
+    $('live-training-input').hidden = this.activity !== 'rhythm';
+    $('training-sight-tools').hidden = this.activity !== 'sight';
+    $('training-input-status').textContent = this.inputStatus();
+    document.querySelectorAll('[data-training-input]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.trainingInput === this.settings.input)));
+  }
+  changeInput(input) {
+    if (input === this.settings.input) return;
+    const wasRunning = this.clock.running;
+    if (this.active) this.pause();
+    this.settings.input = input; saveTraining(this.state);
+    if (this.active) {
+      this.refresh();
+      this.message(`${input === 'midi' ? 'MIDI keyboard' : 'Touch pad'} selected. Tap Resume for a fresh count-in.`);
+      if (input === 'midi' && !this.midi.status.connected && this.supported) void this.midi.connect();
+      else if (wasRunning) void this.start(true);
+    } else this.renderHome();
+  }
+
   home() {
     const quiz = this.activity === 'quiz';
     $('activity-select').value = this.activity;
     $('start-button').disabled = !this.supported;
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
+    this.inputControls();
     $('resume-note').textContent = 'Your unfinished round is ready when you are.';
     if (quiz) { $('customize-button').innerHTML = 'Choose notes <span aria-hidden="true">↗</span>'; return; }
     $('practice-title').textContent = labels[this.activity];
@@ -81,11 +119,11 @@ export class Activities {
   configure() {
     this.pause();
     $('training-setup-title').textContent = `${labels[this.activity]} setup`;
-    for (const key of ['bpm','meter','volume','offset','bars','complexity','style','input']) $(`training-${key}`).value = this.settings[key];
+    for (const key of ['bpm','meter','volume','offset','bars','complexity','style','input','pace','accuracy']) $(`training-${key}`).value = this.settings[key];
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Uses your selected notes, octaves and clefs. Guided waits until the pitch and hold are correct. Continuous keeps the beat.' : this.activity === 'rhythm' ? 'Follow the note values. Any MIDI key or the touch pad works. A half note lasts two beats; rests mean release.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    $('training-setup-help').textContent = this.activity === 'sight' ? 'Uses your selected notes, octaves and clefs. Guided waits for you on every note. Continuous uses the Between bars setting. Notes turn green only after a correct hold and release.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home or above the score. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
     this.openDialog('training-dialog');
   }
 
@@ -119,13 +157,14 @@ export class Activities {
     $('training-beats').hidden = Boolean(this.completed);
     $('training-summary').hidden = !this.completed;
     $('exercise-score').hidden = !exercise || Boolean(this.completed);
-    $('hold-coach').hidden = this.activity !== 'sight' || this.settings.style !== 'guided' || Boolean(this.completed);
+    $('hold-coach').hidden = !exercise || Boolean(this.completed);
     $('training-touchpad').hidden = this.activity !== 'rhythm' || this.settings.input !== 'touch' || Boolean(this.completed);
     $('training-touchpad').disabled = !this.clock.running;
     $('training-recheck').hidden = !this.requiresMidi || !this.supported;
     $('training-sound').hidden = Boolean(this.completed);
     $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
     this.sound();
+    this.inputControls();
   }
 
   async start(resume = false) {
@@ -179,6 +218,11 @@ export class Activities {
     this.session.tick(time);
     if (this.session.done) { this.finish(); return; }
     this.draw(time);
+    const position = this.session.position(time);
+    if (!this.session.guided && position.preparing) {
+      this.message(`Read bar ${position.bar+1} · count in ${Math.ceil(position.remaining)}`);
+      return;
+    }
     this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Different|Try |Between|Rest here|Rest means/.test(this.session.feedback));
   }
 
@@ -198,9 +242,19 @@ export class Activities {
       cursor.style.visibility = visible ? 'visible' : 'hidden';
       if (visible) cursor.setAttribute('transform',`translate(${scoreX(Math.max(0,Math.min(this.phrase.meter,progress-bar*this.phrase.meter)),this.phrase.meter)} 0)`);
     }
-    const target = this.session.current;
-    $('hold-progress').value = target ? Math.min(1,Math.max(0,progress-target.beat)/target.durationBeats) : 0;
-    $('hold-label').textContent = target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}`;
+    const held = [...this.session.holding.values()][0];
+    const target = held?.target ?? this.session.current;
+    const elapsed = held ? (time-this.session.offset-held.result.on)/this.session.beatMs : target?.rest ? progress-target.beat : 0;
+    $('hold-progress').value = target ? Math.min(1,Math.max(0,elapsed)/target.durationBeats) : 0;
+    const releasing = held && elapsed >= target.durationBeats;
+    $('hold-label').textContent = releasing ? 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}`;
+    $('training-touchpad').textContent = held ? releasing ? 'Release now' : 'Keep holding…' : 'Press and hold';
+    for (const measure of $('exercise-score').children) {
+      for (const note of measure.querySelectorAll('[data-event]')) {
+        const holding = [...this.session.holding.values()].some(value => value.target.id === Number(note.dataset.event));
+        note.classList.toggle('holding',holding);
+      }
+    }
     if (this.clock.running) $('training-progress').textContent = `${this.settings.bpm} BPM · Bar ${bar+1}/${this.phrase.bars}`;
   }
 
@@ -223,6 +277,7 @@ export class Activities {
   }
   stop() { ++this.request; this.clock.stop(); this.active = false; this.starting = false; this.paused = false; this.session = null; this.completed = false; this.pointer = undefined; $('training-touchpad').classList.remove('pressed'); }
   midiChanged(status) {
+    this.inputControls();
     if (!this.active || !this.requiresMidi) return;
     if (!status.connected && this.clock.running) this.pause('Keyboard disconnected. Recheck MIDI, then Resume.');
     else if (status.connected && !this.clock.running) { this.refresh(); this.message('Keyboard connected. Tap Resume when ready.'); }

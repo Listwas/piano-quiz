@@ -59,3 +59,42 @@ test('count-in presses cannot claim a note and restarting a bar clears its extra
  note(s,'on',60,1500);note(s,'off',60,1600);assert.equal(s.extras,1);
  assert.equal(s.restartBar(1700),0);assert.equal(s.extras,0);
 });
+
+test('beginner timing accepts a small human delay but still rejects half-length holds',()=>{
+ const s=new ExerciseSession(phrase(true),{accuracy:'beginner'});s.startTime=1000;
+ note(s,'on',60,1180);note(s,'off',60,2820);
+ assert.equal(s.results.get(0).duration,true);assert.equal(s.results.get(0).status,'correct');
+ assert.equal(heldCorrectly(1000,2000,'beginner'),false);
+ assert.equal(heldCorrectly(75,150,'beginner'),false);
+ const strict=new ExerciseSession(phrase(true));strict.startTime=1000;note(strict,'on',60,1180);assert.equal(strict.results.size,0);
+});
+test('an accepted attack remains pending until release and reports actual hold length',()=>{
+ const s=new ExerciseSession(phrase(true));s.startTime=1000;
+ note(s,'on',60,1000);s.tick(3500);
+ assert.equal(s.results.get(0).status,'holding');assert.equal(s.results.get(0).duration,null);
+ assert.equal(s.feedback,'Release now.');
+ note(s,'off',60,3600);assert.equal(s.results.get(0).status,'wrong');assert.match(s.feedback,/held 2.6 of 2.0 beats/);
+});
+test('slightly early first notes use the same timing window as later notes',()=>{
+ const s=new ExerciseSession(phrase(true),{accuracy:'beginner'});s.startTime=1000;
+ note(s,'on',60,850);note(s,'off',60,2850);
+ assert.equal(s.results.get(0).status,'correct');assert.equal(s.results.get(0).error,-150);
+});
+test('practice pacing previews each new bar for a full count-in without marking it missed',()=>{
+ const p=phrase(true);p.bars=2;p.totalBeats=8;p.events.push(...p.events.map(e=>({...e,id:e.id+3,bar:1,beat:e.beat+4})));
+ const s=new ExerciseSession(p,{pace:'practice',accuracy:'beginner'});s.startTime=1000;
+ note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',60,3000);note(s,'off',60,4000);
+ s.tick(5000);assert.equal(s.position(5000).preparing,true);assert.equal(s.position(5000).bar,1);assert.equal(s.position(5000).remaining,4);
+ assert.equal(s.current.id,3);assert.equal(s.results.has(3),false);assert.equal(s.expected(p.events[3]),9000);
+ note(s,'on',60,6000);note(s,'off',60,6050);assert.equal(s.extras,0);
+ s.tick(8999);assert.equal(s.results.has(3),false);
+ note(s,'on',60,9000);note(s,'off',60,11000);assert.equal(s.results.get(3).status,'correct');
+ assert.equal(s.restartBar(11500),1);s.startTime=15000;assert.equal(s.expected(p.events[3]),15000);
+});
+
+test('only unreleased final notes fail at the end; valid releases stay correct',()=>{
+ const s=new ExerciseSession(phrase(true));s.startTime=1000;
+ note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',62,3000);
+ s.tick(7000);assert.equal(s.done,true);assert.equal(s.results.get(0).status,'correct');assert.equal(s.results.get(1).status,'wrong');
+ assert.equal(s.position(5500).beat,4);assert.equal(s.position(5500).preparing,false);
+});

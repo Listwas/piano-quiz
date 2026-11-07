@@ -61,12 +61,17 @@ Tempo changes during playback take effect at the next bar.
 ### Rhythm exercises
 
 Choose **Rhythm** to practise when to press, how long to hold, and when to rest.
-Use the large touch pad or any key on your MIDI keyboard. A half note lasts two
+Choose **Touch pad** or **MIDI keyboard** on Home or above the score.
+Use the pad or any MIDI key. A half note lasts two
 beats; letting go after one beat counts as too short. The music keeps moving
 through mistakes, and the results show beat timing and note lengths separately.
 
 Start with **Simple** rhythms, or choose **Mixed** for eighth notes and rests.
-Set the tempo and exercise length in **Set up**. Pausing restarts the interrupted
+The hold meter shows when to release; green appears after a correct release.
+Beginner timing is more forgiving, and a full-bar count-in between bars gives
+you time to read ahead. In **Set up**, choose **Strict** timing or **Keep playing**
+when you want a challenge, and adjust the tempo and exercise length.
+Pausing restarts the interrupted
 bar with a count-in. Rhythm results save separately from your quiz history.
 
 ### Sight-reading
@@ -80,9 +85,14 @@ Your keyboard supplies the piano sound; the app supplies the beat.
 - **Continuous** keeps the score moving at your chosen tempo. Keep playing
   through mistakes; pitch, beat timing, and note lengths get separate scores.
 
-The current and next bar stay visible. Very short landscape screens show the
+Use **Choose notes** directly on Home or above the score to change your melody
+notes. **Save practice** stays visible while you browse the choices.
+
+The current and next bar stay visible. Small screens show the
 current bar to keep the notation readable. You can pause and retry the interrupted
-bar with a fresh count-in. Recent results save on this device and appear on Home.
+bar with a fresh count-in. Continuous reading also uses the **Between bars**
+setting: a count-in by default, or no break when you choose **Keep playing**.
+Recent results save on this device and appear on Home.
 
 <details>
 <summary><strong>Take a look at the new practice modes</strong></summary>

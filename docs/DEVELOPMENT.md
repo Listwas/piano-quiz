@@ -27,7 +27,27 @@ grades original press timestamps and matching physical releases separately.
 A missed marker is provisional: a delayed message with an in-window timestamp
 can still claim it. Rest checks use physical key intervals with boundary grace.
 Pause discards the interrupted bar and its extra/retry counters, retaining prior
-bars. Touch uses pointer capture and cancellation pauses the exercise.
+bars. Touch uses pointer capture and cancellation pauses the exercise. Native context
+menus, selection and touchstart default gestures are cancelled on the hold pad.
+Touch/MIDI selectors stay visible on Home and in rhythm practice; the connection
+label distinguishes a connected keyboard from the selected input mode.
+
+Beginner tolerance defaults to ±220 ms for attacks (capped at 45% of adjacent
+onset spacing), and ±30% of note length or 140 ms for holds (capped at 40% for short notes). Strict retains
+±100 ms and ±15% or 60 ms. A half-length half note fails either setting.
+Attacks remain pending until release; only validated notes turn green. The
+hold meter uses actual press time, with an explicit release cue and measured
+versus expected beat lengths on a bad release. Only unreleased notes are failed
+when the exercise ends. Slightly early first attacks use the same window.
+
+Practice pacing inserts one unscored, full-bar count-in between played bars.
+The session's expected-time and position functions include these gaps, so the
+next measure appears before its first deadline and cannot be marked missed
+during preparation. Resume starts at the interrupted bar without carrying its
+previous gaps. Flow pacing omits gaps; Guided waits on every note as before.
+
+The note picker has its own scrolling choices and a fixed header/action footer,
+including validation errors. Save stays visible at any list position.
 
 ## Sight-reading
 

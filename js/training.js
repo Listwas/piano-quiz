@@ -1,12 +1,12 @@
 import { poolFor } from './quiz.js';
 
 export const TRAINING_KEY = 'pianoQuiz.training.v1';
-export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', volume: .3, muted: false, offset: 0 };
+export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', pace: 'practice', accuracy: 'beginner', volume: .3, muted: false, offset: 0 };
 export function normalizeTraining(raw) {
   const settings = { ...TRAINING_DEFAULTS };
   if (raw && typeof raw === 'object') {
     for (const [key, min, max] of [['bpm',40,200],['offset',-250,250],['volume',0,1]]) if (Number.isFinite(raw[key])) settings[key] = Math.max(min, Math.min(max, key === 'volume' ? raw[key] : Math.round(raw[key])));
-    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','mixed'], style:['guided','continuous'], input:['touch','midi'] })) if (values.includes(raw[key])) settings[key] = raw[key];
+    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
     if (typeof raw.muted === 'boolean') settings.muted = raw.muted;
   }
   return settings;
@@ -53,12 +53,12 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
   return { events, meter:settings.meter, bars:settings.bars, clef, rhythm, totalBeats:settings.meter * settings.bars };
 }
 
-export const holdTolerance = milliseconds => Math.max(60, milliseconds * .15);
-export const heldCorrectly = (actual, expected) => Math.abs(actual - expected) <= holdTolerance(expected);
+export const holdTolerance = (milliseconds, accuracy = 'strict') => accuracy === 'beginner' ? Math.min(milliseconds * .4, Math.max(140, milliseconds * .3)) : Math.max(60, milliseconds * .15);
+export const heldCorrectly = (actual, expected, accuracy) => Math.abs(actual - expected) <= holdTolerance(expected, accuracy);
 
 export class ExerciseSession {
-  constructor(phrase, { bpm = 60, offset = 0, guided = false } = {}) {
-    Object.assign(this, { phrase, bpm, offset, guided, beatMs:60000 / bpm, startTime:0, startBar:0, currentIndex:0, done:false, feedback:'', guidedRestStart:null });
+  constructor(phrase, { bpm = 60, offset = 0, guided = false, pace = 'flow', accuracy = 'strict' } = {}) {
+    Object.assign(this, { phrase, bpm, offset, guided, accuracy, gapBeats:!guided && pace === 'practice' ? phrase.meter : 0, beatMs:60000 / bpm, startTime:0, startBar:0, currentIndex:0, done:false, feedback:'', guidedRestStart:null });
     this.extraBars = []; this.retryBars = [];
     this.results = new Map();
     this.attempts = new Map();
@@ -69,14 +69,24 @@ export class ExerciseSession {
   }
   get extras() { return this.extraBars.length; }
   get retries() { return this.retryBars.length; }
-  extraAt(time) { this.extraBars.push(this.guided ? this.current?.bar ?? this.phrase.bars-1 : Math.min(this.phrase.bars-1,Math.max(0,Math.floor((this.startBar*this.phrase.meter+(time-this.startTime)/this.beatMs)/this.phrase.meter)))); }
-  expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter) * this.beatMs; }
+  extraAt(time) { this.extraBars.push(this.guided ? this.current?.bar ?? this.phrase.bars-1 : Math.min(this.phrase.bars-1,this.position(time).bar)); }
+  expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter + (event.bar - this.startBar) * this.gapBeats) * this.beatMs; }
+  position(now) {
+    const elapsed = Math.max(0, (now - this.startTime) / this.beatMs);
+    const end = this.phrase.totalBeats - this.startBar * this.phrase.meter + (this.phrase.bars-1-this.startBar) * this.gapBeats;
+    if (elapsed >= end) return { bar:this.phrase.bars-1, preparing:false, remaining:0, beat:this.phrase.totalBeats };
+    const cycle = this.phrase.meter + this.gapBeats;
+    const completed = Math.floor(elapsed / cycle), within = elapsed % cycle;
+    const preparing = this.gapBeats > 0 && within >= this.phrase.meter && this.startBar + completed + 1 < this.phrase.bars;
+    const bar = Math.min(this.phrase.bars - 1, this.startBar + completed + (preparing ? 1 : 0));
+    return { bar, preparing, remaining:preparing ? cycle - within : 0, beat:bar * this.phrase.meter + (preparing ? 0 : Math.min(this.phrase.meter,within)) };
+  }
   get current() { return this.phrase.events[this.currentIndex]; }
   window(event) {
     const notes = this.phrase.events.filter(e => !e.rest);
     const index = notes.indexOf(event);
     const gaps = [notes[index - 1], notes[index + 1]].filter(Boolean).map(e => Math.abs(e.beat - event.beat) * this.beatMs);
-    return Math.min(100, ...gaps.map(gap => gap * .45));
+    return Math.min(this.accuracy === 'beginner' ? 220 : 100, ...gaps.map(gap => gap * .45));
   }
   attempt(event) {
     if (!this.attempts.has(event.id)) this.attempts.set(event.id, { pitch:true, duration:true });
@@ -99,24 +109,25 @@ export class ExerciseSession {
       if (!this.keys.has(key)) return;
       this.keys.get(key).off = time; this.keys.delete(key);
     }
-    if (time < this.startTime) return;
+    const first = this.phrase.events.find(e => e.bar === this.startBar && !e.rest);
+    if (time < this.startTime - (this.guided || !first ? 0 : this.window(first))) return;
     if (this.guided) { this.guidedInput(event, key, time); return; }
     if (event.type === 'on') {
       const candidates = this.phrase.events.filter(e => !e.rest && e.bar >= this.startBar && (!this.results.has(e.id) || this.results.get(e.id).status === 'missed') && Math.abs(time - this.expected(e)) <= this.window(e));
       candidates.sort((a,b) => Math.abs(time - this.expected(a)) - Math.abs(time - this.expected(b)) || a.beat - b.beat);
       const target = candidates[0];
-      if (!target) { this.extraAt(time); this.feedback = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs) ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; return; }
+      if (!target) { if (this.position(time).preparing) return; this.extraAt(time); this.feedback = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs) ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; return; }
       const error = time - this.expected(target), pitch = this.phrase.rhythm || event.note === target.tone.midi;
       const result = { pitch, onset:true, duration:null, error, on:time, status:pitch ? 'holding' : 'wrong' };
       this.results.set(target.id, result); this.holding.set(key, { target, result });
-      this.feedback = !pitch ? 'Different note — keep following the beat.' : Math.abs(error) < 30 ? 'On the beat. Hold…' : `${error < 0 ? 'Early' : 'Late'} by ${Math.round(Math.abs(error))} ms. Hold…`;
+      this.feedback = !pitch ? 'Different note — keep following the beat.' : `Key received · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}.`;
     } else {
       const held = this.holding.get(key);
       if (!held) return;
       const { target, result } = held;
-      result.duration = heldCorrectly(time - result.on, target.durationBeats * this.beatMs);
+      result.duration = heldCorrectly(time - result.on, target.durationBeats * this.beatMs, this.accuracy);
       result.status = result.pitch && result.duration ? 'correct' : 'wrong';
-      if (!result.duration) this.feedback = time - result.on < target.durationBeats * this.beatMs ? 'Too short — hold for the full note value.' : 'Too long — release at the end of the note.';
+      if (!result.duration) this.feedback = this.durationFeedback(time - result.on, target.durationBeats * this.beatMs);
       else if (result.pitch) this.feedback = 'Good hold ✓';
       this.holding.delete(key);
     }
@@ -133,16 +144,16 @@ export class ExerciseSession {
       if (this.holding.size) { this.extraAt(time); this.feedback = 'One note at a time. Finish the held note.'; return; }
       if (event.note !== target.tone.midi) { attempt.pitch = false; this.retryBars.push(target.bar); this.feedback = 'Try the displayed note. You can play it now.'; return; }
       this.holding.set(key, { target, result:{ on:time } });
-      this.feedback = `Hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}…`;
+      this.feedback = `Pitch matched · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}…`;
       return;
     }
     const held = this.holding.get(key);
     if (!held) return;
     this.holding.delete(key);
     const actual = time - held.result.on, expected = target.durationBeats * this.beatMs;
-    if (!heldCorrectly(actual, expected)) {
+    if (!heldCorrectly(actual, expected, this.accuracy)) {
       attempt.duration = false; this.retryBars.push(target.bar);
-      this.feedback = `${actual < expected ? 'Too short' : 'Too long'} — try this note for ${target.durationBeats} beats.`;
+      this.feedback = `${this.durationFeedback(actual, expected)} Try this note again.`;
       return;
     }
     this.results.set(target.id, { ...attempt, onset:null, status:'correct' });
@@ -150,6 +161,9 @@ export class ExerciseSession {
     this.currentIndex++; this.guidedRestStart = null;
     if (this.current?.rest) this.feedback = 'Rest — keep the keys released.';
     this.done = !this.current;
+  }
+  durationFeedback(actual, expected) {
+    return `${actual < expected ? 'Too short' : 'Too long'} · held ${(actual / this.beatMs).toFixed(1)} of ${(expected / this.beatMs).toFixed(1)} beats.`;
   }
   tick(now) {
     if (this.done || now < this.startTime) return;
@@ -165,7 +179,7 @@ export class ExerciseSession {
         }
       } else {
         const held = [...this.holding.values()][0];
-        if (held && now - held.result.on >= target.durationBeats * this.beatMs) this.feedback = 'Release now.';
+        if (held && now - this.offset - held.result.on >= target.durationBeats * this.beatMs) this.feedback = 'Release now.';
       }
       return;
     }
@@ -173,19 +187,23 @@ export class ExerciseSession {
       if (event.rest || event.bar < this.startBar) continue;
       if (!this.results.has(event.id) && now > this.expected(event) + this.window(event) + Math.max(0,this.offset)) this.results.set(event.id, { pitch:false, onset:false, duration:false, status:'missed' });
       const result = this.results.get(event.id);
-      if (result?.duration === null && now - result.on > event.durationBeats * this.beatMs + holdTolerance(event.durationBeats * this.beatMs)) { result.duration = false; result.status = 'wrong'; }
+      if (result?.duration === null && result.pitch && now - this.offset - result.on >= event.durationBeats * this.beatMs) this.feedback = 'Release now.';
     }
-    const beat = this.startBar * this.phrase.meter + (now - this.startTime) / this.beatMs;
+    const { beat } = this.position(now);
     this.currentIndex = this.phrase.events.findIndex(e => e.beat + e.durationBeats > beat);
-    const tail = holdTolerance(4 * this.beatMs) + Math.max(0,this.offset);
-    if (now >= this.startTime + (this.phrase.totalBeats - this.startBar * this.phrase.meter) * this.beatMs + tail) this.done = true;
+    const tail = holdTolerance(4 * this.beatMs,this.accuracy) + Math.max(0,this.offset);
+    const end = this.startTime + (this.phrase.totalBeats - this.startBar * this.phrase.meter + (this.phrase.bars-1-this.startBar) * this.gapBeats) * this.beatMs;
+    if (now >= end + tail) {
+      for (const {result} of this.holding.values()) { result.duration = false; result.status = 'wrong'; }
+      this.done = true;
+    }
   }
   progress(now) {
-    if (!this.guided) return this.startBar * this.phrase.meter + (now - this.startTime) / this.beatMs;
+    if (!this.guided) return this.position(now).beat;
     const target = this.current;
     if (!target) return this.phrase.totalBeats;
     const began = target.rest ? this.guidedRestStart : [...this.holding.values()][0]?.result.on;
-    return target.beat + (began === null || began === undefined ? 0 : Math.min(target.durationBeats, Math.max(0,now - began) / this.beatMs));
+    return target.beat + (began === null || began === undefined ? 0 : Math.min(target.durationBeats, Math.max(0,now - (target.rest ? 0 : this.offset) - began) / this.beatMs));
   }
   restartBar(now) {
     let bar = this.guided ? this.current?.bar ?? this.phrase.bars - 1 : Math.floor(Math.max(0,this.progress(now)) / this.phrase.meter);
