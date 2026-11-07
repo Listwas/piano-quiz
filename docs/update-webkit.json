@@ -1,7 +1,7 @@
 {
   "engine": "webkit",
-  "build": "abe288c1a2efc3",
-  "testedAt": "2026-11-06T23:05:26.476Z",
+  "build": "75e05e89e128a4",
+  "testedAt": "2026-11-07T00:51:18.100Z",
   "checks": [
     "first install activates without offering a stale update prompt",
     "new service worker waits and offers Update without interrupting feedback",

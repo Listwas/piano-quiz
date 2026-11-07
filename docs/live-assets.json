@@ -1,8 +1,8 @@
 {
   "url": "https://piano-quiz.pages.dev/",
-  "deploymentUrl": "https://0e35a266.piano-quiz.pages.dev/",
-  "version": "abe288c1a2efc3",
-  "testedAt": "2026-11-06T23:02:32.235Z",
+  "deploymentUrl": "https://d505dd0e.piano-quiz.pages.dev/",
+  "version": "75e05e89e128a4",
+  "testedAt": "2026-11-07T00:47:32.428Z",
   "result": "passed",
   "files": [
     {
@@ -108,17 +108,22 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "eff7ae88f4c06211f20cea0f7a0fa13a07f9f657ff81a55f4d50343791b253bd"
+      "sha256": "ea0721b4d4f252b93d2c4ce80f42d0c67b5716d2bc9852068d400fa1f672426c"
+    },
+    {
+      "path": "js/activities.js",
+      "status": 200,
+      "sha256": "2569086cd6b2959cec39baffe9b32b4f9b80af0d4975c407b4f21ec5e9f557a3"
     },
     {
       "path": "js/app.js",
       "status": 200,
-      "sha256": "6f02c29aea413e942a5cac23c5828192e41a0f6cb496bc17b80519dfc1bcdca8"
+      "sha256": "24d897553ee94a043fd7730891f2138c51e8f77a6bada74237f0ecc668bb185a"
     },
     {
       "path": "js/audio.js",
       "status": 200,
-      "sha256": "cb483887c9f6161bfb3e66d074e5b48b2be2c2596e64cb958119fd8a2cb5a9fe"
+      "sha256": "836aecd623e6d6dc5cd6e5320045896716549b647de36dd9f691d53bb9ffa8b9"
     },
     {
       "path": "js/chords.js",
@@ -133,7 +138,7 @@
     {
       "path": "js/midi.js",
       "status": 200,
-      "sha256": "4c58dabe1b06e2ae822de28ed32d1f2a27e8b9b774fce40799befc9064b6920d"
+      "sha256": "9f1f1e8087feb6dafe72bc76e74e5e9db0806d161686b82d0508a949d6000e11"
     },
     {
       "path": "js/notes.js",
@@ -146,14 +151,29 @@
       "sha256": "e52914f2f74bf2c22da6d449d53b047e1be608b5d235caf1b2a6d99c02648c97"
     },
     {
+      "path": "js/score.js",
+      "status": 200,
+      "sha256": "b97d6410926faf1fc17ae6a5d16390cd4c09794ea000f1c72e73796bf5383a7c"
+    },
+    {
       "path": "js/staff.js",
       "status": 200,
-      "sha256": "1cdfe6410d7c34e8e8c1365f51a4a78367fb13534ec285c7d51e35fd20c304e6"
+      "sha256": "3d1d5c545817c589bbbc56c9210e7b9d96217063929f8c5cedb60a236d0b0ece"
     },
     {
       "path": "js/storage.js",
       "status": 200,
       "sha256": "129af576a5bd90809f25720c62fdbc18e911985e9d94285cf719591d20e29315"
+    },
+    {
+      "path": "js/timing.js",
+      "status": 200,
+      "sha256": "5adcc152ba30a37929d8d3d2bbeb3b1855d0aea4407d9802d7e21c07a64b0552"
+    },
+    {
+      "path": "js/training.js",
+      "status": 200,
+      "sha256": "c17ce742bc13a46623d033d91378eae76acb3d24c57449e1975eb87d6d4ff5d9"
     },
     {
       "path": "js/viewport.js",
@@ -168,17 +188,17 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "e02cedca839ec76318721a81ab56cb4f4d8a5eca7e83c731ab22a6a606d962a6"
+      "sha256": "aeec12ada738559458d17461704c3c7937039deee79db99dbd9d4fc68daf391b"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "9ed2f94ec529e7984926369d1f1fd1c03fee1b4068fc69c0502b73136d94a05b"
+      "sha256": "e22dde5bb27657eb63878bc4436c8abc72943fb394dc1cf567dad9bf5e62e0c3"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "bcc6551cd3d931e13dbe10a639bb5d827304bdd50de19896b922ff0281d979ad"
+      "sha256": "f736363292df830fc66aa9a6e24d79ccc7a243c6578b2fb0a470211a07e59f48"
     }
   ],
   "headers": {

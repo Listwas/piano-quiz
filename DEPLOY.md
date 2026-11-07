@@ -6,9 +6,9 @@ Project: `piano-quiz`, production branch `main`, account
 `3bbe51d8973c406839b993e52753a08c`. This is an independent static Pages app;
 the original `random-piano` app is unchanged.
 
-Release `abe288c1a2efc3` was published as production deployment
-`0e35a266-6783-4212-8a26-5840a1663649`:
-https://0e35a266.piano-quiz.pages.dev/
+Release `75e05e89e128a4` was published as production deployment
+`d505dd0e-ec98-49fd-b361-b2922b92ec23`:
+https://d505dd0e.piano-quiz.pages.dev/
 
 ## Publish an update
 
@@ -41,6 +41,7 @@ PIANO_URL=https://piano-quiz.pages.dev/ BROWSER=webkit npm run test:browser
 npm run test:update
 PIANO_URL=https://piano-quiz.pages.dev/ npm run test:midi
 PIANO_URL=https://piano-quiz.pages.dev/ npm run test:viewport
+PIANO_URL=https://piano-quiz.pages.dev/ npm run test:training
 ```
 
 The update suite uses an isolated local origin and two worker versions; it does

@@ -226,8 +226,8 @@ outcomes without relying on color; reduced-motion preferences disable the shake.
 `settings.inputMode` is `touch` or `midi`, defaults to Touch for legacy state, and
 saves immediately from Home or Settings. Switching mode preserves the current
 question and updates its settings snapshot. MIDI mode hides tap controls, enlarges
-the staff, and retains a fixed Skip/Recheck dock. Only this mode accepts MIDI
-phrases. Disconnected MIDI time is excluded from active answering time.
+the staff, and retains a fixed Skip/Recheck dock. Only this quiz input mode accepts MIDI
+quiz answers; training activities route their own normalized press/release events. Disconnected MIDI time is excluded from active answering time.
 
 The first answer to a question records history and a round answer. After wrong
 feedback, `retryQuestion` sets `round.retrying` and clears the temporary feedback.
@@ -246,7 +246,7 @@ port is reopened on state refresh; focus/pageshow refresh state without promptin
 Recheck remains available in both the quiz and Settings.
 
 Regression cases cover delayed closes, changed IDs, stale access maps, first-try
-statistics, last-question retry restoration, actual played staff positions, red
-cue duration, reduced-motion animation, fast green advance, saved input modes,
-and hidden tap controls. Native Chromium loopback grades a note both before and
+statistics, last-question retry restoration, immediate wrong/correct presses,
+legato input, duplicate Note On suppression, legacy chord-feedback restoration,
+saved input modes, and hidden tap controls. Native Chromium loopback grades a note both before and
 after using the real Recheck button.
