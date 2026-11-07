@@ -3,12 +3,32 @@
 Published and tested on 2026-11-07 (Europe/Warsaw).
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `66d5448b286fc3`
-- Production deployment: `788f585f-8d19-4cae-a308-f2c5f31c23db`
-- Immutable URL: https://788f585f.piano-quiz.pages.dev/
+- Release: `ac33e1e774c0e1`
+- Production deployment: `c7a5f5f4-38b3-427f-85ab-5b874eae57f1`
+- Immutable URL: https://c7a5f5f4.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
-## Results
+## Latest UI update
+
+Release `ac33e1e774c0e1` removes the input selector and status row from the active
+Rhythm screen. Touch/MIDI selection stays on Home, leaving more room for notation.
+
+All 71 unit tests passed. Six focused rhythm scenarios passed in each of Chromium,
+Firefox and WebKit against the local build, covering touch holds, MIDI holds,
+rotation, unavailable MIDI, Home input selection and bar count-ins. The input
+selection scenario also passed on production in all three engines. Reports:
+[local Chromium](training-focused-chromium.json),
+[local Firefox](training-focused-firefox.json),
+[local WebKit](training-focused-webkit.json),
+[live Chromium](live-training-focused-chromium.json),
+[live Firefox](live-training-focused-firefox.json),
+[live WebKit](live-training-focused-webkit.json).
+
+## Full regression baseline
+
+The comprehensive browser results below describe the preceding release
+`66d5448b286fc3`. This small UI update was checked separately as described above.
+The asset verification and archive metadata describe the current release.
 
 All 39 served files were fetched from production and compared byte for byte with
 `dist/`. HTTP 200, CSP and the MIDI permissions policy were checked.

@@ -1,0 +1,15 @@
+{
+  "engine": "chromium",
+  "origin": "https://piano-quiz.pages.dev/",
+  "build": "ac33e1e774c0e1",
+  "testedAt": "2026-11-07T01:26:18.414Z",
+  "checks": [
+    "rhythm input is selected on Home and leaves the exercise screen clear"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed",
+  "filter": "rhythm input"
+}

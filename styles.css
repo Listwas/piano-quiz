@@ -472,7 +472,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 @media(orientation:landscape) and (max-height:500px){
  #exercise-score .measure+.measure{display:none}
  #training-input-row{display:flex;align-items:center;gap:10px}
- #live-training-input{flex:1}
  #training-input-status{flex:1;margin:0;text-align:right}
  #training-sight-tools{flex:1}
  #training-screen:not([data-activity=metronome]) #training-footnote{display:none}

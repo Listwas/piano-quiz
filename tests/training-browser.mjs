@@ -132,17 +132,20 @@ try{
   }
   await page.locator('#apply-button').tap();assert.equal(await page.locator('#customize-dialog').isVisible(),false);
  });
- await check('rhythm exposes Touch and MIDI switches before starting and while playing',async()=>{
+ await check('rhythm input is selected on Home and leaves the exercise screen clear',async()=>{
   const page=await setup(true,true);await page.selectOption('#activity-select','rhythm');
   assert.equal(await page.locator('#home-training-input').isVisible(),true);
   await page.locator('#home-training-input [data-training-input=midi]').tap();
   assert.equal(await page.locator('#home-training-input [data-training-input=midi]').getAttribute('aria-pressed'),'true');
   await page.locator('#start-button').tap();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').tap();await running(page);
-  assert.match(await page.locator('#training-input-status').innerText(),/MIDI mode.*connected/);
-  await page.locator('#live-training-input [data-training-input=touch]').tap();await running(page);
-  assert.equal(await page.locator('#training-touchpad').isVisible(),true);assert.match(await page.locator('#training-input-status').innerText(),/Touch mode.*select MIDI/);
-  await page.locator('#live-training-input [data-training-input=midi]').tap();await running(page);
+  assert.equal(await page.locator('#training-input-row').isVisible(),false);
+  assert.equal(await page.locator('#training-screen [data-training-input]').count(),0);
   assert.equal(await page.locator('#training-touchpad').isVisible(),false);
+  await page.locator('#training-back').tap();
+  await page.locator('#home-training-input [data-training-input=touch]').tap();
+  await page.locator('#start-button').tap();await running(page);
+  assert.equal(await page.locator('#training-touchpad').isVisible(),true);
+  assert.equal(await page.locator('#training-input-row').isVisible(),false);
  });
  await check('long presses cancel native menus without interrupting the touch hold',async()=>{
   const page=await setup(true);await page.selectOption('#activity-select','rhythm');await page.locator('#start-button').tap();await running(page);
@@ -176,4 +179,4 @@ try{
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}
-finally{for(const ctx of contexts)await ctx.close();await browser.close();await writeFile(`docs/${process.env.PIANO_URL?'live-':''}training-${engine}.json`,JSON.stringify(report,null,2)+'\n');}
+finally{if(process.env.TRAINING_CHECK)report.filter=process.env.TRAINING_CHECK;for(const ctx of contexts)await ctx.close();await browser.close();await writeFile(`docs/${process.env.PIANO_URL?'live-':''}training${process.env.TRAINING_CHECK?'-focused':''}-${engine}.json`,JSON.stringify(report,null,2)+'\n');}

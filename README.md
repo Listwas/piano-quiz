@@ -61,7 +61,7 @@ Tempo changes during playback take effect at the next bar.
 ### Rhythm exercises
 
 Choose **Rhythm** to practise when to press, how long to hold, and when to rest.
-Choose **Touch pad** or **MIDI keyboard** on Home or above the score.
+Choose **Touch pad** or **MIDI keyboard** on Home before starting.
 Use the pad or any MIDI key. A half note lasts two
 beats; letting go after one beat counts as too short. The music keeps moving
 through mistakes, and the results show beat timing and note lengths separately.

@@ -1,0 +1,20 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "ac33e1e774c0e1",
+  "testedAt": "2026-11-07T01:25:00.691Z",
+  "checks": [
+    "rhythm touch holds distinguish a one-beat release from a required two-beat half note",
+    "rhythm score and touch pad fit rotating phone and tablet layouts",
+    "rhythm MIDI accepts different keys and scores their physical hold lengths",
+    "missing MIDI does not block touch rhythm, metronome or the original quiz",
+    "rhythm input is selected on Home and leaves the exercise screen clear",
+    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed",
+  "filter": "rhythm"
+}

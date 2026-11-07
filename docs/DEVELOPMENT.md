@@ -29,8 +29,9 @@ can still claim it. Rest checks use physical key intervals with boundary grace.
 Pause discards the interrupted bar and its extra/retry counters, retaining prior
 bars. Touch uses pointer capture and cancellation pauses the exercise. Native context
 menus, selection and touchstart default gestures are cancelled on the hold pad.
-Touch/MIDI selectors stay visible on Home and in rhythm practice; the connection
-label distinguishes a connected keyboard from the selected input mode.
+Rhythm input is selected on Home. The active exercise omits the input selector
+and its status row to leave more space for notation. Sight-reading retains its
+MIDI connection label and Choose notes shortcut.
 
 Beginner tolerance defaults to ±220 ms for attacks (capped at 45% of adjacent
 onset spacing), and ±30% of note length or 140 ms for holds (capped at 40% for short notes). Strict retains

@@ -79,8 +79,7 @@ export class Activities {
   inputControls() {
     $('home-training-input').hidden = this.activity !== 'rhythm';
     $('home-sight-tools').hidden = this.activity !== 'sight';
-    $('training-input-row').hidden = !this.exercise;
-    $('live-training-input').hidden = this.activity !== 'rhythm';
+    $('training-input-row').hidden = this.activity !== 'sight';
     $('training-sight-tools').hidden = this.activity !== 'sight';
     $('training-input-status').textContent = this.inputStatus();
     document.querySelectorAll('[data-training-input]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.trainingInput === this.settings.input)));
@@ -123,7 +122,7 @@ export class Activities {
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Uses your selected notes, octaves and clefs. Guided waits for you on every note. Continuous uses the Between bars setting. Notes turn green only after a correct hold and release.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home or above the score. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    $('training-setup-help').textContent = this.activity === 'sight' ? 'Uses your selected notes, octaves and clefs. Guided waits for you on every note. Continuous uses the Between bars setting. Notes turn green only after a correct hold and release.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
     this.openDialog('training-dialog');
   }
 
