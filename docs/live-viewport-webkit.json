@@ -1,0 +1,24 @@
+{
+  "engine": "webkit",
+  "origin": "https://piano-quiz.pages.dev/",
+  "build": "abe288c1a2efc3",
+  "testedAt": "2026-11-06T23:04:31.555Z",
+  "checks": [
+    "iphone-14-pro-max: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "iphone-14-pro-max-landscape: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "small-phone: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "honor-magicpad-2-portrait: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "honor-magicpad-2-landscape: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "desktop: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "compact-tablet: home, exact-spelling quiz, feedback, pause, results, root background, safe areas, zoom guards, and settings-only scrolling",
+    "touch: six consecutive phone/tablet rotations, real touch Pause/Resume/Settings/letter selection, and a simulated 96px visible-viewport reduction with dock fully visible",
+    "midi: six consecutive phone/tablet rotations, real touch Pause/Resume/Settings, and a simulated 96px visible-viewport reduction with dock fully visible",
+    "Window resize fallback sizes the app when VisualViewport is unavailable"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated; installed iOS system chrome and physical Honor MagicPad 2 behavior are not reproduced.",
+    "Rotation checks send real touch sequences after viewport resizing. Reduced visible height and the connected MIDI port are simulated."
+  ],
+  "result": "passed"
+}

@@ -1,0 +1,27 @@
+{
+  "engine": "chromium",
+  "origin": "https://piano-quiz.pages.dev/",
+  "build": "abe288c1a2efc3",
+  "testedAt": "2026-11-06T23:03:07.139Z",
+  "checks": [
+    "unsupported or denied MIDI can switch to saved tap mode without blocking practice",
+    "MIDI mode hides tap controls, and hotplug, device selection and disconnect work",
+    "recheck restores input after same-device reopen, changed id, and a stale device list",
+    "wrong MIDI note is red for two seconds, retries without double counting, then advances quickly on green",
+    "MIDI chords grade full overlapping phrases and ignore paused, feedback and held keys",
+    "MIDI staff, red feedback, pause and dock fit phone, tablet and desktop sizes"
+  ],
+  "errors": [],
+  "limits": [
+    "Six device/message scenarios use a simulated Web MIDI API. Chromium also checks native MIDI with a virtual loopback when available. No physical MIDI keyboard is attached."
+  ],
+  "nativeApi": {
+    "available": true,
+    "result": "granted",
+    "inputCount": 1,
+    "virtualInputId": "1A0CE1F47C19C43DAEB93B9595F6E4BA822ED318FE8D8BF2750B66286B5BEC38",
+    "virtualOutputId": "6FF5590044F4859ED50C5167BCFE9700A1798E39AA55A628E86D39011FAECD5D",
+    "virtualLoopback": "passed: native Web MIDI through ALSA Midi Through grades C4 before and after Recheck"
+  },
+  "result": "passed"
+}

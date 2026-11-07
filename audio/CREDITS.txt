@@ -1,0 +1,7 @@
+Salamander Grand Piano V3 — Alexander Holm
+Source: https://archive.org/details/SalamanderGrandPianoV3
+License: Creative Commons Attribution 3.0 Unported (CC-BY 3.0)
+https://creativecommons.org/licenses/by/3.0/
+Yamaha C5 recordings from the velocity-10 layer, trimmed to 3.5 seconds,
+downmixed to mono and encoded as MP3 for this app. Reference playback compensates
+for measured sample tuning. Attribution does not imply endorsement by the author.

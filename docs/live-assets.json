@@ -1,0 +1,188 @@
+{
+  "url": "https://piano-quiz.pages.dev/",
+  "deploymentUrl": "https://0e35a266.piano-quiz.pages.dev/",
+  "version": "abe288c1a2efc3",
+  "testedAt": "2026-11-06T23:02:32.235Z",
+  "result": "passed",
+  "files": [
+    {
+      "path": "audio/A2.mp3",
+      "status": 200,
+      "sha256": "0375f8026a4633683f8f83187dc826792351a3912faee2eae75112ccc2473fb5"
+    },
+    {
+      "path": "audio/A3.mp3",
+      "status": 200,
+      "sha256": "971dd34b0265efba858a063e30a2025046ff37fda721e8ffd1fcc0b20c11ff15"
+    },
+    {
+      "path": "audio/A4.mp3",
+      "status": 200,
+      "sha256": "7e6db396df25cd816fc6b9f1554808d3b4ed5425d23b4286d1dc75a4e0386fca"
+    },
+    {
+      "path": "audio/A5.mp3",
+      "status": 200,
+      "sha256": "642fcd55bcd4357da3227defb8a424d7b5c90c4554a4036a3eb28954c0607e7d"
+    },
+    {
+      "path": "audio/C3.mp3",
+      "status": 200,
+      "sha256": "13c7e28b052d674941352a8562cd4c493a4255a9b8a90a3390fe18cbb844e48a"
+    },
+    {
+      "path": "audio/C4.mp3",
+      "status": 200,
+      "sha256": "18a66d43b674e6337e146c376033c6af399e63b5413c472ca4d36e331b74ded0"
+    },
+    {
+      "path": "audio/C5.mp3",
+      "status": 200,
+      "sha256": "f9276e9c3ea576592d4ff88c52db4c3c79c486ab47c6ac1a91edefce1aa870ff"
+    },
+    {
+      "path": "audio/C6.mp3",
+      "status": 200,
+      "sha256": "b29b71ffc98dbe513a6e93dd90f8e3bf8ca366cf66f024a5d73885934572d063"
+    },
+    {
+      "path": "audio/CREDITS.txt",
+      "status": 200,
+      "sha256": "6d46e3f8aedbe0baa3cfc8c1aa4460999f37b9e88db9450561e3ca6c7c1e1246"
+    },
+    {
+      "path": "audio/Ds3.mp3",
+      "status": 200,
+      "sha256": "d5645929a12e6329531520f393201d33b66f63d65e15d741b77d4486d36ea1eb"
+    },
+    {
+      "path": "audio/Ds4.mp3",
+      "status": 200,
+      "sha256": "a738de902ad6c01a2d213084d8c328688f9ffb9ad1a80ecae6187bd4c99a81d0"
+    },
+    {
+      "path": "audio/Ds5.mp3",
+      "status": 200,
+      "sha256": "9a190407e43878d688bbc9bad7ad4e41cb75cbaf71e11c17c8328b771a02a977"
+    },
+    {
+      "path": "audio/Fs3.mp3",
+      "status": 200,
+      "sha256": "d722ceda66328203cbfcd1b16b1ddb60a66efbe80d1841c5706f6fc488b2d685"
+    },
+    {
+      "path": "audio/Fs4.mp3",
+      "status": 200,
+      "sha256": "9bf84dea996170a7a8962c30f3dc8b6f04aa32ba77f4b1e17050437966cbc4bc"
+    },
+    {
+      "path": "audio/Fs5.mp3",
+      "status": 200,
+      "sha256": "78b73b437aba83a4570f49a77184c49117fdf4aa52ae1e3d2e50618e5f0aab89"
+    },
+    {
+      "path": "icons/apple-touch-icon.png",
+      "status": 200,
+      "sha256": "cd47501cb361ff45bf49bde9afb911c22a3fcbcf5cb9a85413ec1c144b27e34d"
+    },
+    {
+      "path": "icons/icon-192.png",
+      "status": 200,
+      "sha256": "8485347ca81cfb2e9287a8d0c028bbc4170e81ccc19400e52cc7c381f434f72d"
+    },
+    {
+      "path": "icons/icon-512.png",
+      "status": 200,
+      "sha256": "d52e068c117b148ec12416d1affa5a565f558e708f31e9994e71506cacdbcaad"
+    },
+    {
+      "path": "icons/icon-maskable.png",
+      "status": 200,
+      "sha256": "c5b8448ec3d832f0a4bfdc7587d170caea051e72cc45324f059c167696e2261e"
+    },
+    {
+      "path": "icons/icon.svg",
+      "status": 200,
+      "sha256": "251a32fd2ca39be9836b896fa3df3275eb30f80728efb1dd33273e0ac95fbf3d"
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "sha256": "eff7ae88f4c06211f20cea0f7a0fa13a07f9f657ff81a55f4d50343791b253bd"
+    },
+    {
+      "path": "js/app.js",
+      "status": 200,
+      "sha256": "6f02c29aea413e942a5cac23c5828192e41a0f6cb496bc17b80519dfc1bcdca8"
+    },
+    {
+      "path": "js/audio.js",
+      "status": 200,
+      "sha256": "cb483887c9f6161bfb3e66d074e5b48b2be2c2596e64cb958119fd8a2cb5a9fe"
+    },
+    {
+      "path": "js/chords.js",
+      "status": 200,
+      "sha256": "1075aceb443911dbaec04091e9a946be680f187d32b9feccd610e9b867dd676a"
+    },
+    {
+      "path": "js/clef-paths.js",
+      "status": 200,
+      "sha256": "3333a249a411235cd2e01a2f4b321ff607645877b08c977d4608de9f8043c35c"
+    },
+    {
+      "path": "js/midi.js",
+      "status": 200,
+      "sha256": "4c58dabe1b06e2ae822de28ed32d1f2a27e8b9b774fce40799befc9064b6920d"
+    },
+    {
+      "path": "js/notes.js",
+      "status": 200,
+      "sha256": "06d0cad0db4acae6868b54c2cb8e5274d484e1aa9fbbdd861944f17d5c35a36b"
+    },
+    {
+      "path": "js/quiz.js",
+      "status": 200,
+      "sha256": "e52914f2f74bf2c22da6d449d53b047e1be608b5d235caf1b2a6d99c02648c97"
+    },
+    {
+      "path": "js/staff.js",
+      "status": 200,
+      "sha256": "1cdfe6410d7c34e8e8c1365f51a4a78367fb13534ec285c7d51e35fd20c304e6"
+    },
+    {
+      "path": "js/storage.js",
+      "status": 200,
+      "sha256": "129af576a5bd90809f25720c62fdbc18e911985e9d94285cf719591d20e29315"
+    },
+    {
+      "path": "js/viewport.js",
+      "status": 200,
+      "sha256": "e08460cf2b66e5836746727d6f9865353b16fbae0d2a398efa325dcc6ad29c43"
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "sha256": "ca529c433a22ad79ba15aba91583aedd6735c450a63abb90ec71c9eb01c57660"
+    },
+    {
+      "path": "styles.css",
+      "status": 200,
+      "sha256": "e02cedca839ec76318721a81ab56cb4f4d8a5eca7e83c731ab22a6a606d962a6"
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "sha256": "9ed2f94ec529e7984926369d1f1fd1c03fee1b4068fc69c0502b73136d94a05b"
+    },
+    {
+      "path": "version.json",
+      "status": 200,
+      "sha256": "bcc6551cd3d931e13dbe10a639bb5d827304bdd50de19896b922ff0281d979ad"
+    }
+  ],
+  "headers": {
+    "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    "permissionsPolicy": "microphone=(), camera=(), midi=(self)"
+  }
+}

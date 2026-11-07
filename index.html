@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f6ef">
+  <meta name="description" content="A little practice. A little more fluent. Short note and chord reading quizzes for your phone, online or offline.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Piano Quiz · A little more fluent</title>
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button id="home-button" class="brand" aria-label="Piano Quiz home"><span class="brand-icon" aria-hidden="true">♪</span><span>piano<span class="brand-light">quiz</span><span class="brand-dot">.</span></span></button>
+      <div class="top-actions"><span id="network-status" class="network-pill" hidden>Offline</span><button id="settings-button" class="icon-button" aria-label="App settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg></button></div>
+    </header>
+
+    <main>
+      <section id="home-screen" class="screen">
+        <div class="daily-banner"><span class="daily-icon" aria-hidden="true">✳</span><div><strong id="daily-title">Your daily little practice</strong><span id="daily-description">Ten questions. A little more fluent.</span></div><span id="daily-check" aria-hidden="true">○</span></div>
+        <div class="home-heading"><p class="eyebrow">MAKE MUSIC SECOND NATURE</p><h1>See it.<br>Name it.<br><span>Know it.</span></h1><p class="intro">A few notes today.<br>A little less thinking tomorrow.</p><div class="preview-card" aria-hidden="true"><div class="preview-header"><span>A LITTLE WARM-UP</span><span class="preview-spark">✦</span></div><div id="home-staff" class="home-staff"></div><div class="preview-answer"><span>C</span><span>D</span><span class="preview-picked">E <small>✓</small></span><span>F</span></div><div class="preview-caption">One note closer to second nature.</div></div></div>
+        <div class="practice-card"><div class="practice-card-heading"><div><p class="eyebrow">YOUR PRACTICE</p><h2 id="practice-title">Note names</h2></div><button id="customize-button" class="text-button">Choose notes <span aria-hidden="true">↗</span></button></div><p id="practice-detail" class="muted">Treble clef · 7 notes · 10 questions</p><div class="segmented input-mode-options" role="group" aria-label="Answer with"><button data-input-mode="touch" type="button">Tap names</button><button data-input-mode="midi" type="button">MIDI keyboard</button></div><button id="start-button" class="primary">Let’s practise <span aria-hidden="true">→</span></button><p id="resume-note" class="small muted" hidden>Your unfinished round is ready when you are.</p></div>
+        <div id="progress-overview" class="progress-overview"></div>
+        <p class="home-footnote"><span aria-hidden="true">♡</span> Small sessions. No pressure. Just progress.</p>
+      </section>
+
+      <section id="quiz-screen" class="screen" hidden>
+        <span id="answer-status" class="sr-only" role="status" aria-live="polite"></span>
+        <div id="quiz-content">
+        <div class="quiz-heading"><button id="pause-button" class="text-button">‹ Pause</button><span id="question-count" class="small muted"></span><span id="round-score" class="score-pill"></span></div>
+        <div id="round-progress" class="round-progress" role="progressbar" aria-label="Round progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span></span></div>
+        <div id="question-visual"><div class="prompt-heading"><p id="prompt-eyebrow" class="eyebrow"></p><h1 id="prompt-title" tabindex="-1">Name this note</h1></div>
+        <div class="score-card"><span id="clef-label" class="clef-pill"></span><div id="quiz-staff" class="quiz-staff"></div><div id="staff-caption" class="staff-caption" role="status" aria-live="polite">Take a breath. You know more than you think.</div></div></div>
+        <div id="answer-controls">
+          <div class="answer-heading"><span class="eyebrow">YOUR ANSWER</span><output id="answer-preview" aria-live="polite">Choose a letter</output></div>
+          <div id="letters" class="letters" role="group" aria-label="Note letter"></div>
+          <div id="accidentals" class="segmented accidental-selector" role="group" aria-label="Accidental"><button data-alteration="-1" aria-label="Flat" aria-pressed="false">♭ <span>Flat</span></button><button data-alteration="0" aria-label="Natural" aria-pressed="true">♮ <span>Natural</span></button><button data-alteration="1" aria-label="Sharp" aria-pressed="false">♯ <span>Sharp</span></button></div>
+          <div id="quality-answer-section" hidden><p class="eyebrow quality-heading">CHORD TYPE</p><div id="answer-qualities" class="quality-grid" role="group" aria-label="Chord type"></div><label class="quality-picker-label" for="answer-quality-picker">Chord type</label><select id="answer-quality-picker" aria-label="Chord type"><option value="">Choose chord type</option></select></div>
+        </div>
+        <div id="quiz-midi-panel" hidden><p id="quiz-midi-status" class="small muted" role="status"></p><button id="midi-use-touch" class="text-button">Use tap answers</button></div>
+        </div>
+        <div id="paused-panel" class="paused-panel" hidden><span class="pause-symbol" aria-hidden="true">Ⅱ</span><h2>Take your time.</h2><p class="muted">Your place is saved. Come back when you’re ready.</p></div>
+        <div id="quiz-actions">
+          <div id="answer-actions"><button id="check-button" class="primary" disabled>Check answer <span aria-hidden="true">→</span></button><button id="unknown-button" class="quiet-button">I don’t know yet</button></div>
+          <div id="feedback-actions" hidden><div class="feedback-action-row"><button id="hear-button" class="secondary">♫ Hear it</button><button id="next-button" class="primary">Next question <span aria-hidden="true">→</span></button></div><div class="action-spacer" aria-hidden="true"></div></div>
+          <div id="midi-actions" hidden><div class="midi-action-row"><button id="midi-skip-button" class="secondary">Skip note</button><button id="midi-recheck-quiz" class="secondary">Recheck MIDI</button></div><p id="midi-action-hint" class="small muted">Play, then release all keys</p></div>
+          <div id="pause-actions" hidden><button id="resume-button" class="primary">Resume practice <span aria-hidden="true">→</span></button><button id="pause-home-button" class="quiet-button">Back to home</button></div>
+        </div>
+      </section>
+
+      <section id="result-screen" class="screen result-screen" hidden>
+        <p class="eyebrow">A LITTLE PRACTICE ADDS UP</p><div class="result-flower" aria-hidden="true">✳</div><h1 id="result-title" tabindex="-1">Look at you grow.</h1><p id="result-message" class="muted"></p><div id="result-metrics" class="result-metrics"></div><div id="difficult-section" class="difficult-section" hidden><h2>Give these another look</h2><p class="small muted">We’ll bring them back for more practice.</p><div id="difficult-items"></div></div><button id="again-button" class="primary">Practise again <span aria-hidden="true">→</span></button><button id="result-home-button" class="quiet-button">Done for now</button>
+      </section>
+    </main>
+    <footer><span>Made for a little, often.</span><button id="about-button" class="text-button">How it works</button></footer>
+  <div class="notices"><p id="storage-notice" role="status" hidden>Progress can’t be saved in this browser. You can still practise here.</p><div id="update-notice" hidden><span>A fresh version is ready.</span><button id="update-button" class="text-button">Update app</button></div></div>
+  </div>
+
+  <dialog id="customize-dialog" aria-labelledby="customize-title"><form id="customize-form"><div class="dialog-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="customize-title">A little focus.</h2></div><button type="button" data-close="customize-dialog" class="icon-button" aria-label="Close customization">✕</button></div><p class="muted">Choose what you want to get to know.</p>
+    <fieldset><legend>What are we practising?</legend><div class="segmented" id="mode-options"><button type="button" data-mode="notes">Notes</button><button type="button" data-mode="chords">Chords</button><button type="button" data-mode="mixed">Mixed</button></div></fieldset>
+    <fieldset><legend>Clef</legend><div class="segmented" id="clef-options"><button type="button" data-clef="treble">Treble</button><button type="button" data-clef="bass">Bass</button><button type="button" data-clef="mixed">Mixed</button></div></fieldset>
+    <fieldset><legend id="pitch-legend">Notes to practise</legend><div class="preset-actions"><button type="button" data-preset="naturals" class="text-button">Naturals</button><button type="button" data-preset="sharps" class="text-button">Sharps</button><button type="button" data-preset="flats" class="text-button">Flats</button><button type="button" data-preset="all" class="text-button">All</button><button type="button" data-preset="none" class="text-button">Clear</button></div><div id="pitch-options" class="pitch-grid"></div><p id="selection-summary" class="small muted" role="status">Only selected spellings will appear.</p></fieldset>
+    <fieldset id="range-settings"><legend>Staff range · octaves</legend><div class="preset-actions"><button type="button" data-range="standard" class="text-button">Standard</button><button type="button" data-range="wider" class="text-button">Wider range</button><button type="button" data-range="all" class="text-button">All octaves</button></div><div id="octave-options"></div><p class="small muted">Each selected note appears in every selected octave. C4 is middle C; C5 is the higher C in the third space of the treble staff. In chords, this sets the root’s octave.</p></fieldset>
+    <fieldset id="chord-settings"><legend>Chord types</legend><div id="quality-options" class="quality-grid"></div></fieldset>
+    <fieldset><legend>Round length</legend><div class="segmented" id="length-options"><button type="button" data-length="10">10 questions</button><button type="button" data-length="20">20 questions</button></div></fieldset>
+    <p id="setup-error" role="alert" class="error-text" hidden></p><p id="setup-round-note" class="small muted" hidden>Applying changes starts a new round. Your learning progress stays saved.</p><button id="apply-button" class="primary" type="submit">Save practice <span aria-hidden="true">✓</span></button>
+  </form></dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title"><div class="dialog-heading"><div><p class="eyebrow">THE LITTLE DETAILS</p><h2 id="settings-title">App settings</h2></div><button data-close="settings-dialog" class="icon-button" aria-label="Close app settings">✕</button></div><button id="practice-settings-button" class="secondary">Choose practice notes →</button><fieldset class="midi-settings"><legend>MIDI keyboard</legend><div class="segmented input-mode-options" role="group" aria-label="Answer with"><button data-input-mode="touch" type="button">Tap names</button><button data-input-mode="midi" type="button">MIDI keyboard</button></div><p id="midi-status" role="status"></p><button id="midi-connect" class="secondary">Connect MIDI keyboard</button><button id="midi-recheck" class="text-button">Recheck MIDI devices</button><div id="midi-device" hidden><label class="midi-device-label" for="midi-input">Input device</label><select id="midi-input"></select></div><button id="midi-disconnect" class="text-button" hidden>Disconnect MIDI</button><p class="muted">Play the exact displayed octave. Hold a chord together, then release all keys to check; the sustain pedal does not hold an answer open. MIDI carries pitches, so it cannot distinguish C♯ from D♭. Switch to Tap names for written-spelling practice. Use Recheck MIDI after reconnecting if keys stop responding.</p></fieldset><fieldset><legend>Appearance</legend><div id="theme-options" class="theme-grid" role="group" aria-label="Color theme"></div></fieldset><label class="switch-row"><span><strong>Piano after answering</strong><small>Hear the note or chord with feedback.</small></span><input id="sound-setting" type="checkbox" role="switch"></label><div class="settings-note"><strong id="offline-status">Preparing offline practice…</strong><p class="small muted">Install from your browser’s menu: Add to Home Screen or Install app. Progress stays on this device and browser.</p></div><p class="small muted">Your daily goal is one completed round. A fresh start is always welcome.</p><a href="./audio/CREDITS.txt" target="_blank" rel="noopener" class="small">Piano sample credits ↗</a></dialog>
+
+  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-heading"><h2 id="about-title">A little, often.</h2><button data-close="about-dialog" class="icon-button" aria-label="Close help">✕</button></div><p>Read the staff, choose a letter and accidental, then tap <strong>Check answer</strong>. For chords, choose the root letter and chord type.</p><p>Use <strong>Choose notes</strong> on Home or in App settings to select the exact names you want. Naturals, Sharps, and Flats are separate groups; selecting C♯ does not select D♭. In chord mode, these choices are chord roots.</p><p>Name what’s written: a C♯ is answered C♯, even though D♭ sounds the same. Use <strong>Staff range · octaves</strong> in Choose notes to practise the same name at different heights, including ledger lines. C4 is middle C; C5 sits in the third space of the treble staff. Octave numbers aren’t required in your answer.</p><p>A wrong answer shows the played note in red for two seconds, then lets you try the same question again. A correct answer turns green and moves on. Skip reveals the name briefly and moves to another question. Round accuracy counts first tries. Missed items return after a few questions or in a later round.</p><p>Short recall sessions and spaced review give you another chance to remember. Progress is kept separately for each clef and written name.</p><p class="small muted">No microphone or account needed. An instrument is optional: enable a MIDI keyboard in App settings, then play and release the displayed note or chord. Touch answers are always available. This is a staff-reading quiz; using a screen reader will describe the prompt but cannot replace the visual reading exercise.</p></dialog>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "engine": "webkit",
+  "origin": "https://piano-quiz.pages.dev/",
+  "inMemory": false,
+  "checks": [
+    "home loads with default practice and no horizontal overflow",
+    "practice labels cannot be selected by double-clicking or dragging",
+    "fixed answer controls and unanswered staff do not reveal the name",
+    "correct answer grades once and advances automatically",
+    "wrong note turns red, retries after two seconds, and reload preserves first-try grading",
+    "pausing excludes elapsed time and resumes explicitly",
+    "complete ten-question round updates daily goal and displays difficult items",
+    "customization rejects empty pools and cancellation preserves settings",
+    "chord quiz requires root plus quality, and Skip briefly reveals the bass chord",
+    "theme changes pause practice and persist across reload",
+    "320px phone, landscape, and tablet layouts avoid horizontal overflow",
+    "backgrounding pauses a question without counting hidden time",
+    "Check, Next, and Resume stay aligned at the bottom on small phones and landscape",
+    "every palette applies and persists, including light palettes on a dark device",
+    "mixed notes and chords across both clefs survive reload",
+    "Choose notes exposes exact sharp/flat selections and Settings links to the same pool",
+    "octave selection asks higher C5 only, validates ranges, saves and cancels changes",
+    "blocked storage keeps the app usable with an honest notice",
+    "service worker installs, then supports a fresh offline launch and quiz",
+    "piano audio works, or an independently unavailable audio backend is reported"
+  ],
+  "errors": [],
+  "limits": [
+    "unverified: independent WebKit audio context cannot start on this host"
+  ],
+  "build": "abe288c1a2efc3",
+  "testedAt": "2026-11-06T23:04:50.044Z",
+  "audioBackendProbe": {
+    "state": "suspended",
+    "currentTime": 0
+  },
+  "audio": "unverified: independent WebKit audio context cannot start on this host",
+  "result": "passed"
+}
