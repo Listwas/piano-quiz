@@ -208,10 +208,10 @@ export class Activities {
 
   frame({ time, beat, meterBeat = beat, startTime }) {
     if (this.renderedMeter !== this.clock.meter) this.refresh();
-    const index = Math.max(0, Math.floor(meterBeat)) % this.clock.meter;
+    const index = time < this.clock.startTime ? -1 : Math.max(0, Math.floor(meterBeat)) % this.clock.meter;
     if (this.lastBeat !== index) {
       this.lastBeat = index;
-      $('metronome-number').textContent = index + 1;
+      if (index >= 0) $('metronome-number').textContent = index + 1;
       for (const dot of $('training-beats').children) dot.classList.toggle('active', Number(dot.dataset.beat) === index);
     }
     if (!this.exercise || !this.session || this.completed) return;
@@ -272,8 +272,9 @@ export class Activities {
   }
 
   countdown(time) {
-    const count = Math.max(1, Math.ceil((this.session.startTime-time)/this.session.beatMs));
     const retry = this.session.retryReason;
+    const remaining = Math.max(1, Math.ceil((this.session.startTime-time)/this.session.beatMs));
+    const count = retry ? remaining : Math.min(this.clock.countIn, remaining);
     this.message(retry ? `${retry} · get ready to play in ${count} beat${count === 1 ? '' : 's'}` : `Get ready · ${count}`, Boolean(retry));
     if (retry) $('training-progress').textContent = `${this.settings.bpm} BPM · Retry in ${count}`;
   }

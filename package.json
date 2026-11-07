@@ -12,7 +12,8 @@
     "test:viewport": "node tests/viewport.mjs",
     "deploy": "npm run build && node tools/deploy.mjs",
     "test:midi": "node tests/midi-browser.mjs",
-    "test:training": "node tests/training-browser.mjs"
+    "test:training": "node tests/training-browser.mjs",
+    "test:polish": "node tests/polish.mjs"
   },
   "devDependencies": {
     "playwright": "1.64.1",
