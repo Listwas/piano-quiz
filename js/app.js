@@ -21,6 +21,8 @@ let draft;
 let registration;
 let updating = false;
 let pendingWorker;
+let persistTimer;
+let midiCueTimer;
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const clefName = clef => ({ treble: 'Treble clef', bass: 'Bass clef', mixed: 'Mixed clefs' })[clef];
 const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: 'Notes & chords' })[mode];
@@ -43,8 +45,11 @@ function setInputMode(inputMode) {
 }
 
 function persist() {
+  clearTimeout(persistTimer);
+  persistTimer = null;
   $('storage-notice').hidden = saveState(state);
 }
+function queuePersist() { if (!persistTimer) persistTimer = setTimeout(persist, 80); }
 function theme() {
   document.documentElement.dataset.theme = state.settings.theme;
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
@@ -128,7 +133,15 @@ function renderQuestion() {
   midi.phrase.resetPhrase();
   midi.phrase.setActive(canAcceptMidi());
   const round = state.active;
+  if (isMidiMode() && round?.feedback?.answer) {
+    if (round.feedback.correct) advance(round, state.history);
+    else retryQuestion(round);
+    queuePersist();
+  }
   if (!round?.current) { finish(); return; }
+  clearTimeout(midiCueTimer);
+  document.querySelector('.score-card').classList.remove('midi-correct', 'midi-wrong');
+  $('midi-action-hint').classList.remove('midi-mistake');
   renderInputMode();
   const feedback = round.feedback;
   const item = round.current;
@@ -162,7 +175,7 @@ function renderQuestion() {
     }
   }
   $('quiz-staff').innerHTML = renderStaff(displayed, item.clef, Boolean(feedback), feedback ? feedback.correct ? 'correct' : 'wrong' : '');
-  $('staff-caption').textContent = isMidiMode() ? 'Play, then release all keys to check.' : item.kind === 'chord' ? 'Find the root, then the chord type.' : 'Read the staff. Choose the written name.';
+  $('staff-caption').textContent = isMidiMode() ? item.kind === 'note' ? 'Play the key. You can retry straight away.' : 'Hold the chord together, then release to check.' : item.kind === 'chord' ? 'Find the root, then the chord type.' : 'Read the staff. Choose the written name.';
   if (feedback) {
     const given = answerName(feedback.answer, item.kind);
     $('staff-caption').textContent = feedback.correct ? `${item.label} · Correct` : feedback.answer ? `${given} · Try again` : `${item.label} · ${item.tones[0].name}${item.tones[0].octave} · Moving on`;
@@ -207,6 +220,28 @@ function submit(value) {
   persist();
   renderQuestion();
   if (state.settings.sound) void playItem(feedback.item).catch(() => {});
+}
+
+function submitMidi(notes) {
+  if (!canAcceptMidi()) return;
+  captureTime();
+  const round = state.active;
+  const feedback = recordAnswer(round, state.history, { source: 'midi', notes }, round.elapsed);
+  if (!feedback) return;
+  if (feedback.correct) advance(round, state.history);
+  else retryQuestion(round);
+  renderQuestion();
+  startClock();
+  queuePersist();
+  if (screen !== 'quiz') return;
+  const card = document.querySelector('.score-card');
+  card.classList.add(feedback.correct ? 'midi-correct' : 'midi-wrong');
+  const message = feedback.correct ? 'Correct ✓' : `Played ${answerName(feedback.answer, feedback.item.kind)} · Try again`;
+  $('midi-action-hint').textContent = message;
+  $('midi-action-hint').classList.toggle('midi-mistake', !feedback.correct);
+  $('answer-status').textContent = message;
+  midiCueTimer = setTimeout(() => { card.classList.remove('midi-correct', 'midi-wrong'); $('midi-action-hint').classList.remove('midi-mistake'); renderMidiQuiz(); }, feedback.correct ? 120 : 180);
+  if (state.settings.sound) setTimeout(() => { void playItem(feedback.item).catch(() => {}); }, 0);
 }
 
 function next() {
@@ -270,7 +305,7 @@ function renderMidiQuiz() {
   $('quiz-midi-status').textContent = status.connected ? `Connected · ${status.selectedName}` : status.state === 'unsupported' ? 'MIDI is unavailable in this browser. Switch to tap answers.' : status.state === 'requesting' || status.state === 'opening' ? 'Connecting your keyboard…' : 'Keyboard not connected. Reconnect it, then tap Recheck MIDI.';
   const unavailable = status.state === 'unsupported' || status.state === 'requesting';
   $('midi-recheck-quiz').disabled = unavailable;
-  $('midi-action-hint').textContent = state.active?.feedback ? state.active.feedback.correct ? 'Correct ✓' : state.active.feedback.answer ? 'Try again in a moment' : 'Moving to the next note' : 'Play, then release all keys';
+  $('midi-action-hint').textContent = state.active?.feedback ? 'Moving to the next note' : state.active?.current?.kind === 'chord' ? 'Hold together, then release' : 'Play a key · instant retry';
 }
 function renderMidi(status) {
   const messages = {
@@ -279,7 +314,7 @@ function renderMidi(status) {
     requesting: 'Waiting for browser MIDI permission…',
     opening: 'Opening your MIDI keyboard…',
     waiting: status.selectedId ? 'Keyboard disconnected. Reconnect it or use Recheck MIDI.' : 'No MIDI inputs found. Connect a keyboard, then use Recheck MIDI.',
-    connected: `Connected to ${status.selectedName}. Play, then release all keys to check.`,
+    connected: `Connected to ${status.selectedName}. Notes answer on key press; release chords to check.`,
     error: status.message,
   };
   $('midi-status').textContent = messages[status.state];
@@ -299,7 +334,7 @@ function renderMidi(status) {
   else startClock();
   renderMidiQuiz();
 }
-const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi()) submit({ source: 'midi', notes }); } });
+const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
 document.querySelectorAll('[data-input-mode]').forEach(button => { button.onclick = () => setInputMode(button.dataset.inputMode); });
 $('midi-use-touch').onclick = () => setInputMode('touch');
 $('midi-connect').onclick = () => { setInputMode('midi'); void midi.connect(); };

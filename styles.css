@@ -355,3 +355,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 :root[data-short-viewport] .accidental-selector span{display:none}
 :root[data-short-viewport] #quality-answer-section{align-self:center}
 :root[data-short-viewport] #answer-quality-picker{height:48px;font-size:14px}
+.score-card.midi-correct{box-shadow:inset 0 0 0 3px var(--accent)}
+.score-card.midi-wrong{box-shadow:inset 0 0 0 3px var(--wrong)}
+#midi-action-hint.midi-mistake{color:var(--wrong)}

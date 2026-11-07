@@ -17,9 +17,10 @@ chords on the staff, with short quizzes you can fit into your day.
 
 With tap answers, choose the letter and accidental, then **Check answer**. For
 chords, choose the root and chord type too. With MIDI, play the exact displayed
-note or chord and release the keys.
+note. Chords are checked after you release the keys.
 
 Green means correct. Red gives you another chance to try the same question.
+MIDI notes react on key press: mistakes never block your next attempt.
 **I don’t know yet** or **Skip note** shows the answer and moves on. Your score
 counts your first attempt, so retries help you learn without adding extra misses.
 
@@ -46,7 +47,7 @@ Choose **MIDI keyboard** and start practice, then allow MIDI access when asked.
 You can select an input in **App settings**. If unplugging and reconnecting stops
 working, tap **Recheck MIDI**.
 
-For chords, hold the displayed tones together, then release them. The app reads
+Notes answer immediately on key press. For chords, hold the displayed tones together, then release them. The app reads
 physical key releases, so the sustain pedal does not keep an answer open.
 Use your keyboard’s own sound, or enable **Piano after answering**.
 

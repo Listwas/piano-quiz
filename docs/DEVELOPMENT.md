@@ -1,5 +1,13 @@
 # Development
 
+## Responsive MIDI input
+
+Single-note MIDI answers now grade on a fresh Note On, using normalized press/release
+events and original input timestamps. Incorrect attempts retry immediately; correct
+attempts advance immediately. Color cues are visual only. Chords retain release-based
+phrase capture, with no post-answer lockout. Storage writes are coalesced outside the
+input callback, and page hide flushes progress. Touch feedback is unchanged.
+
 ## Architecture
 
 - `js/quiz.js`: pool enumeration, written-name grading, scheduling, round state,

@@ -160,3 +160,16 @@ test('replug adopts a unique matching keyboard with a changed id and recheck ref
   assert.equal(r.access.onstatechange, null);
   r.midi.disconnect();
 });
+
+test('raw note events react to fresh presses and retain input timestamps and channels', () => {
+  const events = [], keyboard = new MidiKeyboard({ onNote: event => events.push(event) });
+  keyboard.receive(on(60), 1234);
+  keyboard.receive(on(60), 1235);
+  keyboard.receive(on(64, 2), 1240);
+  keyboard.receive([0x90, 60, 0], 1300);
+  keyboard.receive(off(60), 1301);
+  keyboard.receive(off(64, 2), 1400);
+  assert.deepEqual(events.map(e => [e.type,e.note,e.channel,e.timeStamp]), [['on',60,0,1234],['on',64,2,1240],['off',60,0,1300],['off',64,2,1400]]);
+  keyboard.receive([0xb0, 123, 0], 1500);
+  assert.equal(events.at(-1).type, 'reset');
+});

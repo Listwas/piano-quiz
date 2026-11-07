@@ -76,9 +76,10 @@ export class MidiPhrase {
 }
 
 export class MidiKeyboard {
-  constructor({ navigator = globalThis.navigator, onStatus = () => {}, onPhrase = () => {} } = {}) {
+  constructor({ navigator = globalThis.navigator, onStatus = () => {}, onPhrase = () => {}, onNote = () => {} } = {}) {
     this.navigator = navigator;
     this.onStatus = onStatus;
+    this.onNote = onNote;
     this.phrase = new MidiPhrase(onPhrase);
     this.access = null;
     this.input = null;
@@ -91,6 +92,17 @@ export class MidiKeyboard {
     this.closing = Promise.resolve();
     this.binding = 0;
     this.status = { state: typeof navigator?.requestMIDIAccess === 'function' ? 'idle' : 'unsupported', inputs: [], selectedId: null, connected: false };
+  }
+
+  receive(data, timeStamp) {
+    if (!data || data.length !== 3 || !Array.from(data).every(value => Number.isInteger(value) && value >= 0 && value <= 255) || data[1] > 127 || data[2] > 127) return;
+    const [status, note, velocity] = data;
+    const command = status & 0xf0, channel = status & 0x0f;
+    const held = this.phrase.held.has(`${channel}:${note}`);
+    const type = command === 0x90 && velocity > 0 ? 'on' : command === 0x80 || command === 0x90 ? 'off' : command === 0xb0 && [120, 123].includes(note) ? 'reset' : null;
+    this.phrase.receive(data);
+    if (!type || type === 'on' && held || type === 'off' && !held) return;
+    this.onNote({ type, note, channel, velocity, timeStamp: Number.isFinite(timeStamp) && timeStamp >= 0 ? timeStamp : performance.now() });
   }
 
   notify(state, message = '') {
@@ -163,7 +175,9 @@ export class MidiKeyboard {
     this.notify('opening');
     this.closing.then(async () => {
       if (!this.wanted || this.generation !== generation || this.binding !== binding || this.input !== input) return;
-      input.onmidimessage = event => this.phrase.receive(event.data);
+      input.onmidimessage = event => {
+        if (this.wanted && this.generation === generation && this.binding === binding && this.input === input) this.receive(event.data, event.timeStamp);
+      };
       await input.open();
       if (this.wanted && this.generation === generation && this.binding === binding && this.input === input && input.state === 'connected') this.notify('connected');
     }).catch(() => this.openFailed(input, generation, binding));
