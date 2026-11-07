@@ -48,6 +48,17 @@ Choose **Metronome** from the activity selector on Home. Set a tempo from
 help you follow along. Pause, resume, or mute the clicks whenever you need.
 Tempo changes during playback take effect at the next bar.
 
+### Rhythm exercises
+
+Choose **Rhythm** to practise when to press, how long to hold, and when to rest.
+Use the large touch pad or any key on your MIDI keyboard. A half note lasts two
+beats; letting go after one beat counts as too short. The music keeps moving
+through mistakes, and the results show beat timing and note lengths separately.
+
+Start with **Simple** rhythms, or choose **Mixed** for eighth notes and rests.
+Set the tempo and exercise length in **Set up**. Pausing restarts the interrupted
+bar with a count-in. Rhythm results save separately from your quiz history.
+
 ## Connect your keyboard
 
 Choose **MIDI keyboard** and start practice, then allow MIDI access when asked.

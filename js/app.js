@@ -343,7 +343,7 @@ function renderMidi(status) {
   activities?.midiChanged(status);
 }
 const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (screen === 'training') { activities?.receive(event); return; } if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
-activities = new Activities({ goHome, openDialog, renderHome, getQuizSettings: () => state.settings, midi });
+activities = new Activities({ goHome, openDialog, openNotes:openCustomize, renderHome, getQuizSettings: () => state.settings, midi });
 document.querySelectorAll('[data-input-mode]').forEach(button => { button.onclick = () => setInputMode(button.dataset.inputMode); });
 $('midi-use-touch').onclick = () => setInputMode('touch');
 $('midi-connect').onclick = () => { setInputMode('midi'); void midi.connect(); };

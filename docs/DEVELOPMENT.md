@@ -18,6 +18,17 @@ as the scheduler. An explicit visual fallback is available if audio cannot start
 Training preferences use their own storage key; selecting another activity keeps
 the unfinished quiz intact.
 
+## Rhythm practice
+
+Rhythm generation uses durations in quarter-note beats, fills bars
+exactly, and includes at least one sounded note in each bar. Simple uses quarter
+and half notes; Mixed adds whole/eighth notes and rests. The pure session model
+grades original press timestamps and matching physical releases separately.
+A missed marker is provisional: a delayed message with an in-window timestamp
+can still claim it. Rest checks use physical key intervals with boundary grace.
+Pause discards the interrupted bar and its extra/retry counters, retaining prior
+bars. Touch uses pointer capture and cancellation pauses the exercise.
+
 ## Architecture
 
 - `js/quiz.js`: pool enumeration, written-name grading, scheduling, round state,

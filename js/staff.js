@@ -55,6 +55,13 @@ function bassClefPath() {
   };
 }
 
+export function clefMarkup(clef) {
+  if (clef === 'treble') return trebleClefGroup();
+  const { body, dots } = bassClefPath();
+  return `<path d="${body}" class="staff__clef--filled"/>` + dots.map(([cx,cy]) => `<circle cx="${cx}" cy="${cy}" r="2.2" class="staff__dot"/>`).join('');
+}
+export const staffY = yForStep;
+
 /* ── Rendering ─────────────────────────────────────────────────────────── */
 
 const ACCIDENTAL_TEXT = { '-2': '♭♭', '-1': '♭', 1: '♯', 2: '♯♯' };

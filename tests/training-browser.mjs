@@ -5,13 +5,14 @@ const engine=process.env.BROWSER||'chromium', base=process.env.PIANO_URL||'http:
 const report={engine,origin:base,build:JSON.parse(await readFile('dist/version.json')).version,testedAt:new Date().toISOString(),checks:[],errors:[],limits:['Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.']};
 const browser=await {chromium,firefox,webkit}[engine].launch({headless:true,...(engine==='chromium'?{executablePath:'/usr/bin/chromium',args:['--mute-audio']}: {})});
 const contexts=[];
-async function setup(){
+async function setup(deterministic = false){
  const ctx=await browser.newContext({viewport:{width:430,height:932},hasTouch:true,reducedMotion:'reduce',...(engine!=='firefox'?{isMobile:true}: {})});contexts.push(ctx);
  await ctx.addInitScript(()=>{
   window.scheduledClicks=[];
   const start=OscillatorNode.prototype.start;
   OscillatorNode.prototype.start=function(when){window.scheduledClicks.push({when,now:this.context.currentTime,frequency:this.frequency.value});return start.call(this,when);};
  });
+ if(deterministic)await ctx.addInitScript(()=>{Math.random=()=>0;});
  const page=await ctx.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(base);return page;
 }
 async function check(label,run){await run();report.checks.push(label);console.log('PASS '+label);}
@@ -46,6 +47,25 @@ try{
    for(const selector of ['#training-toggle','#training-sound','#training-back','#training-configure']){const b=await page.locator(selector).boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
    await page.locator('#training-toggle').tap();await page.locator('#training-toggle').tap();await running(page);
   }
+ });
+ await check('rhythm touch holds distinguish a one-beat release from a required two-beat half note',async()=>{
+  const page=await setup(true);await page.selectOption('#activity-select','rhythm');await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('200');await page.selectOption('#training-bars','2');await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await running(page);
+  await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<800);
+  const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].filter(n=>n.dataset.rest==='false').map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
+  const pad=await page.locator('#training-touchpad').boundingBox();await page.mouse.move(pad.x+pad.width/2,pad.y+pad.height/2);
+  async function until(time){const delay=await page.evaluate(time=>time-performance.now(),time);if(delay>0)await page.waitForTimeout(delay);}
+  for(let i=0;i<data.events.length;i++){const event=data.events[i];await until(data.start+event.beat*300);await page.mouse.down();await until(data.start+(event.beat+(i===0?1:event.duration))*300);await page.mouse.up();}
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,75);assert.equal(result.total,4);assert.equal(result.extras,0);await page.screenshot({path:`docs/images/rhythm-results-${engine}.png`});
+ });
+ await check('rhythm score and touch pad fit rotating phone and tablet layouts',async()=>{
+  const page=await setup(true);await page.selectOption('#activity-select','rhythm');await page.locator('#start-button').click();await running(page);await page.locator('#training-toggle').click();
+  for(const size of profiles){await page.setViewportSize({width:size.width,height:size.height});await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
+   const rects=await page.locator('#training-screen').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(rects.scroll<=rects.height+1,JSON.stringify({size,rects}));
+   for(const selector of ['#training-toggle','#training-touchpad','#training-back']){const b=await page.locator(selector).boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
+   assert.ok((await page.locator('.measure').first().boundingBox()).height>=30);
+  }
+  await page.screenshot({path:`docs/images/rhythm-${engine}.png`});
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}
