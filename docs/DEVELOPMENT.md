@@ -137,6 +137,7 @@ npm run test:midi # MIDI API/device simulation plus native Chromium virtual loop
 npm run test:viewport # safe areas, zoom guards, rotations and real touch targets
 npm run test:training # metronome, rhythm holds, timed bar retries, MIDI and rotation
 npm run test:polish # count-ins, dense notation/extreme ranges and all-theme feedback contrast
+npm run test:display # wake locks, background recovery, fullscreen and unavailable APIs
 ```
 
 Tests use Playwright and are always headless. Chromium defaults to

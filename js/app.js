@@ -7,6 +7,7 @@ import { playItem, stopAudio, suspendAudio } from './audio.js';
 import { MidiKeyboard, tonesFromMidi } from './midi.js';
 import { fitViewport } from './viewport.js';
 import { Activities } from './activities.js';
+import { PracticeDisplay } from './display.js';
 
 fitViewport();
 
@@ -25,6 +26,8 @@ let pendingWorker;
 let persistTimer;
 let midiCueTimer;
 let activities;
+const display = new PracticeDisplay({ onChange:renderDisplay });
+display.setEnabled(state.settings.keepAwake);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const clefName = clef => ({ treble: 'Treble clef', bass: 'Bass clef', mixed: 'Mixed clefs' })[clef];
 const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: 'Notes & chords' })[mode];
@@ -67,7 +70,26 @@ function showScreen(name) {
   screen = name;
   document.querySelector('.app-shell').dataset.screen = name;
   for (const id of ['home', 'quiz', 'result', 'training']) $(`${id}-screen`).hidden = name !== id;
+  display.setActive(name === 'quiz' || name === 'training');
   window.scrollTo(0, 0);
+}
+
+function renderDisplay() {
+  const supported = display.fullscreenSupported;
+  const active = display.fullscreen;
+  const label = active ? 'Exit fullscreen' : 'Enter fullscreen';
+  $('fullscreen-button').hidden = !supported && !active;
+  $('fullscreen-button').setAttribute('aria-label', label);
+  $('fullscreen-button').setAttribute('aria-pressed', String(active));
+  $('fullscreen-button').title = label;
+  $('fullscreen-setting').textContent = label;
+  $('fullscreen-setting').disabled = !supported && !active;
+  $('fullscreen-status').textContent = display.fullscreenError ? 'Fullscreen was blocked. Tap Enter fullscreen to try again.' : active ? 'Fullscreen is on. Use the arrows above or your device’s Back gesture to leave.' : supported ? 'Hide browser controls and system bars while you practise.' : 'This browser does not offer fullscreen for the app. Installed apps use the screen mode allowed by your browser.';
+  $('wake-setting').checked = state.settings.keepAwake;
+  $('wake-setting').disabled = !display.wakeSupported;
+  const messages = { active:'Screen stays awake during practice.', requesting:'Keeping the screen awake…', denied:'Your device declined to keep the screen awake. Battery saver can prevent it.', released:'Your device released the screen lock. Retry to keep it awake.', idle:state.settings.keepAwake ? 'Automatically keeps the screen awake while a quiz or exercise is open.' : 'Your usual screen timeout applies.' };
+  $('wake-status').textContent = display.wakeSupported ? messages[display.wakeState] : 'Keeping the screen awake is unavailable in this browser.';
+  $('wake-retry').hidden = !display.wanted || !['denied','released'].includes(display.wakeState);
 }
 
 function renderHome() {
@@ -381,6 +403,11 @@ $('settings-button').onclick = () => {
   $('sound-setting').checked = state.settings.sound;
   openDialog('settings-dialog');
 };
+async function toggleFullscreen() { if (!await display.toggleFullscreen()) openDialog('settings-dialog'); }
+$('fullscreen-button').onclick = toggleFullscreen;
+$('fullscreen-setting').onclick = () => { $('settings-dialog').close(); void toggleFullscreen(); };
+$('wake-setting').onchange = () => { state.settings.keepAwake = $('wake-setting').checked; persist(); display.setEnabled(state.settings.keepAwake); };
+$('wake-retry').onclick = () => display.sync();
 document.querySelectorAll('[data-close]').forEach(button => { button.onclick = () => $(button.dataset.close).close(); });
 for (const [group, key] of [['mode-options', 'mode'], ['clef-options', 'clef'], ['length-options', 'length']]) $(group).onclick = event => {
   const button = event.target.closest(`[data-${key}]`);

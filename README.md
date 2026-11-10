@@ -145,6 +145,17 @@ Use **Install app** or **Add to Home Screen** in your browser. App settings will
 tell you when offline practice is ready. Reopen the app and choose **Update app**
 when an update is offered; your learning history stays saved.
 
+### Keep practising without interruptions
+
+The screen stays awake while a quiz, metronome or exercise is open. You can turn
+this off under **App settings → Keep screen awake**. Switching apps or returning
+Home releases the screen lock; returning to practice requests it again.
+
+On your tablet, tap the **four arrows next to App settings** to enter or leave
+fullscreen. The same control is under **App settings → Screen**. Installed apps
+also request fullscreen. Your browser and device control whether system bars
+can be hidden; unavailable or blocked features are explained in settings.
+
 ## For developers
 
 Requires Node.js 24 or newer.

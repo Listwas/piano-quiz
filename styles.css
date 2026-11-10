@@ -360,6 +360,13 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 #midi-action-hint.midi-mistake{color:var(--wrong)}
 
 /* Practice activities share the existing viewport and bottom action dock. */
+.display-settings>p{margin-top:10px}
+.display-settings .switch-row{margin:20px 0 8px}
+#fullscreen-button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent)}
+@media(max-width:400px){
+ .topbar:has(#network-status:not([hidden])) .brand{font-size:20px;gap:0}
+ .topbar:has(#network-status:not([hidden])) .brand-icon{display:none}
+}
 #activity-select{display:block;width:100%;max-width:230px;min-height:38px;margin-top:3px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:21px;font-weight:650;padding:0 24px 0 0;cursor:pointer}
 .app-shell[data-screen=training]>footer{display:none}
 #training-screen{display:flex;flex-direction:column;min-height:0}

@@ -30,5 +30,7 @@ export function fitViewport() {
   window.addEventListener('orientationchange', rotated);
   window.screen.orientation?.addEventListener('change', rotated);
   window.addEventListener('pageshow', queue);
+  document.addEventListener('fullscreenchange', rotated);
+  document.addEventListener('webkitfullscreenchange', rotated);
   fit();
 }

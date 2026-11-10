@@ -4,7 +4,7 @@ import { matchesMidi, midiNoteName, validMidiNotes } from './midi.js';
 
 export const DEFAULTS = {
   mode: 'notes', clef: 'treble', inputMode: 'touch', enabled: [true, false, true, false, true, true, false, true, false, true, false, true],
-  qualities: ['maj', 'min'], length: 10, theme: 'system', sound: false, noteNames: null, octaves: { treble: [4], bass: [3] },
+  qualities: ['maj', 'min'], length: 10, theme: 'system', sound: false, keepAwake: true, noteNames: null, octaves: { treble: [4], bass: [3] },
 };
 export const NOTE_OPTIONS = Array.from({ length: 12 }, (_, pc) => spellingsOf(pc).map(([letter, alteration]) => ({ name: toneName(letter, alteration), letter, alteration, pitchClass: pc }))).flat().sort((a, b) => {
   const group = alteration => alteration === 0 ? 0 : alteration === 1 ? 1 : 2;
@@ -51,6 +51,7 @@ export function normalizeSettings(value) {
     if (qualities.length) result.qualities = qualities;
   }
   if (typeof value.sound === 'boolean') result.sound = value.sound;
+  if (typeof value.keepAwake === 'boolean') result.keepAwake = value.keepAwake;
   if (Array.isArray(value.noteNames)) {
     const names = [...new Set(value.noteNames.filter(name => NOTE_OPTIONS.some(note => note.name === name)))];
     if (names.length) result.noteNames = names;

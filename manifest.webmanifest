@@ -5,7 +5,7 @@
   "description": "Short, gentle note and chord reading practice.",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#f7f6ef",
   "theme_color": "#f7f6ef",
   "icons": [
