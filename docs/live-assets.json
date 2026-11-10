@@ -1,7 +1,7 @@
 {
-  "build": "7ec3cb31f0f6a5",
+  "build": "169798f621e9a2",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-10T17:02:59.316Z",
+  "testedAt": "2026-11-10T23:22:32.888Z",
   "result": "passed",
   "files": [
     {
@@ -107,12 +107,12 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "b6ece32bb780c6cb6188683bc89aebe22429e12050841c84a6a97326a45e4150"
+      "sha256": "5a7dd620744a0b22e86ff5d710a4325bb2bd8f821bddbd5f82739fd74532c928"
     },
     {
       "path": "js/activities.js",
       "status": 200,
-      "sha256": "6900eaa62d8352b8e69ccf73cdf4a47fc221684127ddfd1115ea8f9947c2acfd"
+      "sha256": "2143e2b04a3a1fb896463b9c219c760f5bcbaafddbb6957e9248fc19788f5228"
     },
     {
       "path": "js/app.js",
@@ -175,9 +175,14 @@
       "sha256": "f96f85ac1446d0eb5fe47ca6e26fefaeffd10f537eede839544371388632a6e6"
     },
     {
+      "path": "js/training-report.js",
+      "status": 200,
+      "sha256": "44ff4eb32aec63893712a84cfcff1113743b03de34ab31e262d709b23d7ac292"
+    },
+    {
       "path": "js/training.js",
       "status": 200,
-      "sha256": "65627e915aa9aafb1ca73c077e9a6f94d1493275d3671d3ab4f51a1be67a1db0"
+      "sha256": "36627b7d836fb4a38871013bb0ad1cdf8fc4de62f767feddacfe0652c4729618"
     },
     {
       "path": "js/viewport.js",
@@ -192,17 +197,17 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "725c611abe38c6034d6b3ca820665b641d930c8516c1221e2d0b8cac82e860a2"
+      "sha256": "7091fc9189aef6b6432e125174b4dd65d99ef698d1754c7fe55c1e8adfcdd976"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "3a568a16809d0f9dfdef1699aa38e17d9e72400ab4b20becb3ffc3ddfff12bda"
+      "sha256": "ce414006e9661fb6e8a7ab5b354348cfc9261a5b4536c32b2e69999d11966e7a"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "048a0ad5134cb954d3a5120b8ea152941458458150b0f912a34fa19a5538420a"
+      "sha256": "15b2a8020b857e5d3353e0f433bd7eeeabc40e7f397f199c134907dc563b9f39"
     }
   ],
   "headers": {

@@ -1,8 +1,8 @@
 {
   "engine": "firefox",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "2ee1ed845ae73c",
-  "testedAt": "2026-11-07T14:24:40.291Z",
+  "build": "169798f621e9a2",
+  "testedAt": "2026-11-10T23:22:56.151Z",
   "checks": [
     "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
     "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",
@@ -18,7 +18,8 @@
     "rhythm input is selected on Home and leaves the exercise screen clear",
     "long presses cancel native menus without interrupting the touch hold",
     "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note",
-    "four rhythm levels save, introduce their own note values, and keep a single readable bar"
+    "four rhythm levels save, introduce their own note values, and keep a single readable bar",
+    "eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses"
   ],
   "errors": [],
   "limits": [
