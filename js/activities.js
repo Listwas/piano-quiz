@@ -1,6 +1,7 @@
 import { BeatClock } from './timing.js';
 import { loadTraining, saveTraining, normalizeTraining, generatePhrase, ExerciseSession } from './training.js';
 import { renderScore, scoreX } from './score.js';
+import { firstTryBars, renderTrainingDetails, renderTrainingReport } from './training-report.js';
 
 const $ = id => document.getElementById(id);
 const labels = { quiz:'Quiz', metronome:'Metronome', rhythm:'Rhythm', sight:'Sight-reading' };
@@ -9,7 +10,7 @@ export class Activities {
   constructor({ goHome, openDialog, openNotes, renderHome, getQuizSettings, midi }) {
     Object.assign(this, { goHome, openDialog, openNotes, renderHome, getQuizSettings, midi });
     this.state = loadTraining();
-    this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: () => this.pause('Audio stopped. Tap Resume when ready.') });
+    this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: () => this.pause('Audio stopped. Tap Resume when ready.',true) });
     this.active = false;
     this.starting = false;
     this.lastBeat = null;
@@ -25,6 +26,12 @@ export class Activities {
     $('training-toggle').onclick = () => this.clock.running || this.starting ? this.pause() : void this.start(this.active && !this.completed);
     $('training-sound').onclick = () => { this.settings.muted = !this.settings.muted; this.sound(); saveTraining(this.state); };
     $('training-visual').onclick = () => { this.visualOnly = true; void this.start(this.active && !this.completed); };
+    $('training-details').onclick = $('last-session-button').onclick = () => this.showReport();
+    $('training-summary').onclick = event => {
+      const bar = event.target.closest('[data-report-bar]');
+      if (bar) this.showReport(Number(bar.dataset.reportBar));
+    };
+    $('report-bar-select').onchange = event => this.renderReportDetails(Number(event.target.value));
     $('training-recheck').onclick = () => { this.pause('Rechecking your keyboard…'); void midi.recheck(); };
     $('training-notes').onclick = () => { $('training-dialog').close(); openNotes(); };
     $('home-training-notes').onclick = openNotes;
@@ -80,7 +87,7 @@ export class Activities {
   inputControls() {
     $('home-training-input').hidden = this.activity !== 'rhythm';
     $('home-sight-tools').hidden = this.activity !== 'sight';
-    $('training-input-row').hidden = this.activity !== 'sight';
+    $('training-input-row').hidden = this.activity !== 'sight' || Boolean(this.completed);
     $('training-sight-tools').hidden = this.activity !== 'sight';
     $('training-input-status').textContent = this.inputStatus();
     document.querySelectorAll('[data-training-input]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.trainingInput === this.settings.input)));
@@ -105,6 +112,7 @@ export class Activities {
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
     this.inputControls();
     $('resume-note').textContent = 'Your unfinished round is ready when you are.';
+    $('last-session-button').hidden = true;
     if (quiz) { $('customize-button').innerHTML = 'Choose notes <span aria-hidden="true">↗</span>'; return; }
     $('practice-title').textContent = labels[this.activity];
     const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? 'MIDI keyboard · retry each bar' : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
@@ -112,8 +120,13 @@ export class Activities {
     $('customize-button').textContent = 'Set up ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
     const recent = this.state.lastResult;
-    $('resume-note').hidden = recent?.activity !== this.activity;
-    if (recent?.activity === this.activity) $('resume-note').textContent = `Last practice: ${recent.onset === null ? `${recent.pitch}% pitch` : `${recent.onset}% on the beat`} · ${recent.holds}% note lengths`;
+    $('resume-note').hidden = recent?.activity !== this.activity || Boolean(recent?.report);
+    if (recent?.activity === this.activity) {
+      if (recent.report) {
+        $('last-session-button').hidden = false;
+        $('last-session-button').textContent = `Last session · ${this.activity==='sight' ? `${firstTryBars(recent)}/${recent.report.bars.length} bars first try` : `${recent.onset}% on the beat`} ↗`;
+      } else $('resume-note').textContent = this.activity === 'sight' ? `Last practice: ${recent.retries} retries` : `Last practice: ${recent.onset}% on the beat · ${recent.holds}% note lengths`;
+    }
   }
 
   configure() {
@@ -144,7 +157,7 @@ export class Activities {
     $('training-screen').dataset.activity = this.activity;
     $('training-screen').dataset.running = String(this.clock.running);
     $('training-screen').dataset.complete = String(Boolean(this.completed));
-    $('training-title').textContent = this.completed ? 'A little more fluent.' : labels[this.activity];
+    $('training-title').textContent = this.completed ? 'Session complete' : labels[this.activity];
     $('training-progress').textContent = this.completed ? 'Practice complete' : `${this.settings.bpm} BPM · ${this.settings.meter}/4`;
     $('metronome-tempo').textContent = `${this.settings.bpm} BPM`;
     $('live-bpm').value = this.settings.bpm;
@@ -160,8 +173,11 @@ export class Activities {
     $('hold-coach').hidden = !exercise || Boolean(this.completed);
     $('training-touchpad').hidden = this.activity !== 'rhythm' || this.settings.input !== 'touch' || Boolean(this.completed);
     $('training-touchpad').disabled = !this.clock.running;
-    $('training-recheck').hidden = !this.requiresMidi || !this.supported;
+    $('training-recheck').hidden = !this.requiresMidi || !this.supported || Boolean(this.completed);
     $('training-sound').hidden = Boolean(this.completed);
+    $('training-details').hidden = !this.completed;
+    $('training-live-status').hidden = Boolean(this.completed);
+    $('training-footnote').hidden = Boolean(this.completed);
     $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
     this.sound();
     this.inputControls();
@@ -220,7 +236,7 @@ export class Activities {
     if (time < this.session.startTime) { this.draw(time); this.countdown(time); return; }
     this.session.tick(time);
     if (this.retryFailure(time)) return;
-    if (this.session.done) { this.finish(); return; }
+    if (this.session.done) { this.finish(time); return; }
     this.draw(time);
     const position = this.session.position(time);
     if (!this.session.guided && position.preparing) {
@@ -289,27 +305,42 @@ export class Activities {
     return true;
   }
 
-  pause(message = 'Paused. Resume starts this bar with a count-in.') {
+  pause(message = 'Paused. Resume starts this bar with a count-in.', wasRunning = this.clock.running) {
     ++this.request;
-    if (this.exercise && this.session && this.clock.running && !this.completed) this.session.restartBar(performance.now());
+    if (this.exercise && this.session && wasRunning && !this.completed) {
+      const now = performance.now();
+      this.session.pauseRun(now);
+      this.session.restartBar(now);
+    }
     this.clock.stop(); this.starting = false;
     this.pointer = undefined; $('training-touchpad').classList.remove('pressed');
-    if (!this.active) return;
+    if (!this.active || this.completed) return;
     this.paused = true; this.refresh(); this.message(message);
   }
   stop() { ++this.request; this.clock.stop(); this.active = false; this.starting = false; this.paused = false; this.session = null; this.completed = false; this.pointer = undefined; $('training-touchpad').classList.remove('pressed'); }
   midiChanged(status) {
     this.inputControls();
-    if (!this.active || !this.requiresMidi) return;
+    if (!this.active || this.completed || !this.requiresMidi) return;
     if (!status.connected && this.clock.running) this.pause('Keyboard disconnected. Recheck MIDI, then Resume.');
     else if (status.connected && !this.clock.running) { this.refresh(); this.message('Keyboard connected. Tap Resume when ready.'); }
   }
-  finish() {
-    const result = this.session.summary();
+  showReport(bar = -1) {
+    const result = this.state.lastResult;
+    if (!result?.report) return;
+    $('report-bar-select').innerHTML = '<option value="-1">All bars</option>' + result.report.bars.map((_,i)=>`<option value="${i}">Bar ${i+1}</option>`).join('');
+    $('report-bar-select').value = bar;
+    this.renderReportDetails(bar);
+    this.openDialog('training-report-dialog');
+  }
+  renderReportDetails(bar) {
+    const result = this.state.lastResult;
+    if (result?.report) $('training-report-details').innerHTML = renderTrainingDetails(result,bar);
+  }
+  finish(time = performance.now()) {
+    const result = this.session.summary(time);
     this.clock.stop(); this.completed = true; this.paused = false;
     this.state.lastResult = result; saveTraining(this.state); this.refresh();
-    const metrics = [[result.pitch,'Pitch'],[result.onset,'On the beat'],[result.holds,'Note lengths']].filter(([value])=>value!==null);
-    $('training-summary').innerHTML = `<div class="training-metrics">${metrics.map(([value,label])=>`<div><strong>${value}%</strong><span>${label}</span></div>`).join('')}</div><p class="muted">${result.total} notes · ${result.missed} missed · ${result.extras} extra</p><p class="small muted">${result.style==='guided'?`${result.retries} retries · first-try pitch and note lengths`:`${this.activity==='sight'?`${result.retries} bar retries · `:''}${result.restErrors} rest mistakes${result.meanError===null?'':` · average ${Math.abs(result.meanError)} ms ${result.meanError<0?'early':'late'}`}`}</p>`;
-    this.message('Every little practice counts. Try again at your own pace.');
+    $('training-summary').innerHTML = renderTrainingReport(result);
+    $('training-summary').focus({preventScroll:true});
   }
 }

@@ -100,6 +100,17 @@ and explicit accidental cancellation. No Unicode musical-plane font is required.
 
 ## Architecture
 
+- `js/training-report.js`: session overview, per-bar drill-down and saved
+  report display. Sight-reading keeps failure and matched-press totals per bar
+  separately from the score, so a retry only clears the live notation. The
+  headline is bars cleared without a retry. Rhythm keeps the completed pass
+  percentages and also carries judged mistakes forward across interruptions.
+  Reports distinguish timing of matched presses from misses and off-beat
+  presses; the mean uses absolute distances so early and late do not cancel.
+  Practice time includes read-ahead and retry waits, but excludes pauses and
+  the count-ins after starting/resuming. Older saved results still load
+  without fabricated detail.
+
 - `js/display.js`: visible-practice screen wake locks, release/reacquisition,
   opt-out, and native fullscreen controls. Pending wake requests are invalidated
   when practice closes or the page hides, so a late result cannot hold the screen

@@ -11,13 +11,23 @@ export function normalizeTraining(raw) {
   }
   return settings;
 }
-function validTrainingResult(result) {
-  return result?.version === 1 && ['rhythm','sight'].includes(result.activity) && ['guided','continuous'].includes(result.style) && ['pitch','onset','holds'].every(key => result[key] === null || Number.isFinite(result[key]) && result[key] >= 0 && result[key] <= 100) && ['total','extras','retries','missed','restTotal','restErrors','at'].every(key => Number.isFinite(result[key]) && result[key] >= 0);
+const issueReasons = { pitch:'Wrong note', missed:'Missed note', offBeat:'Off the beat', short:'Too short', long:'Too long', rest:'Played during a rest' };
+const issueKeys = Object.keys(issueReasons);
+const timingKeys = ['early','centered','late','absoluteMs'];
+const freshBar = () => ({ retries:0, issues:Object.fromEntries(issueKeys.map(key=>[key,0])), timing:{early:0,centered:0,late:0,absoluteMs:0} });
+const nonnegative = n => Number.isFinite(n) && n >= 0;
+const count = n => Number.isSafeInteger(n) && n >= 0;
+export const totalIssues = bar => issueKeys.reduce((sum,key)=>sum+bar.issues[key],0);
+function restoreTrainingResult(result) {
+  if (result?.version !== 1 || !['rhythm','sight'].includes(result.activity) || !['guided','continuous'].includes(result.style) || !['pitch','onset','holds'].every(key => result[key] === null || nonnegative(result[key]) && result[key] <= 100) || !['total','extras','retries','missed','restTotal','restErrors','at'].every(key => nonnegative(result[key]))) return null;
+  const { report, ...legacy } = result;
+  if (!report || !nonnegative(report.elapsedMs) || !Array.isArray(report.bars) || ![2,4,8].includes(report.bars.length) || !report.bars.every(bar => count(bar?.retries) && issueKeys.every(key=>count(bar.issues?.[key])) && timingKeys.every(key=>(key==='absoluteMs'?nonnegative:count)(bar.timing?.[key])))) return legacy;
+  return { ...legacy, report };
 }
 export function loadTraining(storage) {
   try {
     const raw = JSON.parse((storage ?? globalThis.localStorage).getItem(TRAINING_KEY));
-    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: validTrainingResult(raw?.lastResult) ? raw.lastResult : null };
+    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: restoreTrainingResult(raw?.lastResult) };
   } catch { return { activity: 'quiz', settings: normalizeTraining(), lastResult: null }; }
 }
 export function saveTraining(state) {
@@ -119,13 +129,36 @@ export class ExerciseSession {
     this.holding = new Map();
     this.presses = [];
     this.pastRests = new Map();
+    this.barStats = Array.from({length:phrase.bars},freshBar);
+    this.elapsedMs = 0;
+    this.runStart = null;
   }
   get extras() { return this.extraBars.length; }
   get retries() { return this.retryBars.length + this.barFailures; }
-  fail(reason, time, bar) { if (this.retryOnError && !this.failure) this.failure = { reason, time, bar }; }
+  fail(type, time, bar) {
+    if (this.retryOnError && !this.failure) {
+      this.failure = { reason:issueReasons[type], time, bar };
+      this.barStats[bar].issues[type]++;
+      this.barStats[bar].retries++;
+    }
+  }
+  trackTiming(bar, error) {
+    const timing = bar.timing;
+    timing[error < -20 ? 'early' : error > 20 ? 'late' : 'centered']++;
+    timing.absoluteMs += Math.abs(error);
+  }
+  beginRun(now) {
+    if (this.runStart === null && now >= this.startTime) this.runStart = this.startTime;
+  }
+  pauseRun(now) {
+    this.beginRun(now);
+    if (this.runStart !== null) this.elapsedMs += Math.max(0, now-this.runStart);
+    this.runStart = null;
+  }
   retryBar(now, startTime) {
     const failure = this.failure;
     if (!failure) return;
+    this.runStart ??= Math.min(failure.time,now);
     this.restartBar(now, failure.bar);
     this.barFailures++;
     this.startTime = startTime;
@@ -140,7 +173,7 @@ export class ExerciseSession {
     return { value:target ? Math.min(1,Math.max(0,elapsed)/target.durationBeats) : 0, releasing,
       label:releasing ? 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}` };
   }
-  extraAt(time) { this.extraBars.push(this.guided ? this.current?.bar ?? this.phrase.bars-1 : Math.min(this.phrase.bars-1,this.position(time).bar)); }
+  extraAt(time, rest = null) { this.extraBars.push({bar:this.guided ? this.current?.bar ?? this.phrase.bars-1 : this.position(time).bar,rest}); }
   expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter + (event.bar - this.startBar) * this.gapBeats) * this.beatMs; }
   position(now) {
     const elapsed = Math.max(0, (now - this.startTime) / this.beatMs);
@@ -172,6 +205,7 @@ export class ExerciseSession {
   input(event) {
     if (this.done || this.failure || event.type === 'reset') return;
     const time = event.timeStamp - this.offset, key = `${event.channel}:${event.note}`;
+    this.beginRun(event.timeStamp);
     if (event.type === 'on') {
       if (this.keys.has(key)) return;
       const press = { key, on:time, off:null };
@@ -190,9 +224,18 @@ export class ExerciseSession {
       const candidates = this.phrase.events.filter(e => !e.rest && e.bar >= this.startBar && (!this.results.has(e.id) || this.results.get(e.id).status === 'missed') && Math.abs(time - this.expected(e)) <= this.window(e));
       candidates.sort((a,b) => Math.abs(time - this.expected(a)) - Math.abs(time - this.expected(b)) || a.beat - b.beat);
       const target = candidates[0];
-      if (!target) { if (this.position(time).preparing) return; this.extraAt(time); const rest = this.phrase.events.some(e => e.rest && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs); this.feedback = rest ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.'; this.fail(rest ? 'Played during a rest' : 'Off the beat',event.timeStamp,this.position(time).bar); return; }
+      if (!target) {
+        const {bar,preparing} = this.position(time);
+        if (preparing) return;
+        const rest = this.phrase.events.find(e => e.rest && e.bar >= this.startBar && time >= this.expected(e) && time < this.expected(e) + e.durationBeats * this.beatMs);
+        this.extraAt(time,rest?.id ?? null);
+        this.feedback = rest ? 'Rest here — let the keys go.' : 'Between notes — follow the beat.';
+        this.fail(rest ? 'rest' : 'offBeat',event.timeStamp,bar);
+        return;
+      }
       const error = time - this.expected(target), pitch = this.phrase.rhythm || event.note === target.tone.midi;
-      if (!pitch && this.retryOnError) { this.fail('Wrong note',event.timeStamp,target.bar); return; }
+      if (this.retryOnError) this.trackTiming(this.barStats[target.bar],error);
+      if (!pitch && this.retryOnError) { this.fail('pitch',event.timeStamp,target.bar); return; }
       const result = { pitch, onset:true, duration:null, error, on:time, status:pitch ? 'holding' : 'wrong' };
       this.results.set(target.id, result); this.holding.set(key, { target, result });
       this.feedback = !pitch ? 'Different note — keep following the beat.' : `Key received · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}.`;
@@ -206,7 +249,10 @@ export class ExerciseSession {
       else if (result.pitch) this.feedback = 'Good hold ✓';
       this.holding.delete(key);
       if (result.pitch && result.duration) this.lastHold = { at:event.timeStamp };
-      if (!result.duration) this.fail(time-result.on < target.durationBeats*this.beatMs ? 'Too short' : 'Too long',event.timeStamp,target.bar);
+      if (!result.duration) {
+        result.lengthIssue = time-result.on < target.durationBeats*this.beatMs ? 'short' : 'long';
+        this.fail(result.lengthIssue,event.timeStamp,target.bar);
+      }
     }
   }
   guidedInput(event, key, time) {
@@ -244,6 +290,7 @@ export class ExerciseSession {
   }
   tick(now) {
     if (this.done || this.failure || now < this.startTime) return;
+    this.beginRun(now);
     this.retryReason = '';
     if (this.guided) {
       const target = this.current;
@@ -264,14 +311,14 @@ export class ExerciseSession {
     for (const event of this.phrase.events) {
       if (event.bar < this.startBar) continue;
       if (event.rest) {
-        if (this.retryOnError && now > this.expected(event)+Math.min(100,event.durationBeats*this.beatMs/4) && this.restFailed(event,now-this.offset)) { this.fail('Played during a rest',now,event.bar); return; }
+        if (this.retryOnError && now > this.expected(event)+Math.min(100,event.durationBeats*this.beatMs/4) && this.restFailed(event,now-this.offset)) { this.fail('rest',now,event.bar); return; }
         continue;
       }
-      if (this.retryOnError && !this.results.has(event.id) && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('Missed note',now,event.bar); return; }
+      if (this.retryOnError && !this.results.has(event.id) && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('missed',now,event.bar); return; }
       if (!this.results.has(event.id) && now > this.expected(event) + this.window(event) + Math.max(0,this.offset)) this.results.set(event.id, { pitch:false, onset:false, duration:false, status:'missed' });
       const result = this.results.get(event.id);
-      if (this.retryOnError && result?.status === 'missed' && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('Missed note',now,event.bar); return; }
-      if (this.retryOnError && result?.duration === null && now-this.offset-result.on > event.durationBeats*this.beatMs+holdTolerance(event.durationBeats*this.beatMs,this.accuracy)) { this.fail('Too long',now,event.bar); return; }
+      if (this.retryOnError && result?.status === 'missed' && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('missed',now,event.bar); return; }
+      if (this.retryOnError && result?.duration === null && now-this.offset-result.on > event.durationBeats*this.beatMs+holdTolerance(event.durationBeats*this.beatMs,this.accuracy)) { this.fail('long',now,event.bar); return; }
       if (result?.duration === null && result.pitch && now - this.offset - result.on >= event.durationBeats * this.beatMs) this.feedback = 'Release now.';
     }
     const { beat } = this.position(now);
@@ -279,7 +326,7 @@ export class ExerciseSession {
     const tail = holdTolerance(4 * this.beatMs,this.accuracy) + Math.max(0,this.offset);
     const end = this.startTime + (this.phrase.totalBeats - this.startBar * this.phrase.meter + (this.phrase.bars-1-this.startBar) * this.gapBeats) * this.beatMs;
     if (now >= end + tail) {
-      for (const {result} of this.holding.values()) { result.duration = false; result.status = 'wrong'; }
+      for (const {result} of this.holding.values()) { result.duration = false; result.status = 'wrong'; result.lengthIssue = 'long'; }
       this.done = true;
     }
   }
@@ -294,21 +341,51 @@ export class ExerciseSession {
     let bar = failedBar ?? (this.guided ? this.current?.bar ?? this.phrase.bars - 1 : Math.floor(Math.max(0,this.progress(now)) / this.phrase.meter));
     if (failedBar === undefined) for (const {target} of this.holding.values()) bar = Math.min(bar, target.bar);
     bar = Math.min(this.phrase.bars - 1,bar);
+    if (!this.retryOnError && !this.guided) this.addPassStats(this.barStats,now,bar,true);
     for (const event of this.phrase.events) {
       if (event.bar >= bar) { this.results.delete(event.id); this.attempts.delete(event.id); }
-      else if (event.rest) this.pastRests.set(event.id, this.restFailed(event,now));
+      else if (event.rest) this.pastRests.set(event.id, this.restFailed(event,now-this.offset));
     }
-    this.extraBars = this.extraBars.filter(value=>value<bar); this.retryBars = this.retryBars.filter(value=>value<bar);
+    this.extraBars = this.extraBars.filter(value=>value.bar<bar); this.retryBars = this.retryBars.filter(value=>value<bar);
     this.keys.clear(); this.holding.clear(); this.presses = []; this.startBar = bar;
     this.currentIndex = this.phrase.events.findIndex(e => e.bar === bar); this.guidedRestStart = null; this.done = false;
     this.failure = null; this.retryReason = ''; this.feedback = ''; this.lastHold = null;
     return bar;
+  }
+  // Keep judged mistakes from an interrupted pass without treating future or held notes as misses.
+  addPassStats(bars, now, firstBar = 0, interrupted = false) {
+    const restPresses = new Set();
+    for (const {bar,rest} of this.extraBars) {
+      if (bar < firstBar) continue;
+      if (rest === null) bars[bar].issues.offBeat++;
+      else restPresses.add(rest);
+    }
+    for (const event of this.phrase.events) {
+      if (event.bar < firstBar) continue;
+      const bar = bars[event.bar], result = this.results.get(event.id);
+      if (event.rest) {
+        const failed = this.guided ? result?.duration !== true : this.restFailed(event,now-this.offset);
+        if (failed || restPresses.has(event.id)) bar.issues.rest++;
+        continue;
+      }
+      if (!result || result.status === 'missed') {
+        if (!interrupted || result && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) bar.issues.missed++;
+        continue;
+      }
+      if (result.pitch === false) bar.issues.pitch++;
+      if (result.lengthIssue) bar.issues[result.lengthIssue]++;
+      if (Number.isFinite(result.error)) this.trackTiming(bar,result.error);
+    }
   }
   summary(now = performance.now()) {
     const notes = this.phrase.events.filter(e => !e.rest), rests = this.phrase.events.filter(e => e.rest);
     const values = notes.map(e => this.results.get(e.id));
     const percent = key => Math.round(100 * values.filter(r => r?.[key]).length / Math.max(1,notes.length));
     const errors = values.filter(r => Number.isFinite(r?.error)).map(r => r.error);
-    return { version:1, at:Date.now(), activity:this.phrase.rhythm ? 'rhythm' : 'sight', style:this.guided ? 'guided' : 'continuous', total:notes.length, pitch:this.phrase.rhythm ? null : percent('pitch'), onset:this.guided ? null : percent('onset'), holds:percent('duration'), extras:this.extras, retries:this.retries, missed:values.filter(r => !r || r.status === 'missed').length, restTotal:rests.length, restErrors:rests.filter(e => this.guided ? this.results.get(e.id)?.duration !== true : this.restFailed(e,now)).length, meanError:errors.length ? Math.round(errors.reduce((a,b)=>a+b,0) / errors.length) : null };
+    const failedRests = rests.filter(e => this.guided ? this.results.get(e.id)?.duration !== true : this.restFailed(e,now-this.offset));
+    const bars = structuredClone(this.barStats);
+    if (!this.retryOnError) this.addPassStats(bars,now);
+    const report = { bars, elapsedMs:Math.round(this.elapsedMs+(this.runStart === null ? 0 : Math.max(0,now-this.runStart))) };
+    return { version:1, at:Date.now(), activity:this.phrase.rhythm ? 'rhythm' : 'sight', style:this.guided ? 'guided' : 'continuous', total:notes.length, pitch:this.phrase.rhythm ? null : percent('pitch'), onset:this.guided ? null : percent('onset'), holds:percent('duration'), extras:this.extras, retries:this.retries, missed:values.filter(r => !r || r.status === 'missed').length, restTotal:rests.length, restErrors:failedRests.length, meanError:errors.length ? Math.round(errors.reduce((a,b)=>a+b,0) / errors.length) : null, report };
   }
 }

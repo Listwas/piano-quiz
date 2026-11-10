@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, RHYTHM_LEVELS } from '../js/training.js';
+import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, RHYTHM_LEVELS } from '../js/training.js';
 import { copyDefaults } from '../js/quiz.js';
 import { makeTone } from '../js/notes.js';
 import { renderScore } from '../js/score.js';
@@ -133,6 +133,57 @@ test('a previous-bar release mistake restarts that bar even after the cursor cro
  const s=new ExerciseSession(p,{retryOnError:true});s.startTime=1000;
  note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',62,3000);s.tick(5020);note(s,'off',62,5350);
  assert.equal(s.failure.bar,0);s.retryBar(5350,9000);assert.equal(s.current.id,0);assert.equal(s.results.size,0);
+});
+test('session report retains earlier pitch, timing and missed-note failures after a clean replay',()=>{
+ const p=phrase();p.bars=2;p.totalBeats=8;p.events.push(...p.events.map(e=>({...e,id:e.id+3,bar:1,beat:e.beat+4})));
+ const s=new ExerciseSession(p,{retryOnError:true});s.startTime=1000;
+ note(s,'on',63,950);s.retryBar(950,5000);
+ s.tick(5150);s.retryBar(5150,9000);
+ note(s,'on',60,9400);s.retryBar(9400,13000);
+ for(const [at,pitch,length] of [[13050,60,2000],[15000,62,1000],[17000,60,2000],[19000,62,1000]]){
+  note(s,'on',pitch,at);note(s,'off',pitch,at+length);
+ }
+ s.tick(21600);
+ const result=s.summary(21600),[first,second]=result.report.bars;
+ assert.equal(result.retries,3);assert.equal(result.pitch,100);assert.equal(result.holds,100);
+ assert.deepEqual(first.issues,{pitch:1,missed:1,offBeat:1,short:0,long:0,rest:0});
+ assert.deepEqual(first.timing,{early:1,centered:1,late:1,absoluteMs:100});
+ assert.equal(first.retries,3);assert.equal(second.retries,0);
+ assert.equal(result.report.elapsedMs,20650);
+ const storage = value => ({getItem:()=>JSON.stringify({activity:'sight',lastResult:value})});
+ assert.deepEqual(loadTraining(storage(result)).lastResult.report,result.report);
+ const {report,...legacy}=result;
+ assert.deepEqual(loadTraining(storage(legacy)).lastResult,legacy);
+ assert.deepEqual(loadTraining(storage({...legacy,report:{...report,bars:[null,null]}})).lastResult,legacy);
+});
+test('pauses preserve sight-reading failures and exclude paused time and the resume count-in',()=>{
+ const s=new ExerciseSession(phrase(),{retryOnError:true});s.startTime=1000;
+ note(s,'on',63,1050);s.retryBar(1050,5000);
+ s.pauseRun(1600);s.restartBar(1600);
+ s.startTime=10000;s.tick(9950);s.tick(10000);note(s,'on',60,10000);note(s,'off',60,12000);
+ assert.equal(s.summary(12000).report.elapsedMs,2600);
+ assert.equal(s.summary(12000).report.bars[0].issues.pitch,1);
+ assert.equal(s.retries,1);
+});
+test('rhythm remembers judged holds across a pause without adding misses for interrupted notes',()=>{
+ const s=new ExerciseSession(phrase(true));s.startTime=1000;
+ note(s,'on',60,1000);note(s,'off',60,2000);s.tick(3130);
+ s.pauseRun(3130);s.restartBar(3130);
+ s.startTime=10000;
+ note(s,'on',60,10000);note(s,'off',60,12000);note(s,'on',60,12000);note(s,'off',60,13000);s.tick(14700);
+ const result=s.summary(14700), [bar]=result.report.bars;
+ assert.equal(result.holds,100);assert.equal(bar.issues.short,1);assert.equal(bar.issues.missed,0);
+ assert.equal(bar.timing.centered,3);
+});
+test('a rhythm rest with multiple unwanted presses counts once, including a quick tap inside its grace period',()=>{
+ for (const releases of [[4010],[4010,4500]]) {
+  const s=new ExerciseSession(phrase(true));s.startTime=1000;
+  note(s,'on',60,1000);note(s,'off',60,3000);note(s,'on',60,3000);note(s,'off',60,4000);
+  for(const at of releases){note(s,'on',60,at-5);note(s,'off',60,at);}
+  s.tick(5650);
+  const {issues}=s.summary(5650).report.bars[0];
+  assert.equal(issues.rest,1);assert.equal(issues.offBeat,0);
+ }
 });
 test('valid releases show a fully filled hold meter briefly without delaying the next attack',()=>{
  const s=new ExerciseSession(phrase(true));s.startTime=1000;

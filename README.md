@@ -108,6 +108,16 @@ bar with a fresh count-in. Sight-reading also uses the **Between bars**
 setting: a count-in by default, or no break when you choose **Keep playing**.
 Recent results save on this device and appear on Home.
 
+### Review a session
+
+Sight-reading shows how many bars you cleared without a retry, how many times
+you retried, and how long you practised. Earlier mistakes stay in the report
+after a successful replay. Rhythm also shows your timing and hold scores.
+
+Tap a bar or **Session details** to see the mistake breakdown and how often
+matched presses were early, near the beat, or late. The report suggests what
+to practise next. Open **Last session** on Home to review it again.
+
 <details>
 <summary><strong>Take a look at the new practice modes</strong></summary>
 

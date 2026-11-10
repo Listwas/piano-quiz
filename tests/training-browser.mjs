@@ -13,6 +13,13 @@ async function setup(deterministic = false, midi = false){
   OscillatorNode.prototype.start=function(when){window.scheduledClicks.push({when,now:this.context.currentTime,frequency:this.frequency.value});return start.call(this,when);};
  });
  if(deterministic)await ctx.addInitScript(()=>{Math.random=()=>0;});
+ if(deterministic && engine==='webkit'){
+  // The headless host can report running audio while its clock stalls.
+  // Graded fixtures use the app's visual clock; the metronome probe above remains native.
+  await ctx.addInitScript(()=>{window.AudioContext=undefined;window.webkitAudioContext=undefined;});
+  const limit='Deterministic WebKit exercises use the visual clock because the host audio clock can stall.';
+  if(!report.limits.includes(limit))report.limits.push(limit);
+ }
  if(midi)await ctx.addInitScript(()=>{
   const port={id:'piano',name:'Test piano',manufacturer:'Test',state:'connected',connection:'closed',async open(){this.connection='open';},async close(){this.connection='closed';}};
   const access={inputs:new Map([['piano',port]]),onstatechange:null};
@@ -21,7 +28,11 @@ async function setup(deterministic = false, midi = false){
  });
  const page=await ctx.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(base);return page;
 }
-async function check(label,run){if(process.env.TRAINING_CHECK&&!label.includes(process.env.TRAINING_CHECK))return;await run();report.checks.push(label);console.log('PASS '+label);}
+async function check(label,run){
+ if(process.env.TRAINING_CHECK&&!label.includes(process.env.TRAINING_CHECK))return;
+ try{await run();report.checks.push(label);console.log('PASS '+label);}
+ finally{while(contexts.length)await contexts.pop().close();}
+}
 async function running(page){
  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.running==='true'||!document.getElementById('training-visual').hidden);
  if(await page.locator('#training-visual').isVisible()){report.limits.push('Audio could not start in this host; visual fallback verified.');await page.locator('#training-visual').click();}
@@ -116,6 +127,33 @@ try{
   for(const [beat,duration] of [[0,2],[2,2],[4,2],[6,1],[7,1]]){await until(start+beat*300);await press(72);await until(start+(beat+duration)*300);await release(72);}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.retries,2);assert.equal(result.pitch,100);assert.equal(result.holds,100);assert.equal(result.onset,100);
+  assert.equal(result.report.bars[0].issues.pitch,1);assert.equal(result.report.bars[0].issues.short,1);assert.equal(result.report.bars[1].retries,0);assert.ok(result.report.elapsedMs>=start-original+2400);
+  const summary=page.locator('#training-summary');
+  const [firstTry,retries,duration]=await summary.locator('.training-metrics strong').allTextContents();
+  assert.equal(firstTry,'1/2');assert.equal(retries,'2');assert.match(duration,/^\d+:\d\d$/);
+  assert.equal(await summary.getByRole('button',{name:'Bar 1: 2 retries. View details.'}).isVisible(),true);
+  await page.screenshot({path:`docs/images/sight-report-${engine}.png`});
+  await summary.locator('[data-report-bar="0"]').click();
+  assert.equal(await page.locator('#report-bar-select').inputValue(),'0');
+  assert.deepEqual(await page.locator('.report-issue-list li strong').allTextContents(),['1','1']);
+  assert.match(await page.locator('#training-report-details').innerText(),/Wrong notes[\s\S]*Released too soon/);
+  await page.screenshot({path:`docs/images/sight-report-details-${engine}.png`});
+  await page.selectOption('#report-bar-select','1');assert.match(await page.locator('#training-report-details').innerText(),/No mistakes recorded/);
+  await page.locator('[data-close="training-report-dialog"]').click();
+  for(const size of profiles){
+    await page.setViewportSize({width:size.width,height:size.height});
+    await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);
+    await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
+    for(const selector of ['#training-details','#training-toggle','[data-report-bar="0"]']){
+      const box=await page.locator(selector).boundingBox();assert.ok(box && box.y>=(size.top||0) && box.y+box.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,box}));
+      assert.ok(await page.locator(selector).evaluate(e=>{const b=e.getBoundingClientRect();return e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));}),selector+' remains tappable');
+    }
+    const body=await page.locator('#training-body').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(body.scroll<=body.height+1,JSON.stringify({size,body}));
+  }
+  await page.locator('#training-back').click();await page.reload();
+  assert.match(await page.locator('#last-session-button').innerText(),/1\/2 bars first try/);
+  await page.locator('#last-session-button').click();assert.equal(await page.locator('#report-bar-select').inputValue(),'-1');
+  assert.match(await page.locator('#training-report-details').innerText(),/Wrong notes/);
  });
  await check('sight-reading retries missed beats while retaining already completed bars',async()=>{
   const page=await setup(true,true);await setupSight(page);
@@ -128,6 +166,8 @@ try{
   for(const [beat,duration] of [[0,2],[2,1],[3,1]]){await until(start+beat*300);await page.evaluate(()=>window.trainingMidi.send([0x90,72,100]));await until(start+(beat+duration)*300);await page.evaluate(()=>window.trainingMidi.send([0x80,72,0]));}
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);
   assert.equal(result.retries,1);assert.equal(result.pitch,100);assert.equal(result.holds,100);assert.equal(result.onset,100);assert.equal(result.total,5);
+  assert.equal(result.report.bars[1].issues.missed,1);
+  await page.locator('#training-details').click();assert.match(await page.locator('#training-report-details').innerText(),/Missed notes/);
  });
  await check('sight-reading pauses on disconnect, rechecks, rotates and resumes with its score intact',async()=>{
   const page=await setup(true,true);await setupSight(page);
@@ -214,6 +254,28 @@ try{
    await page.locator('#training-back').click();
   }
   await page.reload();await page.locator('#customize-button').click();assert.equal(await page.locator('#training-complexity').inputValue(),'mixed');
+ });
+ await check('eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses',async()=>{
+  const page=await setup(true);await page.selectOption('#activity-select','rhythm');await page.locator('#customize-button').click();
+  await page.locator('#training-bpm').fill('200');await page.selectOption('#training-bars','8');await page.selectOption('#training-pace','flow');
+  await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await running(page);
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);
+  assert.equal(result.report.bars.length,8);assert.equal(result.report.bars.reduce((n,bar)=>n+bar.issues.missed,0),result.total);
+  assert.equal(await page.locator('.report-bar').count(),8);
+  for(const size of [{width:320,height:568},{width:568,height:320},{width:667,height:375},{width:1280,height:800}]){
+    await page.setViewportSize(size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
+    for(const selector of ['#training-details','#training-toggle','[data-report-bar="7"]']){
+      assert.ok(await page.locator(selector).evaluate(e=>{
+        const b=e.getBoundingClientRect();return b.width>=44&&b.height>=44&&b.y>=0&&b.bottom<=innerHeight&&e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));
+      }),JSON.stringify({size,selector}));
+    }
+  }
+  await page.locator('[data-report-bar="7"]').tap();assert.equal(await page.locator('#report-bar-select').inputValue(),'7');
+  assert.match(await page.locator('#training-report-details').innerText(),/Missed notes[\s\S]*No matched presses to measure/);
+  await page.locator('[data-close="training-report-dialog"]').click();await page.locator('#training-back').click();
+  await page.setViewportSize({width:320,height:568});await page.locator('#last-session-button').tap();
+  assert.equal(await page.locator('#report-bar-select').inputValue(),'-1');
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}
