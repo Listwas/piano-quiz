@@ -100,6 +100,13 @@ and explicit accidental cancellation. No Unicode musical-plane font is required.
 
 ## Architecture
 
+- `js/display.js`: visible-practice screen wake locks, release/reacquisition,
+  opt-out, and native fullscreen controls. Pending wake requests are invalidated
+  when practice closes or the page hides, so a late result cannot hold the screen
+  awake. OS releases are reported with an explicit Retry rather than a busy loop.
+  Fullscreen calls run directly from toolbar/settings gestures with
+  `navigationUI: 'hide'`; native fullscreen events update labels and viewport fit.
+  The manifest requests fullscreen with the browser's standard fallback chain.
 - `js/quiz.js`: pool enumeration, written-name grading, scheduling, round state,
   and summaries. Time and randomness are injectable for deterministic tests.
 - `js/storage.js`: versioned `pianoQuiz.state.v1` storage, validation, round
@@ -120,6 +127,13 @@ Runtime stays buildless. `tools/build.mjs` copies a whitelist of runtime files t
 `dist/`, creates headers, hashes runtime contents and the service-worker template,
 and injects the core cache list. The source `sw.js` is a build template; preview
 the built output rather than serving the source directory.
+
+Display APIs are feature-detected and requests may be declined by browser or
+power policy. Headers allow same-origin `screen-wake-lock` and `fullscreen`.
+See [Screen Wake Lock](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
+and [requestFullscreen](https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen).
+Headless API success does not establish that Honor MagicPad 2 system bars are
+hidden or that a physical device stays awake beyond its configured timeout.
 
 ## Commands
 

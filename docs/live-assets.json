@@ -1,7 +1,7 @@
 {
-  "build": "2ee1ed845ae73c",
+  "build": "7ec3cb31f0f6a5",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-07T14:22:37.339Z",
+  "testedAt": "2026-11-10T17:02:59.316Z",
   "result": "passed",
   "files": [
     {
@@ -107,7 +107,7 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "42f0184c53e1e2fbafd00230329e79af546549a6549f860627b0d247eb1fbf1e"
+      "sha256": "b6ece32bb780c6cb6188683bc89aebe22429e12050841c84a6a97326a45e4150"
     },
     {
       "path": "js/activities.js",
@@ -117,7 +117,7 @@
     {
       "path": "js/app.js",
       "status": 200,
-      "sha256": "24d897553ee94a043fd7730891f2138c51e8f77a6bada74237f0ecc668bb185a"
+      "sha256": "47362e932751caaca9e1c9076e660bfe3e5c42f309e4133891cf90b22446d80a"
     },
     {
       "path": "js/audio.js",
@@ -135,6 +135,11 @@
       "sha256": "3333a249a411235cd2e01a2f4b321ff607645877b08c977d4608de9f8043c35c"
     },
     {
+      "path": "js/display.js",
+      "status": 200,
+      "sha256": "476b70bfacffc92e982627edcb6a34ad784044c329d07ba3db7ced8fb6683676"
+    },
+    {
       "path": "js/midi.js",
       "status": 200,
       "sha256": "9f1f1e8087feb6dafe72bc76e74e5e9db0806d161686b82d0508a949d6000e11"
@@ -147,7 +152,7 @@
     {
       "path": "js/quiz.js",
       "status": 200,
-      "sha256": "e52914f2f74bf2c22da6d449d53b047e1be608b5d235caf1b2a6d99c02648c97"
+      "sha256": "819e2db7e69fae0368e2e8b9b3dca1feb52d7e7126deb722ec475f92c35d9c40"
     },
     {
       "path": "js/score.js",
@@ -177,32 +182,32 @@
     {
       "path": "js/viewport.js",
       "status": 200,
-      "sha256": "e08460cf2b66e5836746727d6f9865353b16fbae0d2a398efa325dcc6ad29c43"
+      "sha256": "831419dc749f86ea7722a50b31cdd6362da3243cfb3460ed208be07b9d9b00eb"
     },
     {
       "path": "manifest.webmanifest",
       "status": 200,
-      "sha256": "ca529c433a22ad79ba15aba91583aedd6735c450a63abb90ec71c9eb01c57660"
+      "sha256": "6299c05c155d7ae2fdc17a149585dabbdac755820c8675d5cd861f3e4630a368"
     },
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "c54343d502a20117bdf50a9606ff82acb138daf143acac8bad71eafba16f1659"
+      "sha256": "725c611abe38c6034d6b3ca820665b641d930c8516c1221e2d0b8cac82e860a2"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "83244428907f582550427fb9d888172214fc589ad9627359fd7a307e53a7f1f1"
+      "sha256": "3a568a16809d0f9dfdef1699aa38e17d9e72400ab4b20becb3ffc3ddfff12bda"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "695a560e77d0fa2e856776abcea62d2d3118d211e53b31b20ba5a52f476813c0"
+      "sha256": "048a0ad5134cb954d3a5120b8ea152941458458150b0f912a34fa19a5538420a"
     }
   ],
   "headers": {
     "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
-    "permissions-policy": "microphone=(), camera=(), midi=(self)",
+    "permissions-policy": "microphone=(), camera=(), midi=(self), screen-wake-lock=(self), fullscreen=(self)",
     "x-content-type-options": "nosniff",
     "referrer-policy": "same-origin"
   }

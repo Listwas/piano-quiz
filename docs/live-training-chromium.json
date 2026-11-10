@@ -1,8 +1,8 @@
 {
   "engine": "chromium",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "2ee1ed845ae73c",
-  "testedAt": "2026-11-07T14:22:50.397Z",
+  "build": "7ec3cb31f0f6a5",
+  "testedAt": "2026-11-10T17:04:09.439Z",
   "checks": [
     "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
     "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",

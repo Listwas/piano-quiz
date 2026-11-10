@@ -1,0 +1,22 @@
+{
+  "engine": "firefox",
+  "origin": "https://piano-quiz.pages.dev/",
+  "build": "7ec3cb31f0f6a5",
+  "testedAt": "2026-11-10T17:02:56.983Z",
+  "checks": [
+    "screen lock starts with quiz, remains during pause, releases at Home, and opt-out persists",
+    "metronome, touch rhythm and MIDI sight-reading all keep the practice screen awake",
+    "background release reacquires on return and a device release offers a working Retry",
+    "fullscreen toolbar and settings controls request hidden navigation and follow native exits",
+    "unsupported and refused display APIs explain their state without blocking practice",
+    "native browser fullscreen enters and exits when available",
+    "native wake lock acquisition and release are probed independently of simulated lifecycle tests"
+  ],
+  "errors": [],
+  "limits": [
+    "Wake lock lifecycle and fullscreen refusal are simulated. Native fullscreen is checked separately when supported. Physical Honor MagicPad 2 system bars and screen timeout are not verified by headless tests."
+  ],
+  "nativeFullscreen": "passed",
+  "nativeWakeLock": "passed: native screen lock acquired and released",
+  "result": "passed"
+}
