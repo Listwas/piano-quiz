@@ -1,15 +1,18 @@
 {
   "engine": "chromium",
   "origin": "https://piano-quiz.pages.dev/",
-  "build": "7b4d29b330ec0d",
-  "testedAt": "2026-11-07T12:16:05.294Z",
+  "build": "832bfaeaa7834d",
+  "testedAt": "2026-11-11T00:50:42.289Z",
   "checks": [
-    "four rhythm levels save, introduce their own note values, and keep a single readable bar"
+    "sight-reading resets the entire bar on wrong pitches and short holds, then waits for the downbeat",
+    "eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses",
+    "MIDI timing calibration suggests an offset, saves only on Apply, and stops on disconnect"
   ],
   "errors": [],
   "limits": [
-    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Calibration uses scheduled clicks from a controlled audio clock and simulated MIDI."
   ],
   "result": "passed",
-  "filter": "four rhythm levels"
+  "filter": "resets the entire bar|eight-bar rhythm report|MIDI timing calibration"
 }

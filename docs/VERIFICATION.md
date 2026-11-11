@@ -1,72 +1,58 @@
 # Verification
 
-Session-report release checked on 2026-11-11 (Europe/Warsaw).
+Bar drills, session history and MIDI timing calibration checked on 2026-11-11
+(Europe/Warsaw).
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `169798f621e9a2`
-- Production deployment: `2850a9c7-7d9e-4a0e-85cb-4d78621ee23e`
-- Immutable URL: https://2850a9c7.piano-quiz.pages.dev/
+- Release: `832bfaeaa7834d`
+- Production deployment: `165fd5a3-a924-4c69-b1b0-4d431f052747`
+- Immutable URL: https://165fd5a3.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**96 unit tests and 72 browser scenarios passed.** The browser checks ran on
-production except for the isolated update suite. Reports below identify the
-build and test time. No uncaught page errors were recorded.
+**100 unit tests and 33 browser scenarios passed.** Browser checks used the
+published build except the isolated worker update suite. No uncaught page
+errors were recorded. The new feature scenarios extend actual graded exercises.
 
 | Check | Chromium | Firefox | WebKit |
 | --- | --- | --- | --- |
-| Practice and reports | [16 passed](live-training-chromium.json) | [16 passed](live-training-firefox.json) | [16 passed](live-training-webkit.json) |
+| Drill, history, layout and calibration scenarios | [3 passed](live-training-focused-chromium.json) | [3 passed](live-training-focused-firefox.json) | [3 passed](live-training-focused-webkit.json) |
 | Quiz, themes, storage and offline launch | [20 passed](live-chromium.json) | — | — |
 | Explicit service-worker updates | [4 passed](update-chromium.json) | — | — |
 
-[Unit report](unit.json). A dash means that suite was not rerun for this build.
-See the [previous audit](https://github.com/Listwas/piano-quiz/blob/aaa9085c5d620f054c4ba22a30de79f801fd0213/docs/VERIFICATION.md)
-for the fullscreen, wake-lock and broader viewport checks.
+[Unit report](unit.json). Dashes indicate suites not rerun in that engine for
+this build. The [earlier full session-report audit](https://github.com/Listwas/piano-quiz/blob/c530c94b8f388f3566417bb9249c7560b9490d03/docs/VERIFICATION.md)
+records broader practice coverage.
 
-## Session-report checks
+## Feature checks
 
-- The sight-reading fixture completes two bars with two retries on the first
-  bar (wrong pitch and short hold). The visible report shows **1/2 first-try
-  bars** and **2 bar retries**, even though the final replay was correct.
-  Bar details show the two distinct mistakes and matched-press timing.
-- A separate replay misses a note in the second bar. Its miss stays in the
-  report after correct replay, and the first bar keeps its clean result.
-- Tests cover earlier mistakes across pauses, time excluding pauses and
-  start/resume count-ins, signed timing distribution, and loading older
-  results without inventing details. Multiple presses in one rhythm rest are
-  reported as one violated rest, including a brief unwanted tap.
-- The eight-bar rhythm fixture deliberately plays no notes. All misses appear
-  on the chart, and timing correctly reports no matched presses. The last bar
-  and bottom actions stay tappable in compact portrait/landscape and tablet
-  sizes. A completed sight-reading report is also checked through rotations
-  with simulated safe areas.
-- The latest detailed report is available from Home after reloading. A bar can
-  be selected directly from the chart or inside the report dialog. The results
-  screen itself stays fixed, with scrolling available inside the dialog.
+- The hardest-bar action selects the bar with the most retries. A user can
+  choose another bar, play at the original tempo or start about 20% slower,
+  and return to the report. The replay preserves the original pitch/octave,
+  written spelling, durations and rests. Tests cover MIDI sight-reading,
+  touch Rhythm, reloading a saved report, and compact/rotated layouts.
+- Replaying a bar does not replace the complete-session report, change saved
+  tempo, or create a history entry. The latest 60 full sessions are stored on
+  the device. History compares matching settings only; BPM, note ranges and
+  timing correction changes are checked separately. Old reports remain usable.
+- Calibration follows four count-in clicks with twelve measured beats. It
+  uses one onset per beat, rejects sparse, noisy or out-of-range runs, and
+  never saves the suggestion until the user applies it. The browser fixture
+  verifies a known +42 ms offset, preserved setup fields, and a MIDI disconnect.
 
-Actual browser screenshots: [Sight-reading overview](images/sight-report-chromium.png),
-[bar details](images/sight-report-details-chromium.png),
-[Rhythm overview](images/rhythm-results-chromium.png).
+Captures: [bar drill](images/bar-drill-chromium.png),
+[history](images/session-history-chromium.png),
+[calibration](images/midi-calibration-chromium.png).
+History comparison includes deliberate saved fixture data. Calibration uses a
+controlled audio clock and simulated MIDI, not a physical latency measurement.
+Deterministic WebKit exercises use the visual clock on this host.
 
 ## Release integrity
 
-All **41 served runtime files** matched `dist/` byte for byte. Source files
-matched the built runtime and reproduced the release hash. Home returned HTTP
-200; CSP and same-origin MIDI, wake-lock and fullscreen policies were checked.
-See [asset verification](live-assets.json). The 42-file release ZIP was reopened
-and checked for exact members, CRC and bytes; [release.json](release.json)
-records its size and SHA-256. Chromium verified an offline launch and explicit
-service-worker updates that preserve unfinished practice.
+All 43 served runtime files matched the build and source. Home returned HTTP
+200; [asset verification](live-assets.json) records byte hashes and response
+policies. The 44-file ZIP was reopened and checked for exact members, CRC and
+bytes. [release.json](release.json) records size, SHA-256 and deployment ID.
 
-## Reproduce and limits
-
-Run `npm run build`, `npm test`, then `npm run dev`. Run `npm run test:training`
-with `BROWSER=chromium`, `firefox` or `webkit`. Set
-`PIANO_URL=https://piano-quiz.pages.dev/` to test production. See
-[development commands](DEVELOPMENT.md#commands) for other suites.
-
-MIDI and safe areas are simulated. Deterministic WebKit exercises use the app's
-visual clock because the headless host audio clock can stall; the native
-metronome scenario is separate. Tests do not measure a physical device's
-MIDI/audio latency.
+See [development commands](DEVELOPMENT.md#commands) to reproduce the tests.
