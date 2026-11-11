@@ -30,6 +30,7 @@ export const THEMES = [
   { id: 'plum', name: 'Plum', detail: 'Velvet & violet', background: '#281d31', accent: '#ddbbf3' },
   { id: 'ember', name: 'Ember', detail: 'Amber after dark', background: '#2b211b', accent: '#f0bc86' },
   { id: 'graphite', name: 'Graphite', detail: 'Quiet & neutral', background: '#242628', accent: '#d6dce0' },
+  { id: 'nocturne', name: 'Nocturne', detail: 'Brass & ivory after dark', background: '#11151f', accent: '#e9c58b' },
   { id: 'amoled', name: 'AMOLED', detail: 'Pure black & lime', background: '#000000', accent: '#c2ee83' },
 ];
 export const DAY = 86400000;

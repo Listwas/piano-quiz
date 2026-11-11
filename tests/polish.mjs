@@ -104,7 +104,7 @@ try {
     }
     await page.locator('#training-back').click();
   });
-  await check('training feedback stays readable in all fourteen palettes', async () => {
+  await check('training feedback stays readable in all fifteen palettes', async () => {
     await page.setViewportSize({width:430,height:932});
     await page.evaluate(() => { for(const edge of ['top','bottom','left','right']) document.documentElement.style.setProperty('--safe-'+edge,'0px'); });
     await home(); await startRhythm(); await page.locator('#training-toggle').click();
@@ -120,7 +120,8 @@ try {
         const wrong=color(getComputedStyle(status).color);
         const note=document.querySelector('[data-event]'); note.classList.add('correct');
         const correct=color(getComputedStyle(note).color); note.classList.remove('correct');
-        return {text:ratio(wrong,bg),wrongNote:ratio(wrong,surface),correctNote:ratio(correct,surface)};
+        note.classList.add('wrong'); const wrongNote=color(getComputedStyle(note).color); note.classList.remove('wrong');
+        return {text:ratio(wrong,bg),wrongNote:ratio(wrongNote,surface),correctNote:ratio(correct,surface)};
       });
       report.contrast.push({theme:theme.id,...contrast});
       assert.ok(contrast.text>=4.5 && contrast.wrongNote>=3 && contrast.correctNote>=3,JSON.stringify({theme:theme.id,contrast}));

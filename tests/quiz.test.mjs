@@ -18,8 +18,8 @@ test('defaults contain seven natural notes and valid independent setting arrays'
   assert.equal(poolFor(normalizeSettings({ enabled: Array(12).fill(false) })).length, 7);
 });
 
-test('all fourteen palettes and Device preference survive settings and storage restoration', () => {
-  assert.equal(THEMES.length, 15);
+test('all fifteen palettes and Device preference survive settings and storage restoration', () => {
+  assert.equal(THEMES.length, 16);
   for (const { id } of THEMES) {
     assert.equal(normalizeSettings({ theme: id }).theme, id);
     const state = freshState();

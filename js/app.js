@@ -14,6 +14,7 @@ fitViewport();
 const $ = id => document.getElementById(id);
 const loaded = loadState();
 let state = loaded.state;
+if (new URLSearchParams(location.search).get('theme') === 'nocturne') state.settings.theme = 'nocturne';
 let screen = 'home';
 let paused = true;
 let clockStart = null;

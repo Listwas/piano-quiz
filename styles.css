@@ -561,3 +561,51 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 #hold-progress::-webkit-progress-bar{background:var(--line);border-radius:8px}
 #hold-progress::-webkit-progress-value{background:var(--accent);border-radius:8px}
 #hold-progress::-moz-progress-bar{background:var(--accent);border-radius:8px}
+
+/* Nocturne: a dark practice stand with an ivory score. */
+:root[data-theme=nocturne]{
+ color-scheme:dark;
+ --bg:#11151f;--surface:#1b2230;--ink:#f5ecdd;--muted:#c6b9af;--line:#414757;
+ --accent:#e9c58b;--accent-soft:#332b29;--wrong:#ffb8ad;--wrong-soft:#482d31;
+ --peach:#4d392e;--shadow:none;--button-ink:#211a16;
+ --nocturne-display:Baskerville,"Palatino Linotype","Book Antiqua",Georgia,serif;
+}
+:root[data-theme=nocturne] body{background-image:radial-gradient(ellipse at 80% 12%,#242535 0,transparent 56%)}
+:root[data-theme=nocturne] :is(h1,.dialog-heading h2,#metronome-number){font-family:var(--nocturne-display)}
+:root[data-theme=nocturne] .brand{letter-spacing:-.8px}
+:root[data-theme=nocturne] .brand-icon{font-size:0;border-radius:7px}
+:root[data-theme=nocturne] .brand-icon::before{content:"";width:17px;height:21px;background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 6px);border-radius:1px}
+:root[data-theme=nocturne] .topbar{border-bottom:1px solid #e9c58b26}
+:root[data-theme=nocturne] .daily-banner{background:transparent;border-bottom:1px solid var(--line);border-radius:0;padding-left:0;padding-right:0}
+:root[data-theme=nocturne] .daily-icon{color:var(--accent)}
+:root[data-theme=nocturne] .home-heading h1{font-weight:400;letter-spacing:-.065em;line-height:.92}
+:root[data-theme=nocturne] .home-heading h1 span{font-style:normal;color:inherit}
+:root[data-theme=nocturne] .home-heading>.eyebrow{color:var(--accent);letter-spacing:.12em}
+:root[data-theme=nocturne] .practice-card{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none}
+:root[data-theme=nocturne] :is(.primary,.secondary){border-radius:8px}
+:root[data-theme=nocturne] .primary{background:var(--accent);color:var(--button-ink);box-shadow:inset 0 -2px 0 #76592c68}
+:root[data-theme=nocturne] .primary:active:not(:disabled){box-shadow:none}
+:root[data-theme=nocturne] .score-pill{border:1px solid #e9c58b43;background:transparent}
+:root[data-theme=nocturne] :is(.preview-card,.score-card,.measure){
+ --surface:#eee2c8;--ink:#262425;--muted:#655543;--accent:#80521d;--bg:#e4d5b8;--line:#bda988;--wrong:#a13d38;
+ color:var(--ink);background:var(--surface);border-color:var(--line);border-radius:4px;
+}
+:root[data-theme=nocturne] .home-heading .preview-card{transform:translateY(-50%) rotate(-4deg);box-shadow:4px 6px 0 #af936f50,0 14px 34px #07090d72}
+:root[data-theme=nocturne] .preview-header{padding-bottom:3px;border-bottom:1px solid #8b6b3b55}
+:root[data-theme=nocturne] .preview-answer{gap:2px}
+:root[data-theme=nocturne] .preview-answer>span{position:relative;background:#fff7e7;border:1px solid #9d896a;border-radius:2px 2px 4px 4px;align-items:end;padding-bottom:3px}
+:root[data-theme=nocturne] .preview-answer>span:nth-child(-n+2)::after{content:"";position:absolute;right:-5px;top:-1px;width:7px;height:60%;background:#292529;border-radius:0 0 2px 2px;z-index:1}
+:root[data-theme=nocturne] .preview-answer .preview-picked{background:#d9b579}
+:root[data-theme=nocturne] .preview-picked small{display:none}
+:root[data-theme=nocturne] .score-event.correct,:root[data-theme=nocturne] .staff--correct .staff__notation{color:#226448}
+:root[data-theme=nocturne] .score-card.midi-correct{box-shadow:inset 0 0 0 3px #226448}
+:root[data-theme=nocturne] :is(.training-metrics>div,.report-chart,.report-detail-section){border-radius:8px}
+:root[data-theme=nocturne] .round-progress{background:var(--line)}
+:root[data-theme=nocturne] :is(button,select,input):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(min-width:1000px) and (min-height:760px){
+ :root[data-theme=nocturne] .practice-card{border-top:0;border-left:1px solid var(--line);padding-left:30px}
+ :root[data-theme=nocturne] .home-heading h1{font-size:clamp(55px,7.5dvh,85px)}
+ :root[data-theme=nocturne] .home-heading .preview-card{position:relative;display:block;top:auto;right:auto;transform:none;width:min(90%,365px);margin-top:16px;padding:10px 14px;box-shadow:4px 5px 0 #af936f45}
+ :root[data-theme=nocturne] .home-heading .home-staff{height:95px;padding:6px 12px}
+ :root[data-theme=nocturne] .preview-caption{margin-top:5px}
+}
