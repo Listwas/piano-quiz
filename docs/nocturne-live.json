@@ -1,0 +1,13 @@
+{
+  "origin": "https://74d393dc.piano-quiz.pages.dev/",
+  "testedAt": "2026-11-11T01:00:16.024Z",
+  "build": "6503f455786040",
+  "files": 43,
+  "checks": [
+    "preview files match dist",
+    "Nocturne loads from preview URL",
+    "quiz and pause/resume work"
+  ],
+  "productionBuild": "832bfaeaa7834d",
+  "result": "passed"
+}

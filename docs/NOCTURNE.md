@@ -31,3 +31,10 @@ passed. A Nocturne smoke check covered Home, Quiz, and Pause/Resume at
 - [Tablet quiz](images/nocturne-quiz-tablet.png)
 - [Browser report](nocturne-browser.json)
 - [Contrast report](nocturne-contrast.json)
+
+Preview: https://74d393dc.piano-quiz.pages.dev/?theme=nocturne
+
+Deployment: 74d393dc-6a64-4338-86a9-76331d98bc34 (Preview).
+
+[Live preview checks](nocturne-live.json) confirm all 43 served files and
+that production is still release 832bfaeaa7834d.
