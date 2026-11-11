@@ -110,6 +110,14 @@ and explicit accidental cancellation. No Unicode musical-plane font is required.
   Practice time includes read-ahead and retry waits, but excludes pauses and
   the count-ins after starting/resuming. Older saved results still load
   without fabricated detail.
+- `js/training-history.js`: bounded local history and recent trend points
+  grouped by the original training settings. History stores the notation
+  needed to replay each bar. A drill reconstructs that bar at beat zero and
+  leaves the full-session result and history untouched.
+- `js/calibration.js`: audio count-in and one MIDI onset per measured beat.
+  The estimate uses the median of consistent matched taps; sparse, unstable
+  and out-of-range runs cannot be applied. Calibration owns its own clock,
+  stops on disconnect/close/backgrounding, and applies only on confirmation.
 
 - `js/display.js`: visible-practice screen wake locks, release/reacquisition,
   opt-out, and native fullscreen controls. Pending wake requests are invalidated

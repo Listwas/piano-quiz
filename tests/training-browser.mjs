@@ -5,7 +5,7 @@ const engine=process.env.BROWSER||'chromium', base=process.env.PIANO_URL||'http:
 const report={engine,origin:base,build:JSON.parse(await readFile('dist/version.json')).version,testedAt:new Date().toISOString(),checks:[],errors:[],limits:['Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.']};
 const browser=await {chromium,firefox,webkit}[engine].launch({headless:true,...(engine==='chromium'?{executablePath:'/usr/bin/chromium',args:['--mute-audio']}: {})});
 const contexts=[];
-async function setup(deterministic = false, midi = false){
+async function setup(deterministic = false, midi = false, mockAudio = false){
  const ctx=await browser.newContext({viewport:{width:430,height:932},hasTouch:true,reducedMotion:'reduce',...(engine!=='firefox'?{isMobile:true}: {})});contexts.push(ctx);
  await ctx.addInitScript(()=>{
   window.scheduledClicks=[];
@@ -24,12 +24,22 @@ async function setup(deterministic = false, midi = false){
   const port={id:'piano',name:'Test piano',manufacturer:'Test',state:'connected',connection:'closed',async open(){this.connection='open';},async close(){this.connection='closed';}};
   const access={inputs:new Map([['piano',port]]),onstatechange:null};
   Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>access});
-  window.midiLog=[];window.trainingMidi={send(data){window.midiLog.push({data:[...data],at:performance.now()});port.onmidimessage?.({data:new Uint8Array(data),timeStamp:performance.now()});},drop(){port.state='disconnected';access.onstatechange?.({port});},plug(){port.state='connected';port.connection='closed';access.onstatechange?.({port});}};
+  window.midiLog=[];window.trainingMidi={send(data,timeStamp=performance.now()){window.midiLog.push({data:[...data],at:timeStamp});port.onmidimessage?.({data:new Uint8Array(data),timeStamp});},drop(){port.state='disconnected';access.onstatechange?.({port});},plug(){port.state='connected';port.connection='closed';access.onstatechange?.({port});}};
+ });
+ if(mockAudio)await ctx.addInitScript(()=>{
+  window.calibrationClicks=[];
+  window.AudioContext=class {
+   state='suspended';origin=performance.now();destination={};
+   get currentTime(){return (performance.now()-this.origin)/1000;}
+   async resume(){this.state='running';} async suspend(){this.state='suspended';}
+   createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+   createOscillator(){return {frequency:{},connect(){},disconnect(){},start:time=>window.calibrationClicks.push(this.origin+time*1000),stop(){}};}
+  };
  });
  const page=await ctx.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(base);return page;
 }
 async function check(label,run){
- if(process.env.TRAINING_CHECK&&!label.includes(process.env.TRAINING_CHECK))return;
+ if(process.env.TRAINING_CHECK&&!process.env.TRAINING_CHECK.split('|').some(filter=>label.includes(filter)))return;
  try{await run();report.checks.push(label);console.log('PASS '+label);}
  finally{while(contexts.length)await contexts.pop().close();}
 }
@@ -140,6 +150,13 @@ try{
   await page.screenshot({path:`docs/images/sight-report-details-${engine}.png`});
   await page.selectOption('#report-bar-select','1');assert.match(await page.locator('#training-report-details').innerText(),/No mistakes recorded/);
   await page.locator('[data-close="training-report-dialog"]').click();
+  await page.getByRole('button',{name:'Practise hardest bar',exact:true}).click();
+  assert.equal(await page.locator('#report-bar-select').inputValue(),'0');
+  assert.equal(await page.locator('#report-practise-tempo').inputValue(),'160');
+  await page.selectOption('#report-practise-tempo','200');await page.locator('#report-practise').click();await running(page);
+  assert.match(await page.locator('#training-progress').innerText(),/Bar 1 · 200 BPM/);
+  assert.deepEqual(await page.locator('[data-event]').evaluateAll(nodes=>nodes.map(e=>[+e.dataset.midi,+e.dataset.duration])),[[72,2],[72,2]]);
+  await page.locator('#training-back').click();assert.equal(await summary.isVisible(),true);
   for(const size of profiles){
     await page.setViewportSize({width:size.width,height:size.height});
     await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);
@@ -154,6 +171,50 @@ try{
   assert.match(await page.locator('#last-session-button').innerText(),/1\/2 bars first try/);
   await page.locator('#last-session-button').click();assert.equal(await page.locator('#report-bar-select').inputValue(),'-1');
   assert.match(await page.locator('#training-report-details').innerText(),/Wrong notes/);
+  const saved=await page.evaluate(()=>localStorage.getItem('pianoQuiz.training.v1'));
+  await page.selectOption('#report-bar-select','1');
+  assert.equal(await page.locator('#report-practise-tempo').inputValue(),'160');
+  await page.screenshot({path:`docs/images/bar-drill-${engine}.png`});
+  await page.locator('#report-practise').click();
+  await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));
+  if(await page.locator('#training-toggle').innerText()==='Resume')await page.locator('#training-toggle').click();
+  await running(page);
+  await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
+  assert.match(await page.locator('#training-progress').innerText(),/Bar 2 · 160 BPM/);
+  assert.deepEqual(await page.locator('[data-event]').evaluateAll(nodes=>nodes.map(e=>[+e.dataset.midi,+e.dataset.duration])),[[72,2],[72,1],[72,1]]);
+  const drillStart=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
+  for(const [beat,duration] of [[0,2],[2,1],[3,1]]){
+   await until(drillStart+beat*375);await press(72);await until(drillStart+(beat+duration)*375);await release(72);
+  }
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  assert.equal(await page.locator('#training-toggle').innerText(),'Play again');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('pianoQuiz.training.v1')),saved);
+  await page.locator('#training-details').click();
+  assert.equal(await page.locator('#home-screen').isVisible(),true);
+  assert.equal(await page.locator('#report-bar-select').inputValue(),'1');
+  await page.locator('[data-close="training-report-dialog"]').click();
+  await page.locator('#training-history-button').click();
+  assert.equal(await page.locator('.history-row').count(),1,'Drill does not create a history entry');
+  await page.locator('[data-close="training-history-dialog"]').click();
+  await page.evaluate(()=>{
+   const key='pianoQuiz.training.v1', state=JSON.parse(localStorage.getItem(key)), latest=state.history[0];
+   const earlier=structuredClone(latest);earlier.at-=60000;earlier.report.bars[1].retries=1;earlier.report.bars[1].issues.missed=1;earlier.retries++;
+   const slower=structuredClone(earlier);slower.at-=60000;slower.replay.bpm=120;
+   state.history.push(earlier,slower);localStorage.setItem(key,JSON.stringify(state));
+  });
+  await page.reload();await page.locator('#training-history-button').click();
+  assert.equal(await page.locator('#history-group-select option').count(),2);
+  assert.deepEqual(await page.locator('.history-point strong').allTextContents(),['0%','50%']);
+  assert.match(await page.locator('#training-history-content').innerText(),/\+50 percentage points/);
+  await page.screenshot({path:`docs/images/session-history-${engine}.png`});
+  await page.setViewportSize({width:320,height:568});
+  assert.ok(await page.locator('#training-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+  await page.selectOption('#history-group-select','1');
+  assert.match(await page.locator('#history-setup').innerText(),/120 BPM/);
+  assert.equal(await page.locator('.history-point').count(),1);
+  await page.locator('.history-point').click();await page.selectOption('#report-bar-select','1');
+  assert.equal(await page.locator('#report-practise-tempo').inputValue(),'96');
+  await page.locator('#report-back-history').click();assert.equal(await page.locator('#history-group-select').inputValue(),'1');
  });
  await check('sight-reading retries missed beats while retaining already completed bars',async()=>{
   const page=await setup(true,true);await setupSight(page);
@@ -276,6 +337,41 @@ try{
   await page.locator('[data-close="training-report-dialog"]').click();await page.locator('#training-back').click();
   await page.setViewportSize({width:320,height:568});await page.locator('#last-session-button').tap();
   assert.equal(await page.locator('#report-bar-select').inputValue(),'-1');
+  await page.selectOption('#report-bar-select','7');
+  await page.locator('#report-practise').tap();await running(page);
+  assert.equal(await page.locator('#training-touchpad').isVisible(),true);
+  assert.match(await page.locator('#training-progress').innerText(),/Bar 8 · 160 BPM/);
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  assert.equal(await page.locator('#training-toggle').innerText(),'Play again');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult),result);
+ });
+ await check('MIDI timing calibration suggests an offset, saves only on Apply, and stops on disconnect',async()=>{
+  const page=await setup(false,true,true);report.limits.push('Calibration uses scheduled clicks from a controlled audio clock and simulated MIDI.');
+  await page.selectOption('#activity-select','rhythm');await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('95');
+  await page.locator('#training-calibrate').click();await page.locator('#calibration-connect').click();
+  await page.locator('#calibration-start').click();
+  await page.waitForFunction(()=>window.calibrationClicks.length>0);
+  await page.evaluate(()=>{
+   const first=window.calibrationClicks[0]+2400;
+   for(let i=0;i<12;i++){
+    const tap=first+i*600+42;
+    setTimeout(()=>{window.trainingMidi.send([0x90,60,100],tap);window.trainingMidi.send([0x80,60,0],tap+1);},tap-performance.now());
+   }
+  });
+  await page.locator('#calibration-apply').waitFor({state:'visible'});
+  assert.match(await page.locator('#calibration-result').innerText(),/12 of 12 taps used/);
+  const offset=Number((await page.locator('#calibration-apply').innerText()).match(/\d+/)[0]);
+  assert.ok(offset>=40&&offset<=44,offset);
+  const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).settings.offset);
+  assert.equal(await stored(),0);
+  await page.screenshot({path:`docs/images/midi-calibration-${engine}.png`});
+  await page.locator('#calibration-apply').click();assert.equal(await stored(),offset);
+  await page.locator('#calibration-start').click();await page.evaluate(()=>window.trainingMidi.drop());
+  await page.waitForFunction(()=>document.getElementById('calibration-status').textContent.includes('disconnected')||document.getElementById('calibration-status').textContent.includes('MIDI input changed'));
+  assert.equal(await page.locator('#calibration-apply').isVisible(),false);
+  await page.locator('[data-close="calibration-dialog"]').click();
+  await page.locator('#training-dialog').waitFor({state:'visible'});
+  assert.equal(await page.locator('#training-bpm').inputValue(),'95');assert.equal(await page.locator('#training-offset').inputValue(),String(offset));
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}

@@ -1,4 +1,5 @@
-import { poolFor } from './quiz.js';
+import { poolFor, selectedNamesFor, octavesFor, NOTE_OPTIONS } from './quiz.js';
+import { makeTone } from './notes.js';
 
 export const TRAINING_KEY = 'pianoQuiz.training.v1';
 export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', pace: 'practice', accuracy: 'beginner', volume: .3, muted: false, offset: 0 };
@@ -18,17 +19,74 @@ const freshBar = () => ({ retries:0, issues:Object.fromEntries(issueKeys.map(key
 const nonnegative = n => Number.isFinite(n) && n >= 0;
 const count = n => Number.isSafeInteger(n) && n >= 0;
 export const totalIssues = bar => issueKeys.reduce((sum,key)=>sum+bar.issues[key],0);
+export function hardestBar(result) {
+  const bars = result.report.bars;
+  const scores = bars.map(bar=>result.activity === 'sight' ? bar.retries : totalIssues(bar));
+  const max = Math.max(0,...scores);
+  return max ? scores.indexOf(max) : -1;
+}
+
+export function saveReplay(phrase, {bpm,input,accuracy,offset}) {
+  return { meter:phrase.meter, clef:phrase.clef, bpm,input,accuracy,offset,
+    bars:Array.from({length:phrase.bars},(_,bar)=>phrase.events.filter(e=>e.bar===bar).map(e=>({
+      beats:e.durationBeats, rest:e.rest, tone:e.tone ? [e.tone.letter,e.tone.alteration,e.tone.octave] : null,
+    }))) };
+}
+const validTone = tone => Array.isArray(tone) && tone.length===3 && count(tone[0]) && tone[0]<=6 && [-1,0,1].includes(tone[1]) && [1,2,3,4,5,6].includes(tone[2]);
+function validReplay(replay, result) {
+  return replay && [3,4].includes(replay.meter) && ['treble','bass'].includes(replay.clef) &&
+    count(replay.bpm) && replay.bpm>=40 && replay.bpm<=200 && ['midi','touch'].includes(replay.input) &&
+    ['beginner','strict'].includes(replay.accuracy) && Number.isInteger(replay.offset) && Math.abs(replay.offset)<=250 &&
+    Array.isArray(replay.bars) && replay.bars.length===result.report.bars.length && replay.bars.every(bar =>
+      Array.isArray(bar) && bar.length<=8 && bar.some(e=>e?.rest===false) &&
+      bar.every(e=>e && [.5,1,1.5,2,3,4].includes(e.beats) && typeof e.rest==='boolean' &&
+        (e.rest || result.activity==='rhythm' ? e.tone===null : validTone(e.tone))) &&
+      bar.reduce((sum,e)=>sum+e.beats,0)===replay.meter);
+}
+export function replayPhrase(result, bar) {
+  const {meter,clef,bars} = result.replay;
+  let beat = 0;
+  const events = bars[bar].map(({beats,rest,tone},id)=>{
+    const event = {id,bar:0,beat,durationBeats:beats,rest,clef,tone:tone ? makeTone(...tone) : null};
+    beat += beats;
+    return event;
+  });
+  return {meter,clef,bars:1,totalBeats:meter,rhythm:result.activity==='rhythm',sourceBar:bar+1,events};
+}
+export const slowerReplayTempo = bpm => Math.max(40,Math.round(bpm*.8));
+const HISTORY_LIMIT = 60;
+export function comparisonSetup(phrase, settings, quizSettings) {
+  return {level:settings.complexity,pace:settings.pace,
+    notes:phrase.rhythm ? [] : [...selectedNamesFor(quizSettings)].sort(),
+    octaves:phrase.rhythm ? [] : [...octavesFor(quizSettings,phrase.clef)].sort()};
+}
+function validComparison(value) {
+  return value && Object.hasOwn(RHYTHM_LEVELS,value.level) && ['practice','flow'].includes(value.pace) &&
+    Array.isArray(value.notes) && value.notes.length<=NOTE_OPTIONS.length && value.notes.every(name=>NOTE_OPTIONS.some(note=>note.name===name)) &&
+    Array.isArray(value.octaves) && value.octaves.length<=4 && value.octaves.every(octave=>[1,2,3,4,5,6].includes(octave));
+}
+export function rememberTrainingResult(state, result) {
+  state.lastResult = result;
+  state.history = [result,...state.history].slice(0,HISTORY_LIMIT);
+}
+
 function restoreTrainingResult(result) {
   if (result?.version !== 1 || !['rhythm','sight'].includes(result.activity) || !['guided','continuous'].includes(result.style) || !['pitch','onset','holds'].every(key => result[key] === null || nonnegative(result[key]) && result[key] <= 100) || !['total','extras','retries','missed','restTotal','restErrors','at'].every(key => nonnegative(result[key]))) return null;
-  const { report, ...legacy } = result;
+  const { report, replay, comparison, ...legacy } = result;
   if (!report || !nonnegative(report.elapsedMs) || !Array.isArray(report.bars) || ![2,4,8].includes(report.bars.length) || !report.bars.every(bar => count(bar?.retries) && issueKeys.every(key=>count(bar.issues?.[key])) && timingKeys.every(key=>(key==='absoluteMs'?nonnegative:count)(bar.timing?.[key])))) return legacy;
-  return { ...legacy, report };
+  const restored = { ...legacy, report };
+  if (validReplay(replay,result)) {
+    restored.replay = replay;
+    if (validComparison(comparison)) restored.comparison = comparison;
+  }
+  return restored;
 }
 export function loadTraining(storage) {
   try {
     const raw = JSON.parse((storage ?? globalThis.localStorage).getItem(TRAINING_KEY));
-    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: restoreTrainingResult(raw?.lastResult) };
-  } catch { return { activity: 'quiz', settings: normalizeTraining(), lastResult: null }; }
+    const history = Array.isArray(raw?.history) ? raw.history.slice(0,HISTORY_LIMIT).map(restoreTrainingResult).filter(result=>result?.comparison) : [];
+    return { activity: ['quiz','metronome','rhythm','sight'].includes(raw?.activity) ? raw.activity : 'quiz', settings: normalizeTraining(raw?.settings), lastResult: restoreTrainingResult(raw?.lastResult), history };
+  } catch { return { activity: 'quiz', settings: normalizeTraining(), lastResult: null, history:[] }; }
 }
 export function saveTraining(state) {
   try { localStorage.setItem(TRAINING_KEY, JSON.stringify(state)); return true; } catch { return false; }

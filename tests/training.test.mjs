@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, RHYTHM_LEVELS } from '../js/training.js';
+import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, RHYTHM_LEVELS } from '../js/training.js';
+import { groupSessions } from '../js/training-history.js';
 import { copyDefaults } from '../js/quiz.js';
 import { makeTone } from '../js/notes.js';
 import { renderScore } from '../js/score.js';
@@ -164,6 +165,42 @@ test('pauses preserve sight-reading failures and exclude paused time and the res
  assert.equal(s.summary(12000).report.elapsedMs,2600);
  assert.equal(s.summary(12000).report.bars[0].issues.pitch,1);
  assert.equal(s.retries,1);
+});
+test('saved drills reconstruct the original bar, including spelling, register, rests and durations',()=>{
+ const settings=normalizeTraining({bars:2,meter:3,bpm:90,complexity:'steady',offset:30,input:'midi'});
+ const p=generatePhrase(settings,{...copyDefaults(),clef:'bass',noteNames:['D♭'],octaves:{bass:[2]}},{random:()=>0});
+ const s=new ExerciseSession(p,{retryOnError:true});s.startTime=1000;
+ s.input({type:'on',note:60,timeStamp:1000,channel:0});
+ s.retryBar(1000,4000);
+ const result={...s.summary(1100),replay:saveReplay(p,settings)};
+ const load=lastResult=>loadTraining({getItem:()=>JSON.stringify({activity:'sight',lastResult})}).lastResult;
+ const saved=load(result);
+ assert.equal(hardestBar(saved),0);
+ assert.equal(slowerReplayTempo(saved.replay.bpm),72);assert.equal(slowerReplayTempo(40),40);
+ const bar=replayPhrase(saved,0);
+ assert.equal(bar.clef,'bass');assert.equal(bar.bars,1);assert.equal(bar.totalBeats,3);
+ assert.deepEqual(bar.events,p.events.filter(e=>e.bar===0));
+ assert.deepEqual(replayPhrase(saved,1).events,p.events.filter(e=>e.bar===1).map((e,id)=>({...e,id,bar:0,beat:e.beat-3})));
+ assert.ok(bar.events.some(e=>e.rest));assert.ok(bar.events.some(e=>e.tone?.name==='D♭'&&e.tone.octave===2));
+ const invalid=structuredClone(result);invalid.replay.bars[0][0].beats=99;
+ assert.equal(load(invalid).replay,undefined);assert.deepEqual(load(invalid).report,result.report);
+});
+test('training history keeps the latest 60 sessions and compares only matching setups',()=>{
+ const settings=normalizeTraining({bars:2,bpm:80});
+ const q={...copyDefaults(),noteNames:['C','D♭']};
+ const p=generatePhrase(settings,q,{random:()=>0});
+ const result={...new ExerciseSession(p).summary(0),replay:saveReplay(p,settings),comparison:comparisonSetup(p,settings,q)};
+ const same={...result,comparison:comparisonSetup(p,settings,{...q,noteNames:['D♭','C']})};
+ const variants=[{...result,replay:{...result.replay,bpm:81}},{...result,replay:{...result.replay,offset:12}},
+  {...result,comparison:{...result.comparison,level:'mixed'}},{...result,comparison:{...result.comparison,octaves:[5]}},
+  {...result,comparison:{...result.comparison,notes:['C']}}];
+ assert.deepEqual(groupSessions([result,same,...variants],'sight').map(group=>group.length),[2,1,1,1,1,1]);
+ const state={history:[]};
+ for(let i=0;i<64;i++)rememberTrainingResult(state,{...result,at:i});
+ assert.equal(state.lastResult.at,63);assert.equal(state.history.length,60);assert.equal(state.history.at(-1).at,4);
+ const restored=loadTraining({getItem:()=>JSON.stringify(state)});
+ assert.deepEqual(restored.history,state.history);
+ assert.equal(groupSessions(restored.history,'rhythm').length,0);
 });
 test('rhythm remembers judged holds across a pause without adding misses for interrupted notes',()=>{
  const s=new ExerciseSession(phrase(true));s.startTime=1000;

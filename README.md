@@ -118,6 +118,21 @@ Tap a bar or **Session details** to see the mistake breakdown and how often
 matched presses were early, near the beat, or late. The report suggests what
 to practise next. Open **Last session** on Home to review it again.
 
+Choose **Practise hardest bar** to replay the bar with the most retries
+(or the most mistakes in Rhythm). You can also choose any bar in the report.
+Play at the original tempo or start about 20% slower. The drill keeps the
+original notes and rests and leaves the full-session result saved.
+
+**History** on Home keeps the latest 60 full Rhythm and Sight-reading sessions
+on this device. Each trend compares matching practice setups, including tempo,
+level, timing correction and the note range when relevant. Tap a point or
+session to reopen the report and practise a bar again.
+
+For MIDI timing, choose **Calibrate MIDI timing** in exercise setup or App
+settings. Listen to four clicks, then play one key on each of the next twelve
+clicks. You can apply the suggested correction or try again. It estimates the
+combined timing of your playing, keyboard and audio setup.
+
 <details>
 <summary><strong>Take a look at the new practice modes</strong></summary>
 

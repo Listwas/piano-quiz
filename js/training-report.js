@@ -22,7 +22,7 @@ function issueRows(bars) {
   return issues.map(([key,label,tip])=>({label,tip,count:bars.reduce((n,bar)=>n+bar.issues[key],0)})).filter(item=>item.count).sort((a,b)=>b.count-a.count);
 }
 
-export function renderTrainingReport(result) {
+export function renderTrainingReport(result, drill = false) {
   const {bars,elapsedMs} = result.report;
   const sight = result.activity === 'sight';
   const counts = bars.map(bar=>sight ? bar.retries : totalIssues(bar));
@@ -35,7 +35,7 @@ export function renderTrainingReport(result) {
   const unit = sight ? 'retry' : 'mistake';
   const chart = counts.map((n,i)=>`<button type="button" class="report-bar${n ? ' needs-work' : ''}" style="--fill:${Math.round(n/max*100)}%" data-report-bar="${i}" aria-label="Bar ${i+1}: ${n} ${n===1?unit:sight?'retries':'mistakes'}. View details."><span>Bar ${i+1}</span><strong>${n || '✓'}</strong></button>`).join('');
   return `<div class="training-metrics">${cards.map(([value,label])=>`<div><strong>${value}</strong><span>${label}</span></div>`).join('')}</div>
-    <section class="report-chart" aria-label="${sight?'Retries':'Mistakes'} by bar"><div class="report-chart-heading"><h2>${sight?'Retries':'Mistakes'} by bar</h2><span class="muted">Tap a bar for details</span></div><div class="report-bars" data-dense="${bars.length>4}" style="--bars:${bars.length}">${chart}</div></section>
+    ${drill ? '' : `<section class="report-chart" aria-label="${sight?'Retries':'Mistakes'} by bar"><div class="report-chart-heading"><h2>${sight?'Retries':'Mistakes'} by bar</h2><button type="button" class="text-button report-all-details" data-all-details>All details</button></div><div class="report-bars" data-dense="${bars.length>4}" style="--bars:${bars.length}">${chart}</div></section>`}
     <div class="report-focus">${highlights.length ? `<ul>${highlights.slice(0,3).map(row=>`<li>${row.label} <strong>${row.count}</strong></li>`).join('')}</ul><p class="muted">${highlights[0].tip}</p>` : '<p class="muted">No mistakes recorded.</p>'}</div>`;
 }
 
