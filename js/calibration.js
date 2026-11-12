@@ -74,6 +74,7 @@ export class MidiCalibration {
     }
     $('calibration-device').textContent = status.connected ? `Connected · ${status.selectedName}` : status.state==='unsupported' ? 'MIDI is unavailable in this browser.' : 'Connect your MIDI keyboard to begin.';
     $('calibration-current').textContent = `Current correction: ${signed(this.getOffset())}`;
+    $('midi-timing-summary').textContent = `For Rhythm and Sight-reading · current correction: ${signed(this.getOffset())}`;
     $('calibration-connect').hidden = status.connected || status.state==='unsupported';
     $('calibration-connect').disabled = ['requesting','opening'].includes(status.state);
     $('calibration-start').disabled = !status.connected;

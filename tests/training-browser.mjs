@@ -302,6 +302,52 @@ try{
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);assert.equal(result.onset,100);assert.equal(result.holds,100);assert.equal(result.missed,0);
  });
+ await check('MIDI eighths reach the full hold meter and accept articulated releases at 200 BPM',async()=>{
+  const page=await setup(true,true);await page.selectOption('#activity-select','rhythm');
+  await page.locator('#home-training-input [data-training-input=midi]').click();
+  await page.locator('#customize-button').click();await page.locator('#training-bpm').fill('200');
+  await page.selectOption('#training-complexity','eighths');await page.selectOption('#training-bars','2');
+  await page.selectOption('#training-pace','flow');await page.selectOption('#training-accuracy','beginner');
+  await page.locator('#training-form button[type=submit]').click();await page.evaluate(()=>{Math.random=()=>.999999;});
+  await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));
+  await page.locator('#training-toggle').click();await running(page);
+  await page.evaluate(()=>{
+   const score=document.getElementById('exercise-score'),seen=new Set();window.eighthChecks=[];
+   function schedule(){
+    const start=Number(score.dataset.startTime);
+    for(const node of score.querySelectorAll('[data-event]')){
+     const {event,beat,duration,rest}=node.dataset;if(rest==='true'||seen.has(event))continue;seen.add(event);
+     const on=start+Number(beat)*300+55,off=start+(Number(beat)+Number(duration))*300-10;
+     setTimeout(()=>window.trainingMidi.send([0x90,60,100],on),Math.max(0,on-performance.now()));
+     setTimeout(()=>{
+      window.trainingMidi.send([0x80,60,0],off);
+      window.eighthChecks.push({duration:Number(duration),full:document.getElementById('hold-progress').value===1,correct:score.querySelector(`[data-event="${event}"]`)?.classList.contains('correct')});
+     },Math.max(0,off-performance.now()));
+    }
+   }
+   window.eighthObserver=new MutationObserver(schedule);window.eighthObserver.observe(score,{childList:true});schedule();
+  });
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  await page.evaluate(()=>window.eighthObserver.disconnect());
+  const checks=await page.evaluate(()=>window.eighthChecks.filter(c=>c.duration===.5));
+  assert.ok(checks.length>=8,JSON.stringify(checks));assert.ok(checks.every(c=>c.full&&c.correct),JSON.stringify(checks));
+  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);
+  assert.equal(result.onset,100);assert.equal(result.holds,100);assert.equal(result.missed,0);assert.equal(result.extras,0);
+ });
+ await check('MIDI calibration is visible at the top of App settings and returns there on close',async()=>{
+  const page=await setup(false,true);
+  for(const viewport of [{width:430,height:932},{width:1280,height:800}]){
+   await page.setViewportSize(viewport);await page.locator('#settings-button').click();
+   assert.equal(await page.locator('#settings-dialog').evaluate(e=>e.scrollTop),0);
+   const button=page.locator('#midi-calibrate'),box=await button.boundingBox();
+   assert.ok(box.y>=0&&box.y+box.height<=viewport.height,JSON.stringify(box));
+   assert.match(await page.locator('#midi-timing-summary').innerText(),/current correction: 0 ms/);
+   await button.tap();await page.locator('#calibration-dialog').waitFor({state:'visible'});
+   await page.locator('[data-close=calibration-dialog]').click();await page.locator('#settings-dialog').waitFor({state:'visible'});
+   await page.locator('[data-close=settings-dialog]').click();
+  }
+  await page.locator('#settings-button').click();await page.screenshot({path:`docs/images/midi-settings-${engine}.png`});
+ });
  await check('four rhythm levels save, introduce their own note values, and keep a single readable bar',async()=>{
   const page=await setup(true);await page.selectOption('#activity-select','rhythm');
   for(const level of ['simple','steady','eighths','mixed']){
@@ -372,6 +418,10 @@ try{
   await page.locator('[data-close="calibration-dialog"]').click();
   await page.locator('#training-dialog').waitFor({state:'visible'});
   assert.equal(await page.locator('#training-bpm').inputValue(),'95');assert.equal(await page.locator('#training-offset').inputValue(),String(offset));
+  await page.locator('[data-close=training-dialog]').click();await page.locator('#settings-button').click();
+  assert.match(await page.locator('#midi-timing-summary').innerText(),new RegExp(`current correction: \\+${offset} ms`));
+  await page.locator('#midi-calibrate').click();await page.locator('#calibration-dialog').waitFor({state:'visible'});
+  assert.match(await page.locator('#calibration-current').innerText(),new RegExp(`\\+${offset} ms`));
  });
  assert.deepEqual(report.errors,[]);report.result='passed';
 }catch(e){report.result='failed';report.failure=e.stack;console.error(e);process.exitCode=1;}

@@ -167,7 +167,7 @@ export class Activities {
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Play your selected notes on the beat. A wrong pitch, missed beat, bad hold or rest mistake restarts the whole bar on the next downbeat. Watch the countdown and release cue.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. Green means the timing and release are both correct. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    $('training-setup-help').textContent = this.activity === 'sight' ? 'Play your selected notes on the beat. A wrong pitch, missed beat, bad hold or rest mistake restarts the whole bar on the next downbeat. Watch the countdown and release cue.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. With Beginner tolerance, the full meter means you can release; keep your next press on the beat. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
     this.openDialog('training-dialog');
   }
 

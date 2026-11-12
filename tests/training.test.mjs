@@ -229,6 +229,50 @@ test('valid releases show a fully filled hold meter briefly without delaying the
  note(s,'on',61,3020);assert.equal(s.holdDisplay(3020).value,0);assert.equal(s.holding.size,1);
 });
 
+test('beginner rhythm accepts articulated eighths with a valid late attack and an on-grid release',()=>{
+ for(const bpm of [60,90,120,160,200])for(const offset of [-100,0,100]){
+  const p={...phrase(true),events:Array.from({length:8},(_,id)=>({id,bar:0,beat:id/2,durationBeats:.5,tone:C,rest:false,clef:'treble'}))};
+  const s=new ExerciseSession(p,{bpm,offset,accuracy:'beginner'});s.startTime=1000;
+  const length=s.beatMs/2,late=Math.min(55,length*.35),gap=Math.min(20,length*.1);
+  for(const e of p.events){
+   const at=s.expected(e)+offset;
+   note(s,'on',60,at+late);note(s,'off',60,at+length-gap);
+   assert.equal(s.results.get(e.id)?.status,'correct',JSON.stringify({bpm,offset,id:e.id}));
+   assert.equal(s.holdDisplay(at+length-gap).value,1);
+  }
+  s.tick(s.expected(p.events.at(-1))+length+2000);
+  assert.equal(s.summary().holds,100);assert.equal(s.summary().onset,100);
+ }
+});
+
+test('beginner rhythm hold meter reaches its release cue before the next eighth attack',()=>{
+ const p={...phrase(true),events:[{...phrase(true).events[0],durationBeats:.5}]};
+ const s=new ExerciseSession(p,{bpm:200,accuracy:'beginner'});s.startTime=1000;
+ note(s,'on',60,1055);
+ assert.ok(s.holdDisplay(1120).value<1);assert.equal(s.holdDisplay(1120).releasing,false);
+ assert.equal(s.holdDisplay(1130).value,1);assert.equal(s.holdDisplay(1130).releasing,true);
+ assert.match(s.holdDisplay(1130).label,/next press on the beat/);
+ note(s,'off',60,1130);assert.equal(s.results.get(0).status,'correct');
+});
+
+test('rhythm release grace still rejects taps, half-length long notes, late releases and offbeat attacks',()=>{
+ const eighth={...phrase(true),events:[{...phrase(true).events[0],durationBeats:.5}]};
+ for(const accuracy of ['beginner','strict']){
+  for(const [on,off] of [[1055,1080],[1000,1250]]){
+   const s=new ExerciseSession(eighth,{bpm:200,accuracy});s.startTime=1000;
+   note(s,'on',60,on);note(s,'off',60,off);assert.equal(s.results.get(0).duration,false);
+  }
+  const s=new ExerciseSession(phrase(true),{accuracy});s.startTime=1000;
+  note(s,'on',60,1100);note(s,'off',60,2000);assert.equal(s.results.get(0).duration,false);
+ }
+ const strict=new ExerciseSession(eighth,{bpm:200,accuracy:'strict'});strict.startTime=1000;
+ note(strict,'on',60,1055);note(strict,'off',60,1130);assert.equal(strict.results.get(0).duration,false);
+ const sight=new ExerciseSession({...eighth,rhythm:false},{bpm:200,accuracy:'beginner',retryOnError:true});sight.startTime=1000;
+ note(sight,'on',60,1055);note(sight,'off',60,1130);assert.equal(sight.failure.reason,'Too short');
+ const offbeat=new ExerciseSession(eighth,{bpm:200,accuracy:'beginner'});offbeat.startTime=1000;
+ note(offbeat,'on',60,1400);assert.equal(offbeat.results.size,0);assert.equal(offbeat.extras,1);
+});
+
 test('pattern bags spread repeats evenly and avoid adjacent duplicate bars, even with a constant random source',()=>{
  for(const meter of [3,4])for(const complexity of Object.keys(RHYTHM_LEVELS))for(const value of [0,.49,.999999]){
   const p=generatePhrase(normalizeTraining({meter,complexity,bars:8}),copyDefaults(),{rhythm:true,random:()=>value});

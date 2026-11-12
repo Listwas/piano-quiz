@@ -63,8 +63,17 @@ Attacks remain pending until release; only validated notes turn green. The
 hold meter uses actual press time, with an explicit release cue and measured
 versus expected beat lengths on a bad release. Only unreleased notes are failed
 when the exercise ends. Sight-reading also fails an overdue hold during play.
-A valid release latches the meter at 100% for 200 ms; a fresh attack clears the
-latch immediately, without input delay. Progress uses explicit themed browser
+In Beginner Rhythm, an accepted late attack can still release near the written
+end of the note, provided at least half its value was physically held. This
+avoids penalizing the same onset delay again when re-articulating eighths.
+On-time attacks retain the usual minimum hold, and the upper duration limit is
+unchanged. Strict and Sight-reading keep the original duration rules.
+
+The Beginner Rhythm meter fills at the earliest valid release, with a cue to
+release and keep the next press on the beat. It is a release-readiness meter;
+the score cursor and metronome retain the full written note length. A valid
+release latches it at 100% for 200 ms; a fresh attack clears the latch immediately,
+without input delay. Progress uses explicit themed browser
 track/fill styles so its full value reaches the end of the track. Slightly early
 first attacks use the same window.
 
@@ -352,3 +361,7 @@ for the normal note range. The frame still expands for ledger notes and chords.
 `npm run test:staff` compares seven notes and a chord in each clef, checks
 extreme natural pitches, and exercises Pause/Resume across phone/tablet sizes,
 touch/MIDI input and Paper/Nocturne. It uses simulated MIDI and viewports.
+
+MIDI calibration is also available near the top of App settings, above Screen
+and device controls. Its summary shows the current signed correction for
+Rhythm and Sight-reading. Closing calibration returns to the parent settings.

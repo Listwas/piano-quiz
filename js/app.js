@@ -400,6 +400,7 @@ $('customize-button').onclick = () => activities.activity === 'quiz' ? openCusto
 $('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(); };
 $('about-button').onclick = () => openDialog('about-dialog');
 $('settings-button').onclick = () => {
+  activities.calibration.sync();
   for (const button of $('theme-options').children) button.setAttribute('aria-pressed', String(button.dataset.theme === state.settings.theme));
   $('sound-setting').checked = state.settings.sound;
   openDialog('settings-dialog');

@@ -1,0 +1,20 @@
+{
+  "engine": "webkit",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "590026ecd00229",
+  "testedAt": "2026-11-12T19:14:45.580Z",
+  "checks": [
+    "MIDI eighths reach the full hold meter and accept articulated releases at 200 BPM",
+    "MIDI calibration is visible at the top of App settings and returns there on close",
+    "MIDI timing calibration suggests an offset, saves only on Apply, and stops on disconnect"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Deterministic WebKit exercises use the visual clock because the host audio clock can stall.",
+    "Audio could not start in this host; visual fallback verified.",
+    "Calibration uses scheduled clicks from a controlled audio clock and simulated MIDI."
+  ],
+  "result": "passed",
+  "filter": "MIDI eighths|MIDI calibration is visible|MIDI timing calibration"
+}

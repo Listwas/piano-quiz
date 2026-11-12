@@ -227,9 +227,21 @@ export class ExerciseSession {
     const target = held?.target ?? this.current;
     if (!held && this.lastHold && now - this.lastHold.at < 200) return { value:1, label:'Good release ✓', releasing:false };
     const elapsed = held ? (now-this.offset-held.result.on)/this.beatMs : target?.rest ? this.progress(now)-target.beat : 0;
-    const releasing = Boolean(held && elapsed >= target.durationBeats);
-    return { value:target ? Math.min(1,Math.max(0,elapsed)/target.durationBeats) : 0, releasing,
-      label:releasing ? 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}` };
+    const rhythmWindow = held && this.phrase.rhythm && this.accuracy === 'beginner' && !this.guided;
+    const fillBeats = rhythmWindow ? (this.releaseBounds(held).start-held.result.on)/this.beatMs : target?.durationBeats;
+    const releasing = Boolean(held && elapsed >= fillBeats);
+    return { value:target ? Math.min(1,Math.max(0,elapsed)/fillBeats) : 0, releasing,
+      label:releasing ? rhythmWindow ? 'Release now · next press on the beat' : 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}` };
+  }
+  releaseBounds({ target, result }) {
+    const length = target.durationBeats*this.beatMs, tolerance = holdTolerance(length,this.accuracy);
+    let minimum = length-tolerance;
+    if (this.phrase.rhythm && this.accuracy === 'beginner' && !this.guided) {
+      // Leave room to re-articulate a valid late attack before the next beat.
+      const gridEnd = this.expected(target)+length;
+      minimum = Math.min(minimum,Math.max(length*.5,gridEnd-tolerance-result.on));
+    }
+    return { start:result.on+minimum, end:result.on+length+tolerance };
   }
   extraAt(time, rest = null) { this.extraBars.push({bar:this.guided ? this.current?.bar ?? this.phrase.bars-1 : this.position(time).bar,rest}); }
   expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter + (event.bar - this.startBar) * this.gapBeats) * this.beatMs; }
@@ -301,7 +313,8 @@ export class ExerciseSession {
       const held = this.holding.get(key);
       if (!held) return;
       const { target, result } = held;
-      result.duration = heldCorrectly(time - result.on, target.durationBeats * this.beatMs, this.accuracy);
+      const bounds = this.releaseBounds(held);
+      result.duration = time >= bounds.start && time <= bounds.end;
       result.status = result.pitch && result.duration ? 'correct' : 'wrong';
       if (!result.duration) this.feedback = this.durationFeedback(time - result.on, target.durationBeats * this.beatMs);
       else if (result.pitch) this.feedback = 'Good hold ✓';
