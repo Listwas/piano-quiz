@@ -104,7 +104,7 @@ try {
     }
     await page.locator('#training-back').click();
   });
-  await check('training feedback stays readable in all fifteen palettes', async () => {
+  await check('training feedback stays readable in all palettes', async () => {
     await page.setViewportSize({width:430,height:932});
     await page.evaluate(() => { for(const edge of ['top','bottom','left','right']) document.documentElement.style.setProperty('--safe-'+edge,'0px'); });
     await home(); await startRhythm(); await page.locator('#training-toggle').click();

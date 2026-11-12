@@ -300,7 +300,7 @@ Protocol and API references: [Web MIDI specification](https://webaudio.github.io
 [MIDI controller messages](https://midi.org/midi-1-0-control-change-messages),
 [requestMIDIAccess](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMIDIAccess).
 
-Fourteen explicit palettes plus Device are validated by settings normalization.
+Sixteen explicit palettes plus Device are validated by settings normalization.
 The browser suite checks saved choices, real computed colors, and at least 4.5:1
 contrast for body text and primary button text in every explicit palette on a dark
 device preference. Global user-select and iOS callout styles prevent selection;

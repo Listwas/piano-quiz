@@ -1,0 +1,113 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "863902201daef0",
+  "testedAt": "2026-11-12T14:17:30.977Z",
+  "checks": [
+    "training feedback stays readable in all palettes"
+  ],
+  "errors": [],
+  "limits": [
+    "Safe areas and screen sizes are simulated. MIDI is simulated and audio is deliberately unavailable to test the visual fallback. Dense notation uses deliberate edge-case fixtures. Physical devices are not attached."
+  ],
+  "contrast": [
+    {
+      "theme": "light",
+      "text": 5.861827030061788,
+      "wrongNote": 6.289165685562574,
+      "correctNote": 6.308927053306898
+    },
+    {
+      "theme": "dark",
+      "text": 8.394921898209885,
+      "wrongNote": 7.215465720114763,
+      "correctNote": 7.79548883425342
+    },
+    {
+      "theme": "ocean",
+      "text": 5.756571557055222,
+      "wrongNote": 6.223209990143626,
+      "correctNote": 5.883544164259732
+    },
+    {
+      "theme": "lavender",
+      "text": 5.239079761921863,
+      "wrongNote": 5.799938857014297,
+      "correctNote": 5.905607729540443
+    },
+    {
+      "theme": "peach",
+      "text": 5.807108344381397,
+      "wrongNote": 6.1493324284063045,
+      "correctNote": 5.290191942916922
+    },
+    {
+      "theme": "midnight",
+      "text": 8.77686981449625,
+      "wrongNote": 7.32163893759573,
+      "correctNote": 7.603721909287864
+    },
+    {
+      "theme": "sunflower",
+      "text": 6.418757940410177,
+      "wrongNote": 6.69567735018273,
+      "correctNote": 6.277229908293188
+    },
+    {
+      "theme": "rose",
+      "text": 6.082009463003869,
+      "wrongNote": 6.504770570466363,
+      "correctNote": 6.1086236127312645
+    },
+    {
+      "theme": "mint",
+      "text": 5.939964501773854,
+      "wrongNote": 6.405842505392369,
+      "correctNote": 6.456794435575651
+    },
+    {
+      "theme": "arctic",
+      "text": 5.681062629980888,
+      "wrongNote": 6.074578613524873,
+      "correctNote": 6.523594040059422
+    },
+    {
+      "theme": "plum",
+      "text": 9.675506823226945,
+      "wrongNote": 8.347174262831212,
+      "correctNote": 8.21468406072894
+    },
+    {
+      "theme": "ember",
+      "text": 9.312270290544028,
+      "wrongNote": 7.922300764009883,
+      "correctNote": 7.795323481836985
+    },
+    {
+      "theme": "graphite",
+      "text": 8.719251362232736,
+      "wrongNote": 7.29684141071543,
+      "correctNote": 9.181909207502322
+    },
+    {
+      "theme": "nocturne",
+      "text": 11.045073947773595,
+      "wrongNote": 5.0456539110002065,
+      "correctNote": 5.477705581943418
+    },
+    {
+      "theme": "amoled",
+      "text": 12.091490975129075,
+      "wrongNote": 10.781323056080574,
+      "correctNote": 14.133846507920085
+    },
+    {
+      "theme": "pulse",
+      "text": 6.822621095529577,
+      "wrongNote": 7.222965572240163,
+      "correctNote": 5.808646563576978
+    }
+  ],
+  "result": "passed",
+  "filter": "training feedback"
+}

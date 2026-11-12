@@ -1,0 +1,13 @@
+{
+  "build": "863902201daef0",
+  "origin": "http://127.0.0.1:8421/",
+  "testedAt": "2026-11-12T14:17:50.196Z",
+  "checks": [
+    "430x932: paired palette grid, dark-device override, persistence, text contrast, Home/Quiz/Pause touch targets",
+    "1280x800: paired palette grid, dark-device override, persistence, text contrast, Home/Quiz/Pause touch targets",
+    "320x568: paired palette grid, dark-device override, persistence, text contrast, Home/Quiz/Pause touch targets",
+    "932x430: paired palette grid, dark-device override, persistence, text contrast, Home/Quiz/Pause touch targets"
+  ],
+  "errors": [],
+  "result": "passed"
+}

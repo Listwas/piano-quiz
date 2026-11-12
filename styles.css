@@ -562,6 +562,20 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 #hold-progress::-webkit-progress-value{background:var(--accent);border-radius:8px}
 #hold-progress::-moz-progress-bar{background:var(--accent);border-radius:8px}
 
+/* Pulse: warm paper and punchy coral practice controls. */
+:root[data-theme=pulse]{
+ color-scheme:light;
+ --bg:#fff5eb;--surface:#fffdf8;--ink:#302921;--muted:#776351;--line:#e5cbb5;
+ --accent:#b63720;--accent-soft:#fce0cf;--wrong:#a22539;--wrong-soft:#ffe3e6;
+ --peach:#f3c6a3;--shadow:0 8px 24px #783c1710;--button-ink:#fffdf8;
+}
+:root[data-theme=pulse] .primary{background:var(--accent);color:var(--button-ink);box-shadow:0 3px 0 #792310}
+:root[data-theme=pulse] .primary:active:not(:disabled){box-shadow:0 1px 0 #792310}
+:root[data-theme=pulse] .home-heading h1{font-family:inherit;font-weight:750;letter-spacing:-.065em}
+:root[data-theme=pulse] .home-heading h1 span{font-style:normal}
+:root[data-theme=pulse] :is(.brand-icon,.primary,.secondary,.score-card){border-radius:10px}
+:root[data-theme=pulse] :is(.mini-stat strong,.result-metrics strong,#metronome-number){font-variant-numeric:tabular-nums}
+
 /* Nocturne: a dark practice stand with an ivory score. */
 :root[data-theme=nocturne]{
  color-scheme:dark;
