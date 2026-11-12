@@ -10,6 +10,7 @@
     "test:browser": "node tests/browser.mjs",
     "test:update": "node tests/update.mjs",
     "test:viewport": "node tests/viewport.mjs",
+    "test:staff": "node tests/staff-browser.mjs",
     "deploy": "npm run build && node tools/deploy.mjs",
     "test:midi": "node tests/midi-browser.mjs",
     "test:training": "node tests/training-browser.mjs",

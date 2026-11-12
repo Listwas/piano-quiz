@@ -168,6 +168,7 @@ npm run test:browser # Chromium
 npm run test:update # isolated real service-worker update test
 npm run test:midi # MIDI API/device simulation plus native Chromium virtual loopback
 npm run test:viewport # safe areas, zoom guards, rotations and real touch targets
+npm run test:staff # equal clef scale and extreme notes
 npm run test:training # metronome, rhythm holds, timed bar retries, MIDI and rotation
 npm run test:polish # count-ins, dense notation/extreme ranges and all-theme feedback contrast
 npm run test:display # wake locks, background recovery, fullscreen and unavailable APIs
@@ -341,3 +342,13 @@ statistics, last-question retry restoration, immediate wrong/correct presses,
 legato input, duplicate Note On suppression, legacy chord-feedback restoration,
 saved input modes, and hidden tap controls. Native Chromium loopback grades a note both before and
 after using the real Recheck button.
+
+## Quiz staff scaling
+
+Both clefs share the treble glyph's minimum vertical frame. Bass notation no
+longer grows to fill a shorter viewBox; staff spacing and notehead size match
+for the normal note range. The frame still expands for ledger notes and chords.
+
+`npm run test:staff` compares seven notes and a chord in each clef, checks
+extreme natural pitches, and exercises Pause/Resume across phone/tablet sizes,
+touch/MIDI input and Paper/Nocturne. It uses simulated MIDI and viewports.

@@ -162,18 +162,15 @@ export function renderStaff(item, clefId = 'treble', revealed = false, feedback 
   const stemY2 = stemUp ? highest.y - overhang : lowest.y + overhang;
   parts.push(svg('line', { x1: stemX, y1: stemY1, x2: stemX, y2: stemY2, class: 'staff__stem' }));
 
-  // The viewBox is fitted to whatever was actually drawn. A fixed box clipped
-  // wide chords and tall ledger stacks, this way the drawing is always framed
-  // no matter the clef, chord width or how far the notes stray off the staff.
-  const ys = [TOP_LINE_Y, BOTTOM_LINE_Y, stemY1, stemY2];
-  if (clef === 'treble') {
-    const gY = yForStep(4 * 7 + 4, 'treble');
-    const h = CLEF_SPACES * SPACING;
-    ys.push(gY - G_CLEF.gLineFraction * h, gY + (1 - G_CLEF.gLineFraction) * h);
-  } else {
-    const fY = yForStep(3 * 7 + 3, 'bass');
-    ys.push(fY - 14, fY + 22);
-  }
+  // Use the same minimum frame for both clefs so the shorter bass symbol
+  // does not enlarge the staff. Expand it for ledger notes and wide chords.
+  const gY = yForStep(4 * 7 + 4, 'treble');
+  const h = CLEF_SPACES * SPACING;
+  const ys = [
+    gY - G_CLEF.gLineFraction * h,
+    gY + (1 - G_CLEF.gLineFraction) * h,
+    TOP_LINE_Y, BOTTOM_LINE_Y, stemY1, stemY2,
+  ];
   placed.forEach(({ y }) => ys.push(y - HEAD_RY, y + HEAD_RY));
   ledgers.forEach((step) => ys.push(yForStep(step, clef)));
 
