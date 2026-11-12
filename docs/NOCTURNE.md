@@ -13,7 +13,8 @@ cream text `#f5ecdd`, and score paper `#eee2c8`. Display type uses a
 Baskerville/Palatino serif stack; controls keep the existing system sans.
 Movement is limited to the pressed key feel and the existing practice feedback.
 
-The design is isolated from stable-before-design. The preview can use
+Nocturne is available on main. The previous design is preserved on
+`stable-before-design`. You can use
 `?theme=nocturne`, or select Nocturne in App settings. Existing themes and
 all practice behavior remain available. Source references:
 [Frontend Design](https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md),
@@ -37,4 +38,19 @@ Preview: https://74d393dc.piano-quiz.pages.dev/?theme=nocturne
 Deployment: 74d393dc-6a64-4338-86a9-76331d98bc34 (Preview).
 
 [Live preview checks](nocturne-live.json) confirm all 43 served files and
-that production is still release 832bfaeaa7834d.
+that production was still release 832bfaeaa7834d at the time of the preview.
+
+## Published on main
+
+The accepted Nocturne theme is now available at
+https://piano-quiz.pages.dev/?theme=nocturne and in App settings. Existing theme
+preferences are preserved. The stable checkpoint remains on
+[stable-before-design](https://github.com/Listwas/piano-quiz/tree/stable-before-design).
+
+Production release `6503f455786040` uses deployment
+`0173f6ed-f119-4d51-a5e4-0699c6c4f245`:
+https://0173f6ed.piano-quiz.pages.dev/?theme=nocturne
+
+[Production checks](nocturne-production.json) passed for all 43 served files
+and four screen sizes, including quiz pause/resume and touch target checks.
+The 100 unit tests also passed on main.

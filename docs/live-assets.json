@@ -1,8 +1,7 @@
 {
-  "build": "832bfaeaa7834d",
+  "build": "6503f455786040",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-11T00:51:17.953Z",
-  "result": "passed",
+  "testedAt": "2026-11-11T01:08:25.486Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -117,7 +116,7 @@
     {
       "path": "js/app.js",
       "status": 200,
-      "sha256": "54863cfc22e7f37f02d40588968409257be56a95127c85e4b5148b53c772caad"
+      "sha256": "a2d260d0ce1713401accd5a7f2eb26d51103a7cca17ec7916b38b275ac1e5719"
     },
     {
       "path": "js/audio.js",
@@ -157,7 +156,7 @@
     {
       "path": "js/quiz.js",
       "status": 200,
-      "sha256": "819e2db7e69fae0368e2e8b9b3dca1feb52d7e7126deb722ec475f92c35d9c40"
+      "sha256": "05890e5ea6255a57764f117da3f26dba55509694cf607f86027e97cc13bce414"
     },
     {
       "path": "js/score.js",
@@ -207,23 +206,26 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "2a92ccbd75d1e2e060f9476b1267749f559a703b230c76e42c1bdbb721dfef85"
+      "sha256": "7364fc9cf6c1dd57ce252c31ca5b97fbd3dd953d89fffa5c9bf907df41d2e185"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "39abf94d3feb0b0e92e922ba10f1048ddf220ddd6d6064209bdc3e36552a2079"
+      "sha256": "a49d86841d51e063b39c1e5667503a70d182f03e44a1c84848d401df251d117e"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "a0f2889a1fa41e88f2832ae33626aa969698b300edafa685270f9adca8926661"
+      "sha256": "4c82c1b9c391afdfe395967870f8791f5bcff41c7fd5479b3a0554ef94a7be6a"
     }
   ],
+  "checks": [],
+  "errors": [],
   "headers": {
     "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     "permissions-policy": "microphone=(), camera=(), midi=(self), screen-wake-lock=(self), fullscreen=(self)",
     "x-content-type-options": "nosniff",
     "referrer-policy": "same-origin"
-  }
+  },
+  "result": "passed"
 }

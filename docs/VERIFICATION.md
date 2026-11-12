@@ -1,31 +1,37 @@
 # Verification
 
-Bar drills, session history and MIDI timing calibration checked on 2026-11-11
-(Europe/Warsaw).
+Nocturne promoted to main; release documentation finalized on 2026-11-12.
 
-- Play: **https://piano-quiz.pages.dev/**
-- Release: `832bfaeaa7834d`
-- Production deployment: `165fd5a3-a924-4c69-b1b0-4d431f052747`
-- Immutable URL: https://165fd5a3.piano-quiz.pages.dev/
+- Play: **https://piano-quiz.pages.dev/?theme=nocturne**
+- Release: `6503f455786040`
+- Production deployment: `0173f6ed-f119-4d51-a5e4-0699c6c4f245`
+- Immutable URL: https://0173f6ed.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**100 unit tests and 33 browser scenarios passed.** Browser checks used the
-published build except the isolated worker update suite. No uncaught page
-errors were recorded. The new feature scenarios extend actual graded exercises.
+**100 unit tests passed on main.** The published runtime is byte-identical to
+the accepted Nocturne preview. All 43 served files matched the local build.
 
-| Check | Chromium | Firefox | WebKit |
-| --- | --- | --- | --- |
-| Drill, history, layout and calibration scenarios | [3 passed](live-training-focused-chromium.json) | [3 passed](live-training-focused-firefox.json) | [3 passed](live-training-focused-webkit.json) |
-| Quiz, themes, storage and offline launch | [20 passed](live-chromium.json) | — | — |
-| Explicit service-worker updates | [4 passed](update-chromium.json) | — | — |
+| Check | Result | Origin |
+| --- | --- | --- |
+| Unit tests | [100 passed](unit.json) | Main source |
+| Quiz, themes, storage and offline launch | [20 passed](nocturne-browser.json) | Local Nocturne preview |
+| Feedback contrast across themes | [Passed](nocturne-contrast.json) | Local Nocturne preview |
+| Home, quiz, pause/resume and touch targets at four viewport sizes | [4 passed](nocturne-production.json) | Production |
+| Runtime asset bytes and response policies | [43 matched](live-assets.json) | Production |
 
-[Unit report](unit.json). Dashes indicate suites not rerun in that engine for
-this build. The [earlier full session-report audit](https://github.com/Listwas/piano-quiz/blob/c530c94b8f388f3566417bb9249c7560b9490d03/docs/VERIFICATION.md)
-records broader practice coverage.
+Production layout checks covered 430 × 932, 1280 × 800, 320 × 568, and
+932 × 430. No uncaught page errors were recorded. These are simulated viewport
+sizes; physical iPhone and Honor MagicPad 2 behavior was not retested.
 
-## Feature checks
+See [Nocturne notes and screenshots](NOCTURNE.md). The earlier feature audit
+for release `832bfaeaa7834d` recorded 33 browser scenarios across Chromium,
+Firefox and WebKit. Those scenarios were not all rerun for this style release;
+[the preserved baseline report](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md)
+records their actual scope and build.
+
+## Earlier feature baseline
 
 - The hardest-bar action selects the bar with the most retries. A user can
   choose another bar, play at the original tempo or start about 20% slower,
@@ -50,9 +56,9 @@ Deterministic WebKit exercises use the visual clock on this host.
 
 ## Release integrity
 
-All 43 served runtime files matched the build and source. Home returned HTTP
-200; [asset verification](live-assets.json) records byte hashes and response
-policies. The 44-file ZIP was reopened and checked for exact members, CRC and
-bytes. [release.json](release.json) records size, SHA-256 and deployment ID.
+All 43 served runtime files matched the build. Home returned HTTP 200;
+[asset verification](live-assets.json) records byte hashes and response policies.
+The 44-file ZIP was reopened and checked for exact members, CRC and bytes.
+[release.json](release.json) records size, SHA-256 and deployment ID.
 
 See [development commands](DEVELOPMENT.md#commands) to reproduce the tests.

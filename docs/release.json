@@ -1,11 +1,11 @@
 {
-  "version": "832bfaeaa7834d",
+  "version": "6503f455786040",
   "files": 44,
   "archive": "piano-quiz-release.zip",
-  "archiveBytes": 686501,
-  "sha256": "c83be696336152fc8042958f5c0d0be8666cf4ef71001bd9d568b0bf86da803e",
+  "archiveBytes": 687539,
+  "sha256": "f86e4d13855c0dd4c132c237eb589b8bfa9ea828c5d4b4f5a6f7b44905ee0fde",
   "deploymentStatus": "published",
   "liveUrl": "https://piano-quiz.pages.dev/",
-  "deploymentUrl": "https://165fd5a3.piano-quiz.pages.dev/",
-  "deploymentId": "165fd5a3-a924-4c69-b1b0-4d431f052747"
+  "deploymentUrl": "https://0173f6ed.piano-quiz.pages.dev/",
+  "deploymentId": "0173f6ed-f119-4d51-a5e4-0699c6c4f245"
 }
