@@ -1,35 +1,37 @@
 # Verification
 
-Nocturne promoted to main; release documentation finalized on 2026-11-12.
+Pulse added on main and published on 2026-11-12.
 
-- Play: **https://piano-quiz.pages.dev/?theme=nocturne**
-- Release: `6503f455786040`
-- Production deployment: `0173f6ed-f119-4d51-a5e4-0699c6c4f245`
-- Immutable URL: https://0173f6ed.piano-quiz.pages.dev/
+- Play: **https://piano-quiz.pages.dev/**
+- Release: `863902201daef0`
+- Production deployment: `3481aa9e-e355-4fe4-8dae-61e8d766bea7`
+- Immutable URL: https://3481aa9e.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**100 unit tests passed on main.** The published runtime is byte-identical to
-the accepted Nocturne preview. All 43 served files matched the local build.
+**100 unit tests passed.** The theme picker now contains sixteen explicit
+palettes in eight paired rows, plus Device. Existing preferences are preserved.
+Choose **App settings → Appearance → Pulse** for warm paper and coral controls.
 
 | Check | Result | Origin |
 | --- | --- | --- |
-| Unit tests | [100 passed](unit.json) | Main source |
-| Quiz, themes, storage and offline launch | [20 passed](nocturne-browser.json) | Local Nocturne preview |
-| Feedback contrast across themes | [Passed](nocturne-contrast.json) | Local Nocturne preview |
-| Home, quiz, pause/resume and touch targets at four viewport sizes | [4 passed](nocturne-production.json) | Production |
+| Settings, storage, quiz and training unit tests | [100 passed](unit.json) | Main source |
+| Paired picker rows, saved theme, contrast and Home/Quiz/Pause controls | [4 viewports passed](pulse-browser.json) | Local build |
+| Correct/incorrect training feedback contrast | [All sixteen palettes passed](pulse-contrast.json) | Local build |
+| Pulse selection, persistence and quiz pause/resume by touch | [Passed](pulse-production.json) | Production |
 | Runtime asset bytes and response policies | [43 matched](live-assets.json) | Production |
 
-Production layout checks covered 430 × 932, 1280 × 800, 320 × 568, and
-932 × 430. No uncaught page errors were recorded. These are simulated viewport
-sizes; physical iPhone and Honor MagicPad 2 behavior was not retested.
+Layout checks covered 430 × 932, 1280 × 800, 320 × 568, and 932 × 430.
+Phone Home and picker screenshots were visually inspected. No uncaught page
+errors were recorded. Viewports were simulated; physical iPhone and Honor
+MagicPad 2 behavior was not retested.
 
-See [Nocturne notes and screenshots](NOCTURNE.md). The earlier feature audit
-for release `832bfaeaa7834d` recorded 33 browser scenarios across Chromium,
-Firefox and WebKit. Those scenarios were not all rerun for this style release;
-[the preserved baseline report](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md)
-records their actual scope and build.
+See [Pulse notes and screenshots](PULSE.md). The general Nocturne browser
+checks and earlier feature suites were not rerun for this small theme addition.
+Their actual scope and builds remain recorded in the
+[Nocturne release audit](https://github.com/Listwas/piano-quiz/blob/319030e44faa94b0ddfc00e5fdb553efeca8d66f/docs/VERIFICATION.md)
+and the [feature baseline](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md).
 
 ## Earlier feature baseline
 

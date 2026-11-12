@@ -1,7 +1,7 @@
 {
-  "build": "6503f455786040",
+  "build": "863902201daef0",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-11T01:08:25.486Z",
+  "testedAt": "2026-11-12T14:20:41.447Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -156,7 +156,7 @@
     {
       "path": "js/quiz.js",
       "status": 200,
-      "sha256": "05890e5ea6255a57764f117da3f26dba55509694cf607f86027e97cc13bce414"
+      "sha256": "498766120e07b5ad251b57a42464734277db1273fc15179c8a15a9164fe76128"
     },
     {
       "path": "js/score.js",
@@ -206,21 +206,23 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "7364fc9cf6c1dd57ce252c31ca5b97fbd3dd953d89fffa5c9bf907df41d2e185"
+      "sha256": "f5aeb8ce70b69e5993131cc288c88e1c48e4f0c97f6a6ac202d429b0374651b7"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "a49d86841d51e063b39c1e5667503a70d182f03e44a1c84848d401df251d117e"
+      "sha256": "c367f4b39a1c9ef7eb5a26c900a8d1dd0c8e35b23a85514f73dea735bbf5f52e"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "4c82c1b9c391afdfe395967870f8791f5bcff41c7fd5479b3a0554ef94a7be6a"
+      "sha256": "4df78f34cd2586a3bcfe149e7c6dbac14e5cbb76d7338304de51b6be8a3334a5"
     }
   ],
-  "checks": [],
   "errors": [],
+  "notes": [
+    "The immediate post-deploy browser check saw the previous theme list; this check was repeated after the new deployment became visible in Chromium."
+  ],
   "headers": {
     "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     "permissions-policy": "microphone=(), camera=(), midi=(self), screen-wake-lock=(self), fullscreen=(self)",

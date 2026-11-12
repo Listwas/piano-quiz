@@ -16,3 +16,11 @@ Runtime: `863902201daef0`.
 
 100 unit tests passed. Viewports were simulated; physical devices were not
 attached. Existing theme preferences are preserved.
+
+Published on main: https://piano-quiz.pages.dev/
+
+Production deployment: `3481aa9e-e355-4fe4-8dae-61e8d766bea7`.
+Immutable URL: https://3481aa9e.piano-quiz.pages.dev/
+
+[Production check](pulse-production.json) verifies all 43 served files and
+Pulse selection, saved preference and quiz pause/resume by touch.
