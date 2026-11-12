@@ -1,48 +1,50 @@
 # Verification
 
-Rhythm eighth-note releases and MIDI calibration access fixed on 2026-11-12.
+Saved bar-practice progress and completed-session button spacing fixed on
+2026-11-12.
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `590026ecd00229`
-- Production deployment: `b351a490-1af5-4b66-bb48-9acc10291cce`
-- Immutable URL: https://b351a490.piano-quiz.pages.dev/
+- Release: `93e676ec562736`
+- Production deployment: `717038c9-7275-4cd4-b02e-5cebe8375f9b`
+- Immutable URL: https://717038c9.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**103 unit tests passed.** New tests reproduced the failed articulated eighths
-and the late release cue before the fix. The model exercises repeated eighths
-at 60, 90, 120, 160 and 200 BPM with offsets of -100, 0 and +100 ms.
-Taps, shortened long notes, overdue releases and offbeat attacks still fail.
-Strict and Sight-reading retain their existing grading.
+**105 unit tests passed.** A successful bar drill now stores a check and its
+best achieved BPM with the original session. History and Last session retain
+the same mark after reloading. The hardest-bar recommendation moves to the
+remaining unpractised bars. Original retry, timing, duration and first-try
+statistics are preserved; a drill does not add a full history session.
 
-In Beginner Rhythm, the full meter now marks the earliest acceptable release.
-A valid late attack can release near the written note end if at least half the
-value was held. This leaves room to re-articulate eighths without relaxing the
-next onset deadline. The metronome and score cursor retain their original grid.
-
-MIDI calibration is visible near the top of App settings with the saved signed
-correction; its original entry in exercise setup remains available.
+Unit cases cover updating separate saved copies, selecting the next bar,
+preserving original stats, keeping the best tempo, round-trip storage, rejecting
+failed drills, and ignoring malformed saved practice marks.
 
 | Check | Chromium | Firefox | WebKit |
 | --- | --- | --- | --- |
-| MIDI eighths at 200 BPM, visible Settings calibration, calibration Apply/disconnect | [Passed](rhythm-eighths-chromium.json) | [Passed](rhythm-eighths-firefox.json) | [Passed](rhythm-eighths-webkit.json) |
-| Existing MIDI hold grading and Sight-reading failed-bar retries | Included above | Not rerun | Not rerun |
-| Published eighths and main-settings calibration access | [2 passed](live-rhythm-eighths.json) | Not rerun | Not rerun |
+| Failed-bar retry, original/slower successful drills, marked summaries, saved reload and history | [Passed](live-practice-progress-chromium.json) | [Passed](practice-progress-firefox.json) | [Passed](practice-progress-webkit.json) |
+| Eight-bar Rhythm summary, dense report and compact controls | Included above | Included above | Included above |
 
-[Unit report](unit.json). The three local reports contain 5, 3 and 3 scenarios.
-The eighth-note scenario uses repeated MIDI Note On/Off messages, verifies full
-meters and green notes, and completes at 100% onset/hold with no extra or missed
-notes. Calibration verifies a controlled +42 ms offset, explicit Apply, current
-correction in App settings, return navigation and cancellation on disconnect.
-[Settings screenshot](images/midi-settings-chromium.png) was visually inspected.
+Each report contains two end-to-end scenarios; Chromium uses production,
+Firefox and WebKit use the local build. The Sight-reading scenario checks
+at least 12 px below the completed-session buttons in six phone/tablet
+layouts, including simulated safe areas. The eight-bar report additionally
+checks 320 × 568, 568 × 320, 667 × 375 and 1280 × 800.
 
-MIDI, audio timing for calibration and device sizes are simulated. WebKit uses
-the explicit visual exercise clock on this host. No physical keyboard or Honor
-MagicPad 2 was attached; these checks do not measure hardware latency.
+[Phone summary](images/practised-bars-firefox.png) and
+[tablet summary](images/practised-bars-tablet-firefox.png) were visually
+inspected. [Unit report](unit.json). No uncaught page errors were recorded
+in the passing scenarios.
 
-The broader suites were not rerun for this fix; see the
-[clef-scale audit](https://github.com/Listwas/piano-quiz/blob/d8f6c0af5cbac92358deac7c213a8f55ed5ff2f7/docs/VERIFICATION.md)
+MIDI and device sizes are simulated. Firefox and WebKit use the explicit visual
+exercise clock on this headless host. The initial native Firefox audio run
+timed out before the baseline Sight-reading exercise completed; it is not
+reported as passing. Physical devices and their audio timing were not retested.
+
+The earlier eighth-note and calibration fixes are included in this runtime.
+Their wider tests were not rerun for the report update; see the
+[Rhythm/calibration audit](https://github.com/Listwas/piano-quiz/blob/48170b5e9dd8e3814138c6b02b652ddcddd76234/docs/VERIFICATION.md)
 and [feature baseline](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md).
 
 ## Earlier feature baseline

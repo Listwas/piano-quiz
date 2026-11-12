@@ -1,7 +1,7 @@
 {
-  "build": "590026ecd00229",
+  "build": "93e676ec562736",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-12T19:16:06.078Z",
+  "testedAt": "2026-11-12T19:24:12.389Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -111,7 +111,7 @@
     {
       "path": "js/activities.js",
       "status": 200,
-      "sha256": "8b0c692acdd80c923027c7a9069c9c3b298b1ad88111f726c828fa07812a6d2d"
+      "sha256": "6defecf73bb6a6dd95dc533f9f0e09d5b3348b748a56d031ba5cb3260834654e"
     },
     {
       "path": "js/app.js",
@@ -186,12 +186,12 @@
     {
       "path": "js/training-report.js",
       "status": 200,
-      "sha256": "1adde0f5ef8b56ca2f68cd8b913f00e8da4c97b2f1dc16f99e0d3190a78be009"
+      "sha256": "2fe0fc520c2fb1063c5a1f163c61cb5d9aa5d2975dfde4df2186c05c0f82c617"
     },
     {
       "path": "js/training.js",
       "status": 200,
-      "sha256": "82d79561666f66c0021660390ecdcf13cff8a3861302683d91a001c327e9e2c5"
+      "sha256": "3d2a94b95be0b10ed02608fe4d7c2881ff10fe5fd46e596351f6082d4dcd385c"
     },
     {
       "path": "js/viewport.js",
@@ -206,17 +206,17 @@
     {
       "path": "styles.css",
       "status": 200,
-      "sha256": "f5aeb8ce70b69e5993131cc288c88e1c48e4f0c97f6a6ac202d429b0374651b7"
+      "sha256": "85adc9b67a51ea703dfe8772128dabcc7ac217a60c94916c6c7b31684a8887ca"
     },
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "65786c7c1451a56d30978d14588e4697e3055948d64ef04e937c7ad2466b074f"
+      "sha256": "02bb38061946c12516b9e9435550c905b57af6ccfba58aa1fbed0f2befa23bd1"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "8ea69a5a9640452705730ca508624ae0fc9ac440f68d42837e54f2b68140ea88"
+      "sha256": "0ce9d76915ac8992f053cb7a108877a084435a16c4a6ef3ce09ab4320dda6c1f"
     }
   ],
   "errors": [],
