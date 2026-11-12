@@ -1,7 +1,7 @@
 {
-  "build": "7afcfb8e0e912e",
+  "build": "590026ecd00229",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-12T19:05:55.629Z",
+  "testedAt": "2026-11-12T19:16:06.078Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -106,17 +106,17 @@
     {
       "path": "index.html",
       "status": 200,
-      "sha256": "e923908faea346f3654788a41650731a7e90ead39bf98235f0c40c748bd4ff92"
+      "sha256": "2a9700d450c126125d5324b71a8d65f0c5cf9d85180ab71ceb5c6ccdeb272148"
     },
     {
       "path": "js/activities.js",
       "status": 200,
-      "sha256": "b3a4778110f60fc895a86ce2b95467d25d8d41850b6fc8b5ad1d5403db7a56b5"
+      "sha256": "8b0c692acdd80c923027c7a9069c9c3b298b1ad88111f726c828fa07812a6d2d"
     },
     {
       "path": "js/app.js",
       "status": 200,
-      "sha256": "a2d260d0ce1713401accd5a7f2eb26d51103a7cca17ec7916b38b275ac1e5719"
+      "sha256": "f2877e4d4c54f76d4d090518d283e2cab20358e3d8c80949f8df999518fbfbd1"
     },
     {
       "path": "js/audio.js",
@@ -126,7 +126,7 @@
     {
       "path": "js/calibration.js",
       "status": 200,
-      "sha256": "4f60ace765147d5bb4d9fc561de633e4d23d5961d1d83ad0083f65734b67e526"
+      "sha256": "0ec01fa1427fc7f199c8eb1b8d0a6bb2b7e61199edf37fce10f0f57c9e4c6cbc"
     },
     {
       "path": "js/chords.js",
@@ -191,7 +191,7 @@
     {
       "path": "js/training.js",
       "status": 200,
-      "sha256": "487b3ae56e4f972cebaae3876aeb548970ae2ac94fb84af85bded200c9239857"
+      "sha256": "82d79561666f66c0021660390ecdcf13cff8a3861302683d91a001c327e9e2c5"
     },
     {
       "path": "js/viewport.js",
@@ -211,12 +211,12 @@
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "6397f4fdc557d99977a1167aad424ac1ab35e50c2ccd984e3ee40f11ace7bbf0"
+      "sha256": "65786c7c1451a56d30978d14588e4697e3055948d64ef04e937c7ad2466b074f"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "a670ec4550f33d7f4f1fec2547c79db3699ebff967b58bced4a329f5d707834e"
+      "sha256": "8ea69a5a9640452705730ca508624ae0fc9ac440f68d42837e54f2b68140ea88"
     }
   ],
   "errors": [],

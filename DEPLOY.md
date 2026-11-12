@@ -6,9 +6,9 @@ Project: `piano-quiz`, production branch `main`, account
 `3bbe51d8973c406839b993e52753a08c`. This is an independent static Pages app;
 the original `random-piano` app is unchanged.
 
-Release `7afcfb8e0e912e` was published as production deployment
-`3c517b48-87c1-49cd-a486-3fbebcfbaa24`:
-https://3c517b48.piano-quiz.pages.dev/
+Release `590026ecd00229` was published as production deployment
+`b351a490-1af5-4b66-bb48-9acc10291cce`:
+https://b351a490.piano-quiz.pages.dev/
 
 ## Publish an update
 

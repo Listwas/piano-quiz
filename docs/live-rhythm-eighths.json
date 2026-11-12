@@ -1,0 +1,16 @@
+{
+  "engine": "chromium",
+  "origin": "https://piano-quiz.pages.dev/",
+  "build": "590026ecd00229",
+  "testedAt": "2026-11-12T19:16:07.177Z",
+  "checks": [
+    "MIDI eighths reach the full hold meter and accept articulated releases at 200 BPM",
+    "MIDI calibration is visible at the top of App settings and returns there on close"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed",
+  "filter": "MIDI eighths|MIDI calibration is visible"
+}
