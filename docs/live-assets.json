@@ -1,7 +1,7 @@
 {
-  "build": "863902201daef0",
+  "build": "7afcfb8e0e912e",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-12T14:20:41.447Z",
+  "testedAt": "2026-11-12T19:05:55.629Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -166,7 +166,7 @@
     {
       "path": "js/staff.js",
       "status": 200,
-      "sha256": "3d1d5c545817c589bbbc56c9210e7b9d96217063929f8c5cedb60a236d0b0ece"
+      "sha256": "f90eb7fe0a24f10ae022128cd0625ec139d2fe6c1da0ab28080dc4667c4e47d7"
     },
     {
       "path": "js/storage.js",
@@ -211,18 +211,15 @@
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "c367f4b39a1c9ef7eb5a26c900a8d1dd0c8e35b23a85514f73dea735bbf5f52e"
+      "sha256": "6397f4fdc557d99977a1167aad424ac1ab35e50c2ccd984e3ee40f11ace7bbf0"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "4df78f34cd2586a3bcfe149e7c6dbac14e5cbb76d7338304de51b6be8a3334a5"
+      "sha256": "a670ec4550f33d7f4f1fec2547c79db3699ebff967b58bced4a329f5d707834e"
     }
   ],
   "errors": [],
-  "notes": [
-    "The immediate post-deploy browser check saw the previous theme list; this check was repeated after the new deployment became visible in Chromium."
-  ],
   "headers": {
     "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     "permissions-policy": "microphone=(), camera=(), midi=(self), screen-wake-lock=(self), fullscreen=(self)",

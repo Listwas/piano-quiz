@@ -1,36 +1,40 @@
 # Verification
 
-Pulse added on main and published on 2026-11-12.
+Quiz bass/treble scaling fixed and published on 2026-11-12.
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `863902201daef0`
-- Production deployment: `3481aa9e-e355-4fe4-8dae-61e8d766bea7`
-- Immutable URL: https://3481aa9e.piano-quiz.pages.dev/
+- Release: `7afcfb8e0e912e`
+- Production deployment: `3c517b48-87c1-49cd-a486-3fbebcfbaa24`
+- Immutable URL: https://3c517b48.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**100 unit tests passed.** The theme picker now contains sixteen explicit
-palettes in eight paired rows, plus Device. Existing preferences are preserved.
-Choose **App settings → Appearance → Pulse** for warm paper and coral controls.
+**100 unit tests and 16 production browser scenarios passed.** Quiz notation
+now uses the same minimum vertical frame in bass and treble clefs. The shorter
+bass glyph previously enlarged the whole staff: the reproduction measured
+31.72 px line spacing in bass against 22.16 px in treble on a 430 × 932 viewport.
+The regression test failed before the fix and now requires spacing and
+notehead widths to match within 0.1 px for the normal note range.
 
 | Check | Result | Origin |
 | --- | --- | --- |
-| Settings, storage, quiz and training unit tests | [100 passed](unit.json) | Main source |
-| Paired picker rows, saved theme, contrast and Home/Quiz/Pause controls | [4 viewports passed](pulse-browser.json) | Local build |
-| Correct/incorrect training feedback contrast | [All sixteen palettes passed](pulse-contrast.json) | Local build |
-| Pulse selection, persistence and quiz pause/resume by touch | [Passed](pulse-production.json) | Production |
+| Existing settings, storage, quiz and training unit tests | [100 passed](unit.json) | Main source |
+| Clef scale, extreme natural pitches and Pause/Resume | [16 passed](staff-scale.json) | Local build |
+| Same clef-scale and control scenarios | [16 passed](live-staff-scale.json) | Production |
 | Runtime asset bytes and response policies | [43 matched](live-assets.json) | Production |
 
-Layout checks covered 430 × 932, 1280 × 800, 320 × 568, and 932 × 430.
-Phone Home and picker screenshots were visually inspected. No uncaught page
-errors were recorded. Viewports were simulated; physical iPhone and Honor
-MagicPad 2 behavior was not retested.
+The browser scenarios compare seven natural notes and a triad in both clefs,
+then check the extremes of the supported octaves. Coverage includes 430 × 932,
+800 × 1280, 1280 × 800 and 932 × 430, touch and simulated MIDI input, and
+Paper and Nocturne. Tablet [bass](images/quiz-scale-bass-tablet.png) and
+[treble](images/quiz-scale-treble-tablet.png) captures were visually inspected.
+No uncaught page errors were recorded. Physical iPhone and Honor MagicPad 2
+behavior was not retested.
 
-See [Pulse notes and screenshots](PULSE.md). The general Nocturne browser
-checks and earlier feature suites were not rerun for this small theme addition.
-Their actual scope and builds remain recorded in the
-[Nocturne release audit](https://github.com/Listwas/piano-quiz/blob/319030e44faa94b0ddfc00e5fdb553efeca8d66f/docs/VERIFICATION.md)
+The frame still expands for ledger notes and chords. Other behavior and
+palettes are unchanged. Their wider suites were not rerun for this fix; see
+the [Pulse release audit](https://github.com/Listwas/piano-quiz/blob/00ad5b2ed337d0fdd9c9af8c033bbed8fcd21ca1/docs/VERIFICATION.md)
 and the [feature baseline](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md).
 
 ## Earlier feature baseline
