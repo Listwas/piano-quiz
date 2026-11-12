@@ -1,5 +1,5 @@
 import { BeatClock } from './timing.js';
-import { loadTraining, saveTraining, normalizeTraining, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult } from './training.js';
+import { loadTraining, saveTraining, normalizeTraining, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
 import { renderScore, scoreX } from './score.js';
 import { firstTryBars, renderTrainingDetails, renderTrainingReport } from './training-report.js';
 import { groupSessions, historyLabel, renderHistoryGroup } from './training-history.js';
@@ -390,7 +390,7 @@ export class Activities {
     this.reportResult = result;
     this.reportFromHistory = fromHistory;
     $('report-back-history').hidden = !fromHistory;
-    $('report-bar-select').innerHTML = '<option value="-1">All bars</option>' + result.report.bars.map((_,i)=>`<option value="${i}">Bar ${i+1}</option>`).join('');
+    $('report-bar-select').innerHTML = '<option value="-1">All bars</option>' + result.report.bars.map((_,i)=>`<option value="${i}">Bar ${i+1}${result.practisedBars?.[i] ? ` ✓ · ${result.practisedBars[i].bpm} BPM` : ''}</option>`).join('');
     $('report-bar-select').value = bar;
     this.renderReportDetails(bar);
     this.openDialog('training-report-dialog');
@@ -447,6 +447,8 @@ export class Activities {
       result.replay = saveReplay(this.phrase,{...this.settings,offset:this.session.offset});
       result.comparison = this.sessionComparison;
       rememberTrainingResult(this.state,result); saveTraining(this.state);
+    } else if (recordBarPractice(this.state,this.drill.result,this.drill.bar,result,this.settings.bpm)) {
+      saveTraining(this.state);
     }
     this.refresh();
     $('training-summary').innerHTML = renderTrainingReport(result,Boolean(this.drill));

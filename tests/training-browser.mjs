@@ -13,11 +13,11 @@ async function setup(deterministic = false, midi = false, mockAudio = false){
   OscillatorNode.prototype.start=function(when){window.scheduledClicks.push({when,now:this.context.currentTime,frequency:this.frequency.value});return start.call(this,when);};
  });
  if(deterministic)await ctx.addInitScript(()=>{Math.random=()=>0;});
- if(deterministic && engine==='webkit'){
+ if(deterministic && (engine==='webkit'||process.env.TRAINING_VISUAL==='1')){
   // The headless host can report running audio while its clock stalls.
   // Graded fixtures use the app's visual clock; the metronome probe above remains native.
   await ctx.addInitScript(()=>{window.AudioContext=undefined;window.webkitAudioContext=undefined;});
-  const limit='Deterministic WebKit exercises use the visual clock because the host audio clock can stall.';
+  const limit=`Deterministic ${engine} exercises use the explicit visual clock on this host; native device audio timing is not asserted.`;
   if(!report.limits.includes(limit))report.limits.push(limit);
  }
  if(midi)await ctx.addInitScript(()=>{
@@ -156,16 +156,27 @@ try{
   await page.selectOption('#report-practise-tempo','200');await page.locator('#report-practise').click();await running(page);
   assert.match(await page.locator('#training-progress').innerText(),/Bar 1 · 200 BPM/);
   assert.deepEqual(await page.locator('[data-event]').evaluateAll(nodes=>nodes.map(e=>[+e.dataset.midi,+e.dataset.duration])),[[72,2],[72,2]]);
+  await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
+  const practiseStart=Number(await page.locator('#exercise-score').getAttribute('data-start-time'));
+  for(const beat of [0,2]){await until(practiseStart+beat*300);await press(72);await until(practiseStart+(beat+2)*300);await release(72);}
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   await page.locator('#training-back').click();assert.equal(await summary.isVisible(),true);
+  assert.equal(await summary.locator('[data-report-bar="0"].practised').count(),1);
+  assert.match(await summary.locator('.report-focus').innerText(),/All difficult bars practised/);
+  assert.equal(await page.locator('#training-details').innerText(),'Session details');
+  assert.deepEqual((await summary.locator('.training-metrics strong').allTextContents()).slice(0,2),['1/2','2']);
+  await page.screenshot({path:`docs/images/practised-bars-${engine}.png`});
   for(const size of profiles){
     await page.setViewportSize({width:size.width,height:size.height});
     await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);
     await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
     for(const selector of ['#training-details','#training-toggle','[data-report-bar="0"]']){
       const box=await page.locator(selector).boundingBox();assert.ok(box && box.y>=(size.top||0) && box.y+box.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,box}));
+      if(selector==='#training-details'||selector==='#training-toggle')assert.ok(box.y+box.height<=size.height-(size.bottom||0)-12,JSON.stringify({size,selector,box,padding:'12px minimum'}));
       assert.ok(await page.locator(selector).evaluate(e=>{const b=e.getBoundingClientRect();return e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));}),selector+' remains tappable');
     }
     const body=await page.locator('#training-body').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(body.scroll<=body.height+1,JSON.stringify({size,body}));
+    if(size.width===1280)await page.screenshot({path:`docs/images/practised-bars-tablet-${engine}.png`});
   }
   await page.locator('#training-back').click();await page.reload();
   assert.match(await page.locator('#last-session-button').innerText(),/1\/2 bars first try/);
@@ -188,10 +199,17 @@ try{
   }
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   assert.equal(await page.locator('#training-toggle').innerText(),'Play again');
-  assert.equal(await page.evaluate(()=>localStorage.getItem('pianoQuiz.training.v1')),saved);
+  const updated=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1'))),before=JSON.parse(saved);
+  assert.equal(updated.lastResult.practisedBars[0].bpm,200);assert.equal(updated.lastResult.practisedBars[1].bpm,160);
+  for(const state of [updated,before]){delete state.lastResult.practisedBars;for(const result of state.history)delete result.practisedBars;}
+  assert.deepEqual(updated,before,'Practice marks preserve original results, history entries and setup');
   await page.locator('#training-details').click();
   assert.equal(await page.locator('#home-screen').isVisible(),true);
   assert.equal(await page.locator('#report-bar-select').inputValue(),'1');
+  assert.match(await page.locator('#training-report-details').innerText(),/Practised at 160 BPM · slower tempo/);
+  await page.locator('[data-close=training-report-dialog]').click();await page.reload();
+  await page.locator('#last-session-button').click();await page.selectOption('#report-bar-select','1');
+  assert.match(await page.locator('#training-report-details').innerText(),/Practised at 160 BPM/);
   await page.locator('[data-close="training-report-dialog"]').click();
   await page.locator('#training-history-button').click();
   assert.equal(await page.locator('.history-row').count(),1,'Drill does not create a history entry');

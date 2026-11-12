@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, RHYTHM_LEVELS } from '../js/training.js';
+import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice, RHYTHM_LEVELS } from '../js/training.js';
 import { groupSessions } from '../js/training-history.js';
 import { copyDefaults } from '../js/quiz.js';
 import { makeTone } from '../js/notes.js';
@@ -201,6 +201,47 @@ test('training history keeps the latest 60 sessions and compares only matching s
  const restored=loadTraining({getItem:()=>JSON.stringify(state)});
  assert.deepEqual(restored.history,state.history);
  assert.equal(groupSessions(restored.history,'rhythm').length,0);
+});
+
+test('successful bar practice updates saved copies and recommendations without rewriting session stats',()=>{
+ const settings=normalizeTraining({bars:2,bpm:100,input:'midi'}),q=copyDefaults();
+ const p=generatePhrase(settings,q,{random:()=>0});
+ const original={...new ExerciseSession(p).summary(0),replay:saveReplay(p,settings),comparison:comparisonSetup(p,settings,q)};
+ original.report.bars[0].retries=3;original.report.bars[1].retries=1;original.retries=4;
+ const unrelated=structuredClone(original);unrelated.at++;
+ const state=loadTraining({getItem:()=>JSON.stringify({activity:'sight',settings,lastResult:original,history:[original,unrelated]})});
+ const selected=state.history[0],snapshot=structuredClone(selected),historyCount=state.history.length;
+ const drill=bpm=>{
+  const phrase=replayPhrase(selected,0),s=new ExerciseSession(phrase,{bpm});s.startTime=1000;
+  for(const event of phrase.events){const at=s.expected(event);note(s,'on',event.tone.midi,at);note(s,'off',event.tone.midi,at+event.durationBeats*s.beatMs);}
+  s.tick(1000+phrase.totalBeats*s.beatMs+2000);assert.equal(s.done,true);return s.summary();
+ };
+ assert.equal(recordBarPractice(state,selected,0,drill(80),80,1234),true);
+ assert.deepEqual(state.lastResult.practisedBars,[{bpm:80,at:1234},null]);
+ assert.deepEqual(state.lastResult.practisedBars,selected.practisedBars);assert.equal(state.history[1].practisedBars,undefined);
+ assert.equal(hardestBar(state.lastResult),1);assert.equal(state.history.length,historyCount);
+ const {practisedBars,...stats}=selected;assert.deepEqual(stats,snapshot);
+ assert.equal(recordBarPractice(state,selected,0,drill(100),100,1235),true);
+ recordBarPractice(state,selected,0,drill(80),80,1236);assert.deepEqual(selected.practisedBars[0],{bpm:100,at:1235});
+ const restored=loadTraining({getItem:()=>JSON.stringify(state)});
+ assert.deepEqual(restored.lastResult.practisedBars,selected.practisedBars);assert.equal(hardestBar(restored.lastResult),1);
+});
+
+test('failed drills and malformed practice marks cannot clear a saved bar',()=>{
+ const settings=normalizeTraining({bars:2,bpm:100,input:'midi'}),q=copyDefaults(),p=generatePhrase(settings,q,{random:()=>0});
+ const original={...new ExerciseSession(p).summary(0),replay:saveReplay(p,settings),comparison:comparisonSetup(p,settings,q)};
+ original.report.bars[0].retries=3;
+ const state={lastResult:original,history:[original]};
+ const base={activity:'sight',pitch:100,onset:100,holds:100,missed:0,extras:0,restErrors:0,report:{bars:[{}]}};
+ for(const bad of [{...base,pitch:50},{...base,holds:50},{...base,missed:1},{...base,extras:1},{...base,restErrors:1},{...base,activity:'rhythm'}]){
+  assert.equal(recordBarPractice(state,original,0,bad,100),false);assert.equal(original.practisedBars,undefined);
+ }
+ assert.equal(recordBarPractice(state,original,-1,base,100),false);
+ assert.equal(recordBarPractice(state,original,0,base,999),false);
+ const invalid={...original,practisedBars:[{bpm:999,at:123},{bpm:80,at:'bad'}]};
+ const restored=loadTraining({getItem:()=>JSON.stringify({lastResult:invalid})}).lastResult;
+ assert.deepEqual(restored.practisedBars,[null,null]);assert.equal(hardestBar(restored),0);
+ assert.deepEqual(restored.report,original.report);
 });
 test('rhythm remembers judged holds across a pause without adding misses for interrupted notes',()=>{
  const s=new ExerciseSession(phrase(true));s.startTime=1000;

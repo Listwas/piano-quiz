@@ -121,7 +121,9 @@ to practise next. Open **Last session** on Home to review it again.
 Choose **Practise hardest bar** to replay the bar with the most retries
 (or the most mistakes in Rhythm). You can also choose any bar in the report.
 Play at the original tempo or start about 20% slower. The drill keeps the
-original notes and rests and leaves the full-session result saved.
+original notes and rests and leaves the full-session result saved. A successful
+replay adds a saved ✓ and the practised tempo to that bar. It also moves the
+hardest-bar recommendation on to the remaining bars.
 
 **History** on Home keeps the latest 60 full Rhythm and Sight-reading sessions
 on this device. Each trend compares matching practice setups, including tempo,

@@ -365,3 +365,19 @@ touch/MIDI input and Paper/Nocturne. It uses simulated MIDI and viewports.
 MIDI calibration is also available near the top of App settings, above Screen
 and device controls. Its summary shows the current signed correction for
 Rhythm and Sight-reading. Closing calibration returns to the parent settings.
+
+## Completed bar practice
+
+A clean single-bar drill stores its best successful tempo on the original session
+as `practisedBars`. This metadata is shared with matching history entries and
+survives reloads. It does not change the original first-try bars, retries, issues,
+time or timing measurements, and does not create a second history session.
+
+The summary marks practised bars with a check, the review picker and details
+show the achieved BPM, and the hardest-bar recommendation skips practised
+bars. Slower successful practice is labelled with its actual tempo; a later
+slower replay cannot replace a successful original-tempo mark. Failed or
+interrupted drills do not add marks. Saved marks are validated on restoration.
+
+Completed-session actions keep an extra 12–20 px below the button row, in
+addition to the app shell's device safe area.

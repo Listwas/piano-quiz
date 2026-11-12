@@ -1,0 +1,20 @@
+{
+  "engine": "webkit",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "93e676ec562736",
+  "testedAt": "2026-11-12T19:22:35.488Z",
+  "checks": [
+    "sight-reading resets the entire bar on wrong pitches and short holds, then waits for the downbeat",
+    "eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Deterministic webkit exercises use the explicit visual clock on this host; native device audio timing is not asserted.",
+    "Audio could not start in this host; visual fallback verified.",
+    "Audio could not start in this host; visual fallback verified.",
+    "Audio could not start in this host; visual fallback verified."
+  ],
+  "result": "passed",
+  "filter": "sight-reading resets|eight-bar rhythm report"
+}

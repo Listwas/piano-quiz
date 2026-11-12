@@ -21,7 +21,7 @@ const count = n => Number.isSafeInteger(n) && n >= 0;
 export const totalIssues = bar => issueKeys.reduce((sum,key)=>sum+bar.issues[key],0);
 export function hardestBar(result) {
   const bars = result.report.bars;
-  const scores = bars.map(bar=>result.activity === 'sight' ? bar.retries : totalIssues(bar));
+  const scores = bars.map((bar,i)=>result.practisedBars?.[i] ? 0 : result.activity === 'sight' ? bar.retries : totalIssues(bar));
   const max = Math.max(0,...scores);
   return max ? scores.indexOf(max) : -1;
 }
@@ -70,14 +70,34 @@ export function rememberTrainingResult(state, result) {
   state.history = [result,...state.history].slice(0,HISTORY_LIMIT);
 }
 
+export function recordBarPractice(state, original, bar, result, bpm, at = Date.now()) {
+  if (!original?.replay?.bars[bar] || !Number.isInteger(bar) ||
+      ![original.replay.bpm,slowerReplayTempo(original.replay.bpm)].includes(bpm) ||
+      !count(at) || result?.activity !== original.activity || !result.report || result.report.bars.length !== 1 ||
+      result.pitch !== (original.activity === 'rhythm' ? null : 100) || result.onset !== 100 || result.holds !== 100 ||
+      result.missed || result.extras || result.restErrors) return false;
+  const identity = value => JSON.stringify([value.at,value.activity,value.replay,value.report]);
+  const key = identity(original);
+  for (const saved of new Set([original,state.lastResult,...(state.history || [])].filter(Boolean))) {
+    if (identity(saved) !== key) continue;
+    saved.practisedBars ??= Array(saved.report.bars.length).fill(null);
+    if ((saved.practisedBars[bar]?.bpm ?? 0) <= bpm) saved.practisedBars[bar] = {bpm,at};
+  }
+  return true;
+}
+
 function restoreTrainingResult(result) {
   if (result?.version !== 1 || !['rhythm','sight'].includes(result.activity) || !['guided','continuous'].includes(result.style) || !['pitch','onset','holds'].every(key => result[key] === null || nonnegative(result[key]) && result[key] <= 100) || !['total','extras','retries','missed','restTotal','restErrors','at'].every(key => nonnegative(result[key]))) return null;
-  const { report, replay, comparison, ...legacy } = result;
+  const { report, replay, comparison, practisedBars, ...legacy } = result;
   if (!report || !nonnegative(report.elapsedMs) || !Array.isArray(report.bars) || ![2,4,8].includes(report.bars.length) || !report.bars.every(bar => count(bar?.retries) && issueKeys.every(key=>count(bar.issues?.[key])) && timingKeys.every(key=>(key==='absoluteMs'?nonnegative:count)(bar.timing?.[key])))) return legacy;
   const restored = { ...legacy, report };
   if (validReplay(replay,result)) {
     restored.replay = replay;
     if (validComparison(comparison)) restored.comparison = comparison;
+    if (Array.isArray(practisedBars) && practisedBars.length === report.bars.length) {
+      restored.practisedBars = practisedBars.map(value=>value && count(value.at) &&
+        [replay.bpm,slowerReplayTempo(replay.bpm)].includes(value.bpm) ? {bpm:value.bpm,at:value.at} : null);
+    }
   }
   return restored;
 }
