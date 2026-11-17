@@ -149,6 +149,8 @@ try {
     assert.equal(await page.locator('#check-button').isDisabled(), true);
     await chooseExact(page);
     await page.locator('#unknown-button').click();
+    assert.equal((await state(page)).active.feedback,null,'Clear answer must not skip a selected answer');
+    await page.locator('#unknown-button').click();
     assert.equal(await page.locator('#hear-button').isVisible(), true);
     assert.ok((await page.locator('#staff-caption').innerText()).includes(item.label));
     assert.equal(await page.locator('#quiz-staff ellipse').count(), item.tones.length);
@@ -352,7 +354,7 @@ try {
     await p.locator('#start-button').click();
     assert.equal(await p.locator('#storage-notice').isVisible(), true);
     await p.locator('#unknown-button').click();
-    assert.match(await p.locator('#staff-caption').innerText(), /Moving on/);
+    assert.match(await p.locator('#staff-caption').innerText(), /Skipped · Answer:/);
     await c.close();
   });
   if (!inMemory) {
@@ -367,7 +369,7 @@ try {
       await c.setOffline(true);
       await p.reload();
       await p.locator('#start-button').click();
-      assert.match(await p.locator('#staff-caption').innerText(), /Moving on/);
+      assert.match(await p.locator('#staff-caption').innerText(), /Skipped · Answer:/);
       await p.locator('#next-button').click();
       await p.locator('#unknown-button').click();
       await c.close();

@@ -104,6 +104,16 @@ test('grade requires the written note spelling rather than sounding equivalence'
   assert.equal(answerName({ letter: 99, alteration: 0 }, 'note'), '');
 });
 
+test('touch naming accepts each written spelling at every selected octave while MIDI still requires its register',()=>{
+  const settings={...copyDefaults(),mode:'notes',clef:'mixed',noteNames:NOTE_OPTIONS.map(note=>note.name),octaves:OCTAVE_OPTIONS};
+  for(const item of poolFor(settings)){
+    const tone=item.tones[0],answer={letter:tone.letter,alteration:tone.alteration};
+    assert.equal(grade(item,answer),true,item.id);
+    assert.equal(grade(item,{source:'midi',notes:[tone.midi]}),true,item.id);
+    assert.equal(grade(item,{source:'midi',notes:[tone.midi+12]}),false,item.id);
+  }
+});
+
 test('chords require root and quality; incomplete answers cannot be named', () => {
   const item = buildChord(0, 'min', 4, () => 1);
   assert.equal(grade(item, { letter: 0, alteration: 0, qualityId: 'maj' }), false);

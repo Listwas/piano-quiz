@@ -33,6 +33,8 @@ Green means correct. Red gives you another chance to try the same question.
 MIDI notes react on key press: mistakes never block your next attempt.
 **I don’t know yet** or **Skip note** shows the answer and moves on. Your score
 counts your first attempt, so retries help you learn without adding extra misses.
+Once you select an answer, the quiet button becomes **Clear answer**; it cannot
+skip your selected name. Tap **Check answer** to submit it.
 
 ## Practise what you need
 

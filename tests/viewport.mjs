@@ -211,6 +211,7 @@ try {
       await touch(page, '#resume-button');
       await page.locator('#pause-button').waitFor({ state: 'visible' });
       if (mode === 'touch') {
+        if (await page.locator('#unknown-button').innerText() === 'Clear answer') await touch(page, '#unknown-button');
         await touch(page, '#unknown-button');
         await page.locator('#next-button').waitFor({ state: 'visible' });
         assert.ok(Math.abs((await page.locator('#next-button').boundingBox()).y - dock.y) <= 1, 'Feedback must keep the action row aligned');

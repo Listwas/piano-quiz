@@ -19,6 +19,8 @@ let screen = 'home';
 let paused = true;
 let clockStart = null;
 let nextTimer;
+let checkPress = null;
+let suppressCheckClick = false;
 let answer = blankAnswer();
 let draft;
 let registration;
@@ -33,6 +35,7 @@ const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', 
 const clefName = clef => ({ treble: 'Treble clef', bass: 'Bass clef', mixed: 'Mixed clefs' })[clef];
 const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: 'Notes & chords' })[mode];
 function blankAnswer() { return { letter: null, alteration: 0, qualityId: null }; }
+const hasAnswerSelection = () => answer.letter !== null || answer.alteration !== 0 || answer.qualityId !== null;
 
 const isMidiMode = () => state.settings.inputMode === 'midi';
 function renderInputMode() {
@@ -203,11 +206,12 @@ function renderQuestion() {
       displayed = item.kind === 'chord' ? buildChord(root.pitchClass, feedback.answer.qualityId, root.octave, () => 1, [root.letter, root.alteration]) : { tones: [root] };
     }
   }
-  $('quiz-staff').innerHTML = renderStaff(displayed, item.clef, Boolean(feedback), feedback ? feedback.correct ? 'correct' : 'wrong' : '');
+  $('quiz-staff').innerHTML = renderStaff(displayed, item.clef, Boolean(feedback), feedback?.answer ? feedback.correct ? 'correct' : 'wrong' : '');
   $('staff-caption').textContent = isMidiMode() ? item.kind === 'note' ? 'Play the key. You can retry straight away.' : 'Hold the chord together, then release to check.' : item.kind === 'chord' ? 'Find the root, then the chord type.' : 'Read the staff. Choose the written name.';
   if (feedback) {
     const given = answerName(feedback.answer, item.kind);
-    $('staff-caption').textContent = feedback.correct ? `${item.label} · Correct` : feedback.answer ? `${given} · Try again` : `${item.label} · ${item.tones[0].name}${item.tones[0].octave} · Moving on`;
+    const revealedName = item.kind === 'note' ? `${item.tones[0].name}${item.tones[0].octave}` : `${item.label} · root ${item.tones[0].name}${item.tones[0].octave}`;
+    $('staff-caption').textContent = feedback.correct ? `${item.label} · Correct` : feedback.answer ? `${given} · Try again` : `Skipped · Answer: ${revealedName}`;
     $('next-button').innerHTML = `${feedback.correct ? 'Next question' : 'Skip question'} <span aria-hidden="true">→</span>`;
     if (!paused) nextTimer = setTimeout(() => {
       if (feedback.correct || !feedback.answer) next();
@@ -238,6 +242,7 @@ function renderAnswer() {
   const name = answerName(answer, state.active.current.kind);
   $('answer-preview').textContent = name || (answer.letter === null ? 'Choose a letter' : 'Choose a chord type');
   $('check-button').disabled = !name;
+  $('unknown-button').textContent = hasAnswerSelection() ? 'Clear answer' : 'I don’t know yet';
 }
 
 
@@ -387,8 +392,31 @@ $('letters').onclick = event => { const button = event.target.closest('[data-let
 $('accidentals').onclick = event => { const button = event.target.closest('[data-alteration]'); if (button) { answer.alteration = Number(button.dataset.alteration); renderAnswer(); } };
 $('answer-qualities').onclick = event => { const button = event.target.closest('[data-quality]'); if (button) { answer.qualityId = button.dataset.quality; renderAnswer(); } };
 $('answer-quality-picker').onchange = () => { answer.qualityId = $('answer-quality-picker').value || null; renderAnswer(); };
-$('check-button').onclick = () => submit(answer);
-$('unknown-button').onclick = () => submit(null);
+$('check-button').onclick = event => { if (event.detail === 0) submit(answer); };
+$('check-button').onpointerdown = event => {
+  if (event.button !== 0 || event.currentTarget.disabled || checkPress) return;
+  checkPress = {pointer:event.pointerId,x:event.clientX,y:event.clientY,item:state.active?.current?.id,answer:structuredClone(answer)};
+  event.currentTarget.setPointerCapture(event.pointerId);
+};
+$('check-button').onpointerup = event => {
+  if (checkPress?.pointer !== event.pointerId) return;
+  const press = checkPress; checkPress = null;
+  suppressCheckClick = true;
+  const box = event.currentTarget.getBoundingClientRect();
+  const inside = event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom;
+  if (press.item === state.active?.current?.id && (inside || Math.hypot(event.clientX-press.x,event.clientY-press.y)<=12)) submit(press.answer);
+};
+$('check-button').onpointercancel = $('check-button').onlostpointercapture = () => { checkPress = null; };
+document.addEventListener('pointerdown', () => { suppressCheckClick = false; }, true);
+document.addEventListener('click', event => {
+  if (!suppressCheckClick || event.detail === 0) return;
+  suppressCheckClick = false;
+  event.preventDefault(); event.stopImmediatePropagation();
+}, true);
+$('unknown-button').onclick = () => {
+  if (hasAnswerSelection()) { answer = blankAnswer(); renderAnswer(); }
+  else submit(null);
+};
 $('next-button').onclick = next;
 $('hear-button').onclick = () => { void playItem(state.active.current).then(ok => { if (!ok) $('hear-button').textContent = 'Audio unavailable'; }); };
 $('start-button').onclick = start;

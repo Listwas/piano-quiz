@@ -381,3 +381,23 @@ interrupted drills do not add marks. Saved marks are validated on restoration.
 
 Completed-session actions keep an extra 12–20 px below the button row, in
 addition to the app shell's device safe area.
+
+## Touch quiz confirmation
+
+Note-name buttons grade written letter and accidental only, across every
+selected octave. MIDI still checks the displayed octave. `npm run test:touch`
+exercises all 136 note spellings/registers in both clefs using real touch events.
+Use `TOUCH_MATRIX=sample BROWSER=firefox npm run test:touch` (or WebKit) for the
+D spelling/register subset and all interaction guards.
+
+Selecting a letter, accidental or quality changes the quiet action to Clear
+answer. Clearing does not submit, advance or change the score. A skip is only
+available with an empty selection, stays neutral on the staff and labels the
+revealed note once.
+
+Check captures its pointer and snapshots the answer/question on press. It
+submits on release even if the layout moved beneath a stationary finger,
+while dragging outside or cancelling leaves the question unanswered. The
+compatibility click from that handled gesture is consumed to prevent clicking
+through onto the newly displayed feedback actions. A fresh pointer press clears
+that suppression; keyboard and assistive clicks remain supported.
