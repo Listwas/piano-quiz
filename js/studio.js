@@ -8,8 +8,8 @@ import {
 import { renderStaff } from './staff.js';
 import { makeTone } from './notes.js';
 import { poolFor } from './quiz.js';
-import { saveTraining, slowerReplayTempo } from './training.js';
-import { restoreState } from './storage.js';
+import { saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
+import { canSaveProgress, RESET_KEY, restoreState, STORAGE_KEY } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
@@ -20,13 +20,13 @@ const esc = (s) =>
         c
       ],
   );
-const DATA_KEYS = ['pianoQuiz.state.v1', 'pianoQuiz.training.v1', KEY];
-function replaceProgress(storage, data) {
-  const previous = DATA_KEYS.map((key) => [key, storage.getItem(key)]);
+const DATA_KEYS = [STORAGE_KEY, TRAINING_KEY, KEY];
+function replaceProgress(storage, data, keys = DATA_KEYS) {
+  const previous = keys.map((key) => [key, storage.getItem(key)]);
   const write = (key, value) =>
     value == null ? storage.removeItem(key) : storage.setItem(key, value);
   try {
-    for (const key of DATA_KEYS) write(key, data[key]);
+    for (const key of keys) write(key, data[key]);
   } catch (error) {
     for (const [key, value] of previous) write(key, value);
     throw error;
@@ -35,6 +35,7 @@ function replaceProgress(storage, data) {
 
 export function backupBeforeStudio(storage = localStorage) {
   try {
+    if (storage.getItem(RESET_KEY)) return true;
     if (!storage.getItem(BACKUP)) {
       const data = {};
       for (const key of ['pianoQuiz.state.v1', 'pianoQuiz.training.v1']) {
@@ -59,6 +60,7 @@ export class Studio {
     start,
     renderHome,
     onImport,
+    onDelete,
   }) {
     Object.assign(this, {
       getState,
@@ -67,6 +69,7 @@ export class Studio {
       start,
       renderHome,
       onImport,
+      onDelete,
     });
     this.tab = 'today';
     this.backedUp = backupBeforeStudio();
@@ -75,6 +78,7 @@ export class Studio {
     this.appearance();
   }
   save() {
+    if (!canSaveProgress()) return false;
     try {
       localStorage.setItem(KEY, JSON.stringify(this.state));
       return true;
@@ -179,6 +183,20 @@ export class Studio {
       this.start();
     };
     $('data-export').onclick = () => this.exportData();
+    $('data-delete').onclick = () => {
+      $('delete-data-error').hidden = true;
+      $('delete-data-dialog').showModal();
+    };
+    $('delete-data-confirm').onclick = () => {
+      try {
+        const token = `${Date.now()}:${Math.random()}`;
+        replaceProgress(localStorage, { [RESET_KEY]: token }, [...DATA_KEYS, BACKUP, RESET_KEY]);
+      } catch {
+        $('delete-data-error').hidden = false;
+        return;
+      }
+      this.onDelete();
+    };
     $('data-import').onchange = async (e) => {
       try {
         const file = e.target.files[0];
@@ -217,6 +235,9 @@ export class Studio {
         $('data-status').textContent = error.message;
       }
     };
+    this.syncDataActions();
+  }
+  syncDataActions() {
     let hasBackup = false;
     try {
       hasBackup = Boolean(JSON.parse(localStorage.getItem(BACKUP))?.data);

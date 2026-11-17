@@ -3,7 +3,7 @@ import { noteHint, recordQuizSession, recordLearningAnswer, loadStudio } from '.
 import { LETTERS, makeTone } from './notes.js';
 import { QUALITIES } from './chords.js';
 import { poolFor, createRound, recordAnswer, retryQuestion, advance, answerName, localDay, NOTE_OPTIONS, selectedNamesFor, OCTAVE_OPTIONS, octavesFor, rangeKey } from './quiz.js';
-import { loadState, saveState, completeRound } from './storage.js';
+import { loadState, saveState, completeRound, observeProgressReset, RESET_KEY } from './storage.js';
 import { renderStaff } from './staff.js';
 import { playItem, stopAudio, suspendAudio } from './audio.js';
 import { MidiKeyboard } from './midi.js';
@@ -470,6 +470,7 @@ $('about-button').onclick = () => { $('settings-dialog').close(); openDialog('ab
 $('settings-button').onclick = () => {
   activities.calibration.sync();
   studio.appearance();
+  studio.syncDataActions();
   $('sound-setting').checked = state.settings.sound;
   openDialog('settings-dialog');
 };
@@ -528,7 +529,14 @@ $('customize-form').onsubmit = event => {
 $('sound-setting').onchange = () => { state.settings.sound = $('sound-setting').checked; if (!state.settings.sound) suspendAudio(); persist(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(screen === 'quiz'); else if (['home','today','progress'].includes(screen)) renderHome(); });
 window.addEventListener('pagehide', () => pause(false));
-window.addEventListener('pageshow', () => { if (midi.wanted) midi.sync(); if (screen === 'quiz' && paused) renderQuestion(); });
+window.addEventListener('pageshow', () => {
+  if (observeProgressReset()) reloadProgress(true);
+  if (midi.wanted) midi.sync();
+  if (screen === 'quiz' && paused) renderQuestion();
+});
+window.addEventListener('storage', event => {
+  if (event.key === RESET_KEY && observeProgressReset()) reloadProgress(true);
+});
 window.addEventListener('focus', () => { if (midi.wanted) midi.sync(); });
 
 function network() { $('network-status').hidden = navigator.onLine; }
@@ -558,7 +566,60 @@ if ('serviceWorker' in navigator) {
 } else $('offline-status').textContent = 'Offline installation isn’t supported in this browser.';
 $('update-button').onclick = () => { announceUpdate(); if (pendingWorker) { pause(); updating = true; pendingWorker.postMessage('activate'); } };
 
-studio = new Studio({getState:()=>state,getActivities:()=>activities,navigate:tab=>{activities.stop();pause(false);showScreen(tab);renderHome();},start,renderHome,onImport:()=>{clearTimeout(nextTimer);clearTimeout(persistTimer);persistTimer=null;learningDirty=false;clockStart=null;activities.stop();state=loadState().state;activities.state=loadTraining();studio.state=loadStudio(localStorage,state.settings.theme);display.setEnabled(state.settings.keepAwake);studio.tab='today';$('settings-dialog').close();showScreen('today');renderHome();}});
+function reloadProgress(deleted = false) {
+  for (const timer of [nextTimer, persistTimer, midiCueTimer, questionCueTimer]) clearTimeout(timer);
+  persistTimer = null;
+  learningDirty = false;
+  clockStart = null;
+  paused = true;
+  answer = blankAnswer();
+  checkPress = null;
+  draft = null;
+  suspendAudio();
+  activities.stop();
+  if (deleted) {
+    activities.calibration.parent = null;
+    activities.calibration.stop();
+    activities.calibration.suggestion = null;
+    activities.phraseHistory.clear();
+    activities.reportResult = null;
+    activities.historyGroups = [];
+    midi.disconnect();
+  }
+  for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
+  state = loadState().state;
+  activities.state = loadTraining();
+  studio.state = loadStudio(localStorage, state.settings.theme);
+  display.setEnabled(state.settings.keepAwake);
+  studio.syncDataActions();
+  $('data-status').textContent = '';
+  studio.open('today');
+  if (deleted) {
+    const status = $('data-deleted-status');
+    status.textContent = 'Your saved data was deleted.';
+    status.hidden = false;
+    status.focus({ preventScroll: true });
+  }
+}
+
+studio = new Studio({
+  getState: () => state,
+  getActivities: () => activities,
+  navigate: tab => {
+    $('data-deleted-status').hidden = true;
+    activities.stop();
+    pause(false);
+    showScreen(tab);
+    renderHome();
+  },
+  start,
+  renderHome,
+  onImport: () => reloadProgress(),
+  onDelete: () => {
+    observeProgressReset();
+    reloadProgress(true);
+  },
+});
 $('quiz-hint').onclick=()=>{const round=state.active;if(!round?.current||round.feedback)return;round.assisted=true;$('staff-caption').textContent=noteHint(round.current);$('quiz-assistance').textContent='Hint used · practice answer';persist();};
 $('quiz-reveal').onclick=()=>submit(null,true);
 if(new URLSearchParams(location.search).get('theme')==='nocturne'){studio.state.appearance='dark';studio.state.accent='brass';}

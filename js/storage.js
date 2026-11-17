@@ -1,6 +1,21 @@
 import { normalizeSettings, poolFor, localDay, summarize, selectedNamesFor, rangeKey, answerName } from './quiz.js';
 
 export const STORAGE_KEY = 'pianoQuiz.state.v1';
+export const RESET_KEY = 'pianoQuiz.reset.v1';
+const readReset = () => {
+  try { return globalThis.localStorage.getItem(RESET_KEY); }
+  catch { return null; }
+};
+let observedReset = readReset();
+
+// An open tab may have scheduled writes from before another tab cleared the data.
+export const canSaveProgress = () => observedReset === readReset();
+export function observeProgressReset() {
+  const changed = !canSaveProgress();
+  observedReset = readReset();
+  return changed;
+}
+
 export const freshState = () => ({ version: 1, settings: normalizeSettings(), history: {}, daily: {}, active: null, lastResult: null });
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 const nonnegative = value => Number.isFinite(value) && value >= 0;
@@ -48,6 +63,7 @@ export function loadState(storage) {
 }
 
 export function saveState(state, storage) {
+  if (!storage && !canSaveProgress()) return false;
   try { (storage ?? globalThis.localStorage).setItem(STORAGE_KEY, JSON.stringify(state)); return true; } catch { return false; }
 }
 

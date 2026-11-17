@@ -1,5 +1,6 @@
 import { poolFor, selectedNamesFor, octavesFor, NOTE_OPTIONS } from './quiz.js';
 import { makeTone } from './notes.js';
+import { canSaveProgress } from './storage.js';
 
 export const TRAINING_KEY = 'pianoQuiz.training.v1';
 export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', pace: 'practice', accuracy: 'beginner', behavior: 'retry-bar', volume: .3, muted: false, offset: 0 };
@@ -111,6 +112,7 @@ export function loadTraining(storage) {
   } catch { return { activity: 'quiz', settings: normalizeTraining(), lastResult: null, history:[] }; }
 }
 export function saveTraining(state) {
+  if (!canSaveProgress()) return false;
   try { localStorage.setItem(TRAINING_KEY, JSON.stringify(state)); return true; } catch { return false; }
 }
 

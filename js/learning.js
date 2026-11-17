@@ -6,6 +6,7 @@ import {
   INTERVAL_DAYS,
 } from './quiz.js';
 import { hardestBar } from './training.js';
+import { canSaveProgress } from './storage.js';
 
 export const STUDIO_KEY = 'pianoQuiz.studio.v2';
 export const BACKUP_KEY = 'pianoQuiz.backup.preStudio.v1';
@@ -43,7 +44,7 @@ export function loadStudio(storage, theme) {
     const raw = JSON.parse(storage.getItem(STUDIO_KEY));
     if (raw?.version !== 2) {
       const state = emptyStudio(theme);
-      storage.setItem(STUDIO_KEY, JSON.stringify(state));
+      if (canSaveProgress()) storage.setItem(STUDIO_KEY, JSON.stringify(state));
       return state;
     }
     const state = emptyStudio(theme);

@@ -163,7 +163,7 @@ and the app spaces out reviews as you learn. There is no penalty for taking a da
 
 Your preferences and unfinished round save in this browser. No account,
 microphone, subscription, or tracking is needed. Progress stays on your device;
-it does not sync between browsers. Use **App settings → Your data** to export or import a copy.
+it does not sync between browsers. Use **App settings → Your data** to export or import a copy. **Delete all data** clears progress, settings and the local backup after confirmation.
 
 ### Install and practise offline
 

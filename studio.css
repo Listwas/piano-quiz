@@ -2693,3 +2693,27 @@ dialog::backdrop {
 :root[data-compact-viewport] #quiz-screen #answer-quality-picker { min-height: 34px; height: 34px; }
 #staff-caption[data-outcome=correct] { color: #227346; }
 #staff-caption[data-outcome=wrong] { color: #b02b39; }
+
+#data-delete {
+  margin-top: 10px;
+}
+.danger-button.secondary {
+  color: var(--wrong);
+  border-color: var(--wrong);
+}
+.danger-button.primary {
+  background: var(--wrong);
+  color: var(--button-ink);
+}
+#delete-data-warning p + p {
+  margin-top: 12px;
+}
+.delete-data-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+#data-deleted-status {
+  margin: 0;
+  flex-shrink: 0;
+}

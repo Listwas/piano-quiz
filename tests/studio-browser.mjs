@@ -137,6 +137,46 @@ try {
   checks.push('legacy palette and progress, independent recall, stable reveal, export, all eight palette contrasts');
   await context.close();
 
+  const deletion = await open({ width: 320, height: 568 }, false, false, true);
+  const firstTab = deletion.page;
+  await tap(firstTab, '#recommendation-start');
+  await tap(firstTab, '#quiz-hint');
+  const roundId = (await read(firstTab, 'state.v1')).active.id;
+  const secondTab = await deletion.context.newPage();
+  secondTab.on('pageerror', error => errors.push(error.message));
+  await secondTab.goto(origin);
+  await tap(secondTab, '#recommendation-start');
+  await firstTab.bringToFront();
+  await tap(firstTab, '#settings-button');
+  await tap(firstTab, '#data-delete');
+  assert.match(await firstTab.locator('#delete-data-warning').innerText(), /cannot be undone/);
+  assert.equal(await firstTab.locator('#delete-data-dialog :focus').innerText(), 'Cancel');
+  assert.equal((await read(firstTab, 'state.v1')).active.id, roundId);
+  await tap(firstTab, '#delete-data-dialog [data-close]');
+  assert.ok(await firstTab.locator('#settings-dialog').isVisible());
+  assert.equal((await read(firstTab, 'training.v1')).settings.offset, 42);
+  await firstTab.evaluate(() => {
+    localStorage.setItem('unrelated-key', 'keep');
+    localStorage.setItem('pianoQuiz.studio.v2', JSON.stringify({
+      version: 2, appearance: 'dark', accent: 'coral', items: {},
+      sessions: [{ id: 'saved', version: 2, at: Date.now(), input: 'touch', correct: 10, total: 10, items: [], setup: 'notes' }],
+    }));
+  });
+  await tap(firstTab, '#data-delete');
+  await tap(firstTab, '#delete-data-confirm');
+  await firstTab.locator('#data-deleted-status').waitFor();
+  await secondTab.locator('#data-deleted-status').waitFor();
+  await secondTab.reload();
+  assert.equal((await read(firstTab, 'state.v1')).active, null);
+  assert.deepEqual((await read(secondTab, 'studio.v2')).sessions, []);
+  assert.equal(await read(secondTab, 'backup.preStudio.v1'), null);
+  assert.equal(await secondTab.evaluate(() => localStorage.getItem('unrelated-key')), 'keep');
+  await tap(secondTab, '#settings-button');
+  assert.match(await secondTab.locator('#midi-timing-summary').innerText(), /0 ms/);
+  assert.ok(await secondTab.locator('#data-restore-backup').isDisabled());
+  await deletion.context.close();
+  checks.push('Delete all data confirms, supports cancellation, clears the backup and resets other tabs');
+
   const flow=await open({width:430,height:932},false,true);
   await tap(flow.page,'[data-tab=home]');
   await tap(flow.page,'.activity-card[data-activity=sight]');
