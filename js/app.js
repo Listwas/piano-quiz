@@ -1,17 +1,21 @@
+import { Studio, backupBeforeStudio } from './studio.js';
+import { noteHint, recordQuizSession, recordLearningAnswer, loadStudio } from './learning.js';
 import { LETTERS, makeTone } from './notes.js';
-import { QUALITIES, buildChord } from './chords.js';
-import { poolFor, createRound, recordAnswer, retryQuestion, advance, answerName, localDay, THEMES, NOTE_OPTIONS, selectedNamesFor, OCTAVE_OPTIONS, octavesFor, rangeKey } from './quiz.js';
+import { QUALITIES } from './chords.js';
+import { poolFor, createRound, recordAnswer, retryQuestion, advance, answerName, localDay, NOTE_OPTIONS, selectedNamesFor, OCTAVE_OPTIONS, octavesFor, rangeKey } from './quiz.js';
 import { loadState, saveState, completeRound } from './storage.js';
 import { renderStaff } from './staff.js';
 import { playItem, stopAudio, suspendAudio } from './audio.js';
-import { MidiKeyboard, tonesFromMidi } from './midi.js';
+import { MidiKeyboard } from './midi.js';
 import { fitViewport } from './viewport.js';
 import { Activities } from './activities.js';
+import { loadTraining, saveTraining } from './training.js';
 import { PracticeDisplay } from './display.js';
 
 fitViewport();
 
 const $ = id => document.getElementById(id);
+backupBeforeStudio();
 const loaded = loadState();
 let state = loaded.state;
 if (new URLSearchParams(location.search).get('theme') === 'nocturne') state.settings.theme = 'nocturne';
@@ -23,12 +27,16 @@ let checkPress = null;
 let suppressCheckClick = false;
 let answer = blankAnswer();
 let draft;
+let sightNoteSetup = false;
 let registration;
 let updating = false;
 let pendingWorker;
 let persistTimer;
+let learningDirty = false;
 let midiCueTimer;
 let activities;
+let studio;
+let questionCueTimer;
 const display = new PracticeDisplay({ onChange:renderDisplay });
 display.setEnabled(state.settings.keepAwake);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -37,7 +45,7 @@ const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: '
 function blankAnswer() { return { letter: null, alteration: 0, qualityId: null }; }
 const hasAnswerSelection = () => answer.letter !== null || answer.alteration !== 0 || answer.qualityId !== null;
 
-const isMidiMode = () => state.settings.inputMode === 'midi';
+const isMidiMode = () => (screen==='quiz' ? state.active?.settings.inputMode ?? state.settings.inputMode : state.settings.inputMode) === 'midi';
 function renderInputMode() {
   document.querySelector('.app-shell').dataset.inputMode = state.settings.inputMode;
   document.querySelectorAll('[data-input-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.inputMode === state.settings.inputMode)));
@@ -46,7 +54,7 @@ function setInputMode(inputMode) {
   captureTime();
   clearTimeout(nextTimer);
   state.settings.inputMode = inputMode;
-  if (state.active) state.active.settings.inputMode = inputMode;
+  if (screen==='quiz' && state.active) state.active.settings.inputMode = inputMode;
   renderInputMode();
   if (screen === 'quiz') { renderQuestion(); startClock(); }
   else renderHome();
@@ -56,10 +64,15 @@ function setInputMode(inputMode) {
 function persist() {
   clearTimeout(persistTimer);
   persistTimer = null;
-  $('storage-notice').hidden = saveState(state);
+  const saved = saveState(state);
+  if (learningDirty && studio) {
+    learningDirty = !studio.save();
+  }
+  $('storage-notice').hidden = saved && !learningDirty;
 }
 function queuePersist() { if (!persistTimer) persistTimer = setTimeout(persist, 80); }
 function theme() {
+  if(studio){studio.appearance();return;}
   document.documentElement.dataset.theme = state.settings.theme;
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
 }
@@ -73,7 +86,7 @@ function startClock() {
 function showScreen(name) {
   screen = name;
   document.querySelector('.app-shell').dataset.screen = name;
-  for (const id of ['home', 'quiz', 'result', 'training']) $(`${id}-screen`).hidden = name !== id;
+  for (const id of ['today','home','progress', 'quiz', 'result', 'training']) $(`${id}-screen`).hidden = name !== id;
   display.setActive(name === 'quiz' || name === 'training');
   window.scrollTo(0, 0);
 }
@@ -112,30 +125,34 @@ function renderHome() {
     return `${settings.clef === 'mixed' ? clef === 'treble' ? 'Treble ' : 'Bass ' : ''}${spans.map(([first, last]) => `C${first}–B${last}`).join(', ')}`;
   }).join(' / ');
   $('practice-detail').textContent = `${clefName(settings.clef)} · ${selection}${types} · ${settings.length} questions · ${ranges}`;
-  $('start-button').innerHTML = `${state.active ? 'Resume practice' : 'Let’s practise'} <span aria-hidden="true">→</span>`;
-  $('resume-note').hidden = !state.active;
+  $('start-button').innerHTML = `${state.active?.settings.mode === settings.mode ? 'Resume practice' : 'Start session'} <span aria-hidden="true">→</span>`;
+  $('resume-note').hidden = !state.active || state.active.settings.mode === settings.mode;
+  $('resume-note').textContent='Starting this exercise replaces the unfinished quiz.';
   const done = state.daily[localDay()] || 0;
-  $('daily-title').textContent = done ? 'A little practice, already done.' : 'Your daily little practice';
-  $('daily-description').textContent = done ? `${done} round${done > 1 ? 's' : ''} today. Anything extra is a bonus.` : `${settings.length === 10 ? 'Ten' : 'Twenty'} questions. A little more fluent.`;
+  $('daily-title').textContent = done ? 'Daily practice complete' : 'Your daily practice';
+  $('daily-description').textContent = done ? `${done} round${done > 1 ? 's' : ''} today. Anything extra is a bonus.` : `One short session is a good start.`;
   $('daily-check').textContent = done ? '✓' : '○';
-  const history = Object.values(state.history);
-  const attempts = history.reduce((n, h) => n + h.attempts, 0);
-  const correct = history.reduce((n, h) => n + h.correct, 0);
-  const due = poolFor(settings).filter(item => state.history[item.id]?.due <= Date.now()).length;
-  const stats = attempts ? [[attempts, 'answers practised'], [`${Math.round(correct / attempts * 100)}%`, 'all-time accuracy'], [due, 'ready for review']] : [['01', 'small daily habit'], ['10', 'questions to begin'], ['∞', 'room to grow']];
-  $('progress-overview').innerHTML = stats.map(([value, label]) => `<div class="mini-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   activities?.home();
+  studio?.render();
 }
 
 function goHome() {
   activities?.stop();
   pause(false);
-  showScreen('home');
+  showScreen(studio?.tab || 'today');
   renderHome();
+}
+function reviewHistory(input, settings = state.active?.settings ?? state.settings) {
+  return Object.fromEntries(poolFor(settings).flatMap(({id}) => {
+    const items = studio.state.items;
+    const record = items[`${input}:${id}`] ?? (!items[`touch:${id}`] && !items[`midi:${id}`] ? state.history[id] : null);
+    return record ? [[id, record]] : [];
+  }));
 }
 function start() {
   if (activities.activity !== 'quiz') { pause(false); showScreen('training'); void activities.start(); return; }
-  if (!state.active) state.active = createRound(state.settings, state.history);
+  if (!state.active || state.active.settings.mode !== state.settings.mode) state.active = createRound(state.settings, reviewHistory(state.settings.inputMode, state.settings));
+  state.settings.mode = state.active.settings.mode;
   paused = false;
   showScreen('quiz');
   renderQuestion();
@@ -165,7 +182,7 @@ function renderQuestion() {
   midi.phrase.resetPhrase();
   const round = state.active;
   if (isMidiMode() && round?.feedback?.answer) {
-    if (round.feedback.correct) advance(round, state.history);
+    if (round.feedback.correct) advance(round, reviewHistory(round.settings.inputMode));
     else retryQuestion(round);
     queuePersist();
   }
@@ -175,9 +192,12 @@ function renderQuestion() {
   document.querySelector('.score-card').classList.remove('midi-correct', 'midi-wrong');
   $('midi-action-hint').classList.remove('midi-mistake');
   renderInputMode();
+  document.querySelector('.app-shell').dataset.inputMode = isMidiMode() ? 'midi' : 'touch';
   const feedback = round.feedback;
   const item = round.current;
-  $('answer-status').textContent = feedback && !paused ? feedback.correct ? 'Correct. Next question.' : feedback.answer ? 'Incorrect. Try the same question again.' : `The answer is ${item.label}. Moving to the next question.` : '';
+  $('quiz-hint').disabled=Boolean(feedback);$('quiz-reveal').disabled=Boolean(feedback);
+  $('quiz-assistance').textContent=round.assisted?'Hint used':'';
+  $('answer-status').textContent = feedback && !paused ? feedback.correct ? 'Correct. Next question.' : feedback.answer ? 'Incorrect. Try the same question again.' : `The answer is ${item.label}.` : '';
   $('paused-panel').hidden = !paused;
   $('quiz-content').hidden = paused;
   $('pause-actions').hidden = !paused;
@@ -185,38 +205,34 @@ function renderQuestion() {
   $('answer-controls').hidden = paused || isMidiMode();
   $('answer-controls').inert = Boolean(feedback);
   $('answer-actions').hidden = paused || isMidiMode() || Boolean(feedback);
-  $('feedback-actions').hidden = paused || isMidiMode() || !feedback;
-  $('midi-actions').hidden = paused || !isMidiMode();
+  $('feedback-actions').hidden = paused || !feedback || isMidiMode() && !feedback.revealed;
+  $('midi-actions').hidden = paused || !isMidiMode() || Boolean(feedback?.revealed);
   $('quiz-midi-panel').hidden = paused || !isMidiMode();
   $('pause-button').hidden = paused;
+  $('quiz-content').dataset.kind = item.kind;
   const index = round.answers.length + (feedback || round.retrying ? 0 : 1);
   $('question-count').textContent = `Question ${Math.min(index, round.settings.length)} of ${round.settings.length}`;
-  $('round-score').textContent = `${round.answers.filter(a => a.correct).length} first try`;
+  $('round-score').textContent = `${round.answers.filter(a => a.correct && !a.assisted).length} first try`;
   $('round-progress').setAttribute('aria-valuemax', round.settings.length);
   $('round-progress').setAttribute('aria-valuenow', round.answers.length);
   $('round-progress').firstElementChild.style.width = `${round.answers.length / round.settings.length * 100}%`;
   $('prompt-title').textContent = isMidiMode() ? item.kind === 'note' ? 'Play this note' : 'Play this chord' : item.kind === 'note' ? 'Name this note' : 'Name this chord';
   $('prompt-eyebrow').textContent = 'ONE NOTE AT A TIME';
   $('clef-label').textContent = clefName(item.clef);
-  let displayed = item;
-  if (feedback && !feedback.correct && feedback.answer) {
-    if (feedback.answer.source === 'midi') displayed = { tones: tonesFromMidi(feedback.answer.notes).slice(0, 8) };
-    else {
-      const root = makeTone(feedback.answer.letter, feedback.answer.alteration, item.tones[0].octave);
-      displayed = item.kind === 'chord' ? buildChord(root.pitchClass, feedback.answer.qualityId, root.octave, () => 1, [root.letter, root.alteration]) : { tones: [root] };
-    }
-  }
-  $('quiz-staff').innerHTML = renderStaff(displayed, item.clef, Boolean(feedback), feedback?.answer ? feedback.correct ? 'correct' : 'wrong' : '');
+  $('quiz-staff').innerHTML = renderStaff(item, item.clef, Boolean(feedback), feedback?.answer ? feedback.correct ? 'correct' : 'wrong' : '');
+  delete $('staff-caption').dataset.outcome;
   $('staff-caption').textContent = isMidiMode() ? item.kind === 'note' ? 'Play the key. You can retry straight away.' : 'Hold the chord together, then release to check.' : item.kind === 'chord' ? 'Find the root, then the chord type.' : 'Read the staff. Choose the written name.';
   if (feedback) {
     const given = answerName(feedback.answer, item.kind);
     const revealedName = item.kind === 'note' ? `${item.tones[0].name}${item.tones[0].octave}` : `${item.label} · root ${item.tones[0].name}${item.tones[0].octave}`;
     $('staff-caption').textContent = feedback.correct ? `${item.label} · Correct` : feedback.answer ? `${given} · Try again` : `Skipped · Answer: ${revealedName}`;
-    $('next-button').innerHTML = `${feedback.correct ? 'Next question' : 'Skip question'} <span aria-hidden="true">→</span>`;
+    if (feedback.revealed) $('staff-caption').textContent = `Answer: ${revealedName}`;
+    $('next-button').innerHTML = `${feedback.correct || feedback.revealed ? 'Next question' : 'Skip question'} <span aria-hidden="true">→</span>`;
     if (!paused) nextTimer = setTimeout(() => {
       if (feedback.correct || !feedback.answer) next();
       else if (retryQuestion(round)) { persist(); renderQuestion(); startClock(); }
-    }, feedback.correct ? isMidiMode() ? 450 : 900 : 2000);
+    }, feedback.correct ? 900 : 2000);
+    if(feedback.revealed)clearTimeout(nextTimer);
   } else if (!paused && !isMidiMode()) {
     answer = blankAnswer();
     $('quality-answer-section').hidden = item.kind !== 'chord';
@@ -246,13 +262,23 @@ function renderAnswer() {
 }
 
 
-function submit(value) {
+function submit(value, revealed = false) {
   if (paused || screen !== 'quiz' || state.active?.feedback) return;
   captureTime();
+  const roundWasRetrying=state.active.retrying;
   const feedback = recordAnswer(state.active, state.history, value, state.active.elapsed);
   if (!feedback) return;
-  persist();
-  renderQuestion();
+  if (revealed) feedback.revealed = true;
+  if (!roundWasRetrying) {
+    recordLearningAnswer(studio.state, feedback, state.active.settings.inputMode);
+    learningDirty = true;
+  }
+  if(feedback.answer&&!feedback.correct){
+    retryQuestion(state.active);persist();renderQuestion();startClock();
+    $('staff-caption').textContent=`You chose ${answerName(feedback.answer,feedback.item.kind)} · Try again`;
+    const wrong=$('letters').querySelector(`[data-letter="${feedback.answer.letter}"]`);wrong?.classList.add('answer-wrong');
+    clearTimeout(questionCueTimer);questionCueTimer=setTimeout(()=>wrong?.classList.remove('answer-wrong'),2000);
+  }else{persist();renderQuestion();}
   if (state.settings.sound) void playItem(feedback.item).catch(() => {});
 }
 
@@ -260,9 +286,14 @@ function submitMidi(notes) {
   if (!canAcceptMidi()) return;
   captureTime();
   const round = state.active;
+  const roundWasRetrying=round.retrying;
   const feedback = recordAnswer(round, state.history, { source: 'midi', notes }, round.elapsed);
+  if (feedback && !roundWasRetrying) {
+    recordLearningAnswer(studio.state, feedback, 'midi');
+    learningDirty = true;
+  }
   if (!feedback) return;
-  if (feedback.correct) advance(round, state.history);
+  if (feedback.correct) advance(round, reviewHistory(round.settings.inputMode));
   else retryQuestion(round);
   renderQuestion();
   startClock();
@@ -271,8 +302,8 @@ function submitMidi(notes) {
   const card = document.querySelector('.score-card');
   card.classList.add(feedback.correct ? 'midi-correct' : 'midi-wrong');
   const message = feedback.correct ? 'Correct ✓' : `Played ${answerName(feedback.answer, feedback.item.kind)} · Try again`;
-  $('midi-action-hint').textContent = message;
-  $('midi-action-hint').classList.toggle('midi-mistake', !feedback.correct);
+  $('staff-caption').textContent = feedback.correct ? `Last answer: ${feedback.item.label} ✓` : message;
+  $('staff-caption').dataset.outcome = feedback.correct ? 'correct' : 'wrong';
   $('answer-status').textContent = message;
   midiCueTimer = setTimeout(() => { card.classList.remove('midi-correct', 'midi-wrong'); $('midi-action-hint').classList.remove('midi-mistake'); renderMidiQuiz(); }, feedback.correct ? 120 : 180);
   if (state.settings.sound) setTimeout(() => { void playItem(feedback.item).catch(() => {}); }, 0);
@@ -282,7 +313,7 @@ function next() {
   clearTimeout(nextTimer);
   stopAudio();
   if (paused || !state.active?.feedback) return;
-  if (!advance(state.active, state.history)) { finish(); return; }
+  if (!advance(state.active, reviewHistory(state.active.settings.inputMode))) { finish(); return; }
   persist();
   renderQuestion();
   startClock();
@@ -293,13 +324,15 @@ function finish() {
   captureTime();
   clearTimeout(nextTimer);
   suspendAudio();
+  const completedRound=state.active;
   const result = completeRound(state) || state.lastResult;
+  if(completedRound&&result){recordQuizSession(studio.state,completedRound,result);studio.save();}
   persist();
   if (!result) { goHome(); return; }
   showScreen('result');
-  $('result-title').textContent = result.accuracy === 100 ? 'Look at you grow.' : result.accuracy >= 60 ? 'A little more fluent.' : 'Every try plants a seed.';
-  $('result-message').textContent = `${result.correct} of ${result.total} correct. ${result.improvement > 0 ? `Up ${result.improvement} percentage points from your last round with these notes.` : result.accuracy === 100 ? 'Let those connections settle. Come back tomorrow.' : 'The tricky ones are another chance to learn.'}`;
-  $('result-metrics').innerHTML = `<div><strong>${result.accuracy}%</strong><span>accuracy this round</span></div><div><strong>${result.meanMs === null ? '—' : (result.meanMs / 1000).toFixed(1) + 's'}</strong><span>average correct answer</span></div>`;
+  $('result-title').textContent = 'Session complete';
+  $('result-message').textContent = `${result.correct} of ${result.total} correct on the first try. ${result.improvement > 0 ? `Up ${result.improvement} percentage points from your last round with these notes.` : result.accuracy === 100 ? 'Let those connections settle. Come back tomorrow.' : 'The tricky ones are another chance to learn.'}`;
+  $('result-metrics').innerHTML = `<div><strong>${result.accuracy}%</strong><span>independent first tries</span></div><div><strong>${result.meanMs === null ? '—' : (result.meanMs / 1000).toFixed(1) + 's'}</strong><span>average correct answer</span></div>`;
   $('difficult-section').hidden = !result.difficult.length;
   $('difficult-items').innerHTML = result.difficult.slice(0, 3).map(item => `<span>${escape(item.label)}<small>${escape(clefName(item.clef))}</small></span>`).join('') + (result.difficult.length > 3 ? `<span class="more-reviews">+${result.difficult.length - 3} more to review</span>` : '');
   $('result-title').focus({ preventScroll: true });
@@ -310,11 +343,14 @@ function openDialog(id) {
   if (screen === 'training') pause(false);
   $(id).showModal();
 }
-function openCustomize() {
+function openCustomize(forSight = activities?.activity === 'sight') {
+  sightNoteSetup = forSight;
+  $('mode-options').closest('fieldset').hidden = forSight;
+  $('length-options').closest('fieldset').hidden = forSight;
   draft = structuredClone(state.settings);
   draft.noteNames = [...selectedNamesFor(draft)];
   draft.octaves = Object.fromEntries(['treble', 'bass'].map(clef => [clef, [...octavesFor(draft, clef)]]));
-  $('setup-round-note').hidden = !state.active;
+  $('setup-round-note').hidden = !state.active || forSight;
   renderDraft();
   openDialog('customize-dialog');
 }
@@ -326,10 +362,13 @@ function renderDraft() {
     $(`${clef}-octaves`).hidden = draft.clef !== 'mixed' && draft.clef !== clef;
     for (const button of $(`${clef}-octaves`).querySelectorAll('[data-octave]')) button.setAttribute('aria-pressed', String(draft.octaves[clef].includes(Number(button.dataset.octave))));
   }
-  $('chord-settings').hidden = draft.mode === 'notes';
-  $('pitch-legend').textContent = draft.mode === 'chords' ? 'Chord roots to practise' : draft.mode === 'mixed' ? 'Notes & chord roots to practise' : 'Notes to practise';
+  $('chord-settings').hidden = sightNoteSetup || draft.mode === 'notes';
+  $('pitch-legend').textContent = sightNoteSetup ? 'Notes to practise' : draft.mode === 'chords' ? 'Chord roots to practise' : draft.mode === 'mixed' ? 'Notes & chord roots to practise' : 'Notes to practise';
   $('selection-summary').textContent = `${draft.noteNames.length} selected. Only these written spellings will appear.`;
   $('setup-error').hidden = true;
+  const previewPool=poolFor({...draft,noteNames:draft.noteNames.length?draft.noteNames:['C']});
+  const clefs=draft.clef==='mixed'?['treble','bass']:[draft.clef];
+  $('range-preview').innerHTML=clefs.map(clef=>{const items=previewPool.filter(i=>i.clef===clef);return items.length?renderStaff({tones:[items[0].tones[0],items.at(-1).tones[0]]},clef):'';}).join('')+`<small>${draft.noteNames.length} written names · ${draft.clef} clef<br>Only your selection will appear.</small>`;
 }
 
 function canAcceptMidi() {
@@ -369,9 +408,10 @@ function renderMidi(status) {
   else startClock();
   renderMidiQuiz();
   activities?.midiChanged(status);
+  if (studio && ['home','today','progress'].includes(screen)) studio.render();
 }
 const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (activities?.calibration.receive(event)) return; if (screen === 'training') { activities?.receive(event); return; } if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
-activities = new Activities({ goHome, showTraining:() => showScreen('training'), openDialog, openNotes:openCustomize, renderHome, getQuizSettings: () => state.settings, midi });
+activities = new Activities({ goHome, showTraining:() => showScreen('training'), openDialog, openNotes:()=>openCustomize(true), renderHome, getQuizSettings: () => state.settings, midi });
 document.querySelectorAll('[data-input-mode]').forEach(button => { button.onclick = () => setInputMode(button.dataset.inputMode); });
 $('midi-use-touch').onclick = () => setInputMode('touch');
 $('midi-connect').onclick = () => { setInputMode('midi'); void midi.connect(); };
@@ -386,7 +426,7 @@ $('letters').innerHTML = LETTERS.map((letter, i) => `<button data-letter="${i}" 
 $('pitch-options').innerHTML = [[0, 'Naturals'], [1, 'Sharps'], [-1, 'Flats']].map(([alteration, title]) => `<div class="note-group"><p class="eyebrow">${title}</p><div class="note-grid">${NOTE_OPTIONS.filter(note => note.alteration === alteration).map(note => `<button type="button" data-note="${note.name}" aria-pressed="false">${note.name}</button>`).join('')}</div></div>`).join('');
 $('octave-options').innerHTML = ['treble', 'bass'].map(clef => `<div id="${clef}-octaves" class="note-group"><p class="eyebrow">${clefName(clef)}</p><div class="octave-grid">${OCTAVE_OPTIONS[clef].map(octave => `<button type="button" data-range-clef="${clef}" data-octave="${octave}" aria-label="${clefName(clef)} octave ${octave}, C${octave} to B${octave}" aria-pressed="false">C${octave}–B${octave}</button>`).join('')}</div></div>`).join('');
 $('quality-options').innerHTML = QUALITIES.map(q => `<button type="button" data-quality="${q.id}" aria-pressed="false">${q.name}<small>${q.suffix || 'major'}</small></button>`).join('');
-$('theme-options').innerHTML = THEMES.map(t => `<button data-theme="${t.id}" aria-pressed="false"><span class="theme-swatch" aria-hidden="true" style="--swatch-bg:${t.background};--swatch-accent:${t.accent}"></span><span>${t.name}<small>${t.detail}</small></span></button>`).join('');
+
 
 $('letters').onclick = event => { const button = event.target.closest('[data-letter]'); if (button) { answer.letter = Number(button.dataset.letter); renderAnswer(); } };
 $('accidentals').onclick = event => { const button = event.target.closest('[data-alteration]'); if (button) { answer.alteration = Number(button.dataset.alteration); renderAnswer(); } };
@@ -425,11 +465,11 @@ $('resume-button').onclick = resume;
 for (const id of ['home-button', 'pause-home-button', 'result-home-button']) $(id).onclick = goHome;
 $('again-button').onclick = start;
 $('customize-button').onclick = () => activities.activity === 'quiz' ? openCustomize() : activities.configure();
-$('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(); };
-$('about-button').onclick = () => openDialog('about-dialog');
+$('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(false); };
+$('about-button').onclick = () => { $('settings-dialog').close(); openDialog('about-dialog'); };
 $('settings-button').onclick = () => {
   activities.calibration.sync();
-  for (const button of $('theme-options').children) button.setAttribute('aria-pressed', String(button.dataset.theme === state.settings.theme));
+  studio.appearance();
   $('sound-setting').checked = state.settings.sound;
   openDialog('settings-dialog');
 };
@@ -479,14 +519,14 @@ $('customize-form').onsubmit = event => {
   const oldContent = JSON.stringify([state.settings.mode, state.settings.clef, [...selectedNamesFor(state.settings)].sort(), state.settings.qualities, state.settings.length, rangeKey(state.settings)]);
   const newContent = JSON.stringify([draft.mode, draft.clef, [...draft.noteNames].sort(), draft.qualities, draft.length, rangeKey(draft)]);
   state.settings = { ...state.settings, ...draft };
-  if (oldContent !== newContent) state.active = null;
+  if (oldContent !== newContent && !sightNoteSetup) state.active = null;
   persist();
   $('customize-dialog').close();
   goHome();
 };
-$('theme-options').onclick = event => { const button = event.target.closest('[data-theme]'); if (button) { state.settings.theme = button.dataset.theme; theme(); for (const b of $('theme-options').children) b.setAttribute('aria-pressed', String(b === button)); persist(); } };
+
 $('sound-setting').onchange = () => { state.settings.sound = $('sound-setting').checked; if (!state.settings.sound) suspendAudio(); persist(); };
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(screen === 'quiz'); else if (screen === 'home') renderHome(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(screen === 'quiz'); else if (['home','today','progress'].includes(screen)) renderHome(); });
 window.addEventListener('pagehide', () => pause(false));
 window.addEventListener('pageshow', () => { if (midi.wanted) midi.sync(); if (screen === 'quiz' && paused) renderQuestion(); });
 window.addEventListener('focus', () => { if (midi.wanted) midi.sync(); });
@@ -518,6 +558,12 @@ if ('serviceWorker' in navigator) {
 } else $('offline-status').textContent = 'Offline installation isn’t supported in this browser.';
 $('update-button').onclick = () => { announceUpdate(); if (pendingWorker) { pause(); updating = true; pendingWorker.postMessage('activate'); } };
 
+studio = new Studio({getState:()=>state,getActivities:()=>activities,navigate:tab=>{activities.stop();pause(false);showScreen(tab);renderHome();},start,renderHome,onImport:()=>{clearTimeout(nextTimer);clearTimeout(persistTimer);persistTimer=null;learningDirty=false;clockStart=null;activities.stop();state=loadState().state;activities.state=loadTraining();studio.state=loadStudio(localStorage,state.settings.theme);display.setEnabled(state.settings.keepAwake);studio.tab='today';$('settings-dialog').close();showScreen('today');renderHome();}});
+$('quiz-hint').onclick=()=>{const round=state.active;if(!round?.current||round.feedback)return;round.assisted=true;$('staff-caption').textContent=noteHint(round.current);$('quiz-assistance').textContent='Hint used · practice answer';persist();};
+$('quiz-reveal').onclick=()=>submit(null,true);
+if(new URLSearchParams(location.search).get('theme')==='nocturne'){studio.state.appearance='dark';studio.state.accent='brass';}
+showScreen('today');
+
 theme();
 network();
 $('storage-notice').hidden = loaded.available;
@@ -527,5 +573,5 @@ for (const name of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) 
   document.addEventListener(name, event => event.preventDefault(), { passive: false });
 }
 document.addEventListener('touchmove', event => {
-  if (event.touches.length > 1 || !event.target.closest?.('dialog[open]')) event.preventDefault();
+  if (event.touches.length > 1 || !event.target.closest?.('dialog[open], .scroll-region')) event.preventDefault();
 }, { passive: false });

@@ -1,3 +1,4 @@
+import { openPractice } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
@@ -55,7 +56,7 @@ try {
   const ctx = await context();
   const page = await ctx.newPage();
   page.on('pageerror', error => report.errors.push(error.message));
-  await page.goto(base);
+  await page.goto(base);await openPractice(page);
   await check('home loads with default practice and no horizontal overflow', async () => {
     await page.locator('#start-button').waitFor();
     assert.match(await page.locator('#practice-detail').innerText(), /Treble clef · 7 notes · 10 questions/);
@@ -63,9 +64,9 @@ try {
     await page.screenshot({ path: 'docs/images/home.png', fullPage: true });
   });
   await check('practice labels cannot be selected by double-clicking or dragging', async () => {
-    await page.locator('.home-heading h1').dblclick();
+    await page.locator('#home-screen .studio-heading h1').dblclick();
     assert.equal(await page.evaluate(() => getSelection().toString()), '');
-    assert.equal(await page.locator('.home-heading h1').evaluate(element => getComputedStyle(element).userSelect), 'none');
+    assert.equal(await page.locator('#home-screen .studio-heading h1').evaluate(element => getComputedStyle(element).userSelect), 'none');
   });
   await page.locator('#start-button').click();
   await check('fixed answer controls and unanswered staff do not reveal the name', async () => {
@@ -85,19 +86,17 @@ try {
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).active.feedback === null, key);
     assert.match(await page.locator('#question-count').innerText(), /Question 2 of 10/);
   });
-  await check('wrong note turns red, retries after two seconds, and reload preserves first-try grading', async () => {
+  await check('wrong note retries immediately and reload preserves first-try grading', async () => {
     const item = (await state(page)).active.current;
     await page.locator(`#letters [data-letter="${(item.tones[0].letter + 1) % 7}"]`).click();
     await page.locator('#check-button').click();
-    assert.equal(await page.locator('#quiz-staff .staff--wrong').count(), 1);
+    assert.equal(await page.locator('.answer-wrong').count(), 1);
     assert.match(await page.locator('#staff-caption').innerText(), /Try again/);
     await page.screenshot({ path: 'docs/images/correction.png', fullPage: true });
-    await page.reload();
+    await page.reload();await openPractice(page);
     await page.locator('#start-button').click();
     assert.equal((await state(page)).active.answers.length, 2);
-    const began = Date.now();
     await page.waitForFunction(key => { const active = JSON.parse(localStorage.getItem(key)).active; return active.retrying && !active.feedback; }, key);
-    assert.ok(Date.now() - began >= 1600, 'Red feedback should last about two seconds');
     assert.equal((await state(page)).active.current.id, item.id);
     assert.equal(await page.locator('#quiz-staff .staff--wrong').count(), 0);
     await chooseExact(page);
@@ -127,7 +126,7 @@ try {
     assert.equal(await page.locator('#difficult-section').isVisible(), true);
     await page.screenshot({ path: 'docs/images/results.png', fullPage: true });
     await page.locator('#result-home-button').click();
-    assert.match(await page.locator('#daily-title').innerText(), /already done/);
+    assert.match(await page.locator('#daily-title').innerText(), /Daily practice complete/);
   });
   await check('customization rejects empty pools and cancellation preserves settings', async () => {
     const before = (await state(page)).settings;
@@ -159,11 +158,11 @@ try {
   });
   await check('theme changes pause practice and persist across reload', async () => {
     await page.locator('#settings-button').click();
-    await page.locator('[data-theme="dark"]').click();
+    await page.locator('[data-appearance="dark"]').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.locator('[data-close="settings-dialog"]').click();
     assert.equal(await page.locator('#paused-panel').isVisible(), true);
-    await page.reload();
+    await page.reload();await openPractice(page);
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.screenshot({ path: 'docs/images/dark.png', fullPage: true });
   });
@@ -202,7 +201,7 @@ try {
       for (const mode of ['notes', 'chords']) {
         const c = await context({ viewport });
         const p = await c.newPage();
-        await p.goto(base);
+        await p.goto(base);await openPractice(p);
         if (mode === 'chords') {
           await p.locator('#customize-button').click();
           await p.locator('[data-mode="chords"]').click();
@@ -234,18 +233,17 @@ try {
     }
   });
 
-  await check('every palette applies and persists, including light palettes on a dark device', async () => {
+  await check('light and dark appearances apply and persist', async () => {
     const c = await context({ colorScheme: 'dark' });
     const p = await c.newPage();
-    await p.goto(base);
-    const backgrounds = Object.fromEntries(THEMES.filter(theme => theme.id !== 'system').map(theme => [theme.id, theme.background]));
+    await p.goto(base);await openPractice(p);
+    const backgrounds = {light:'#f5f3ef',dark:'#111923'};
     for (const [theme, background] of Object.entries(backgrounds)) {
       await p.locator('#settings-button').click();
-      await p.locator(`#theme-options [data-theme="${theme}"]`).click();
+      await p.locator(`#theme-options [data-appearance="${theme}"]`).click();
       assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()), background);
       await p.locator('[data-close="settings-dialog"]').click();
-      await p.reload();
-      assert.equal((await state(p)).settings.theme, theme);
+      await p.reload();await openPractice(p);
       assert.equal(await p.locator('html').getAttribute('data-theme'), theme);
       const contrast = await p.locator('#start-button').evaluate(button => {
         const luminance = color => {
@@ -260,7 +258,7 @@ try {
       if (['sunflower', 'rose', 'plum', 'amoled'].includes(theme)) await p.screenshot({ path: `docs/images/theme-${theme}.png` });
     }
     await p.locator('#settings-button').click();
-    await p.locator('#theme-options [data-theme="plum"]').scrollIntoViewIfNeeded();
+    await p.locator('#theme-options [data-appearance="dark"]').scrollIntoViewIfNeeded();
     await p.screenshot({ path: 'docs/images/themes.png', fullPage: true });
     await c.close();
   });
@@ -269,7 +267,7 @@ try {
     const c = await context();
     const p = await c.newPage();
     p.on('pageerror', error => report.errors.push(error.message));
-    await p.goto(base);
+    await p.goto(base);await openPractice(p);
     await p.locator('#customize-button').click();
     await p.locator('[data-mode="mixed"]').click();
     await p.locator('[data-clef="mixed"]').click();
@@ -277,7 +275,7 @@ try {
     await p.locator('#apply-button').click();
     await p.locator('#start-button').click();
     const id = (await state(p)).active.current.id;
-    await p.reload();
+    await p.reload();await openPractice(p);
     await p.locator('#start-button').click();
     assert.equal((await state(p)).active.current.id, id);
     await c.close();
@@ -285,7 +283,7 @@ try {
   await check('Choose notes exposes exact sharp/flat selections and Settings links to the same pool', async () => {
     const c = await context();
     const p = await c.newPage();
-    await p.goto(base);
+    await p.goto(base);await openPractice(p);
     await p.locator('#customize-button').click();
     await p.locator('[data-preset="flats"]').click();
     assert.equal(await p.locator('#pitch-options [data-note][aria-pressed="true"]').count(), 5);
@@ -298,7 +296,7 @@ try {
     await p.locator('[data-preset="none"]').click();
     await p.locator('#pitch-options [data-note="C♯"]').click();
     await p.locator('#apply-button').click();
-    await p.reload();
+    await p.reload();await openPractice(p);
     await p.locator('#start-button').click();
     assert.deepEqual((await state(p)).settings.noteNames, ['C♯']);
     assert.equal((await state(p)).active.current.tones[0].name, 'C♯');
@@ -307,7 +305,7 @@ try {
   await check('octave selection asks higher C5 only, validates ranges, saves and cancels changes', async () => {
     const c = await context();
     const p = await c.newPage();
-    await p.goto(base);
+    await p.goto(base);await openPractice(p);
     await p.locator('#customize-button').click();
     await p.locator('[data-preset="none"]').click();
     await p.locator('#pitch-options [data-note="C"]').click();
@@ -326,7 +324,7 @@ try {
     await p.screenshot({ path: 'docs/images/higher-c5.png' });
     await p.locator('#unknown-button').click();
     assert.match(await p.locator('#staff-caption').innerText(), /C5/);
-    await p.reload();
+    await p.reload();await openPractice(p);
     await p.locator('#start-button').click();
     assert.equal((await state(p)).active.current.tones[0].octave, 5);
     assert.equal((await state(p)).history['note:treble:0:0:5'].attempts, 1);
@@ -350,7 +348,7 @@ try {
     await c.addInitScript(() => { Storage.prototype.getItem = () => { throw new DOMException('Blocked', 'SecurityError'); }; Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'SecurityError'); }; });
     const p = await c.newPage();
     p.on('pageerror', error => report.errors.push(error.message));
-    await p.goto(base);
+    await p.goto(base);await openPractice(p);
     await p.locator('#start-button').click();
     assert.equal(await p.locator('#storage-notice').isVisible(), true);
     await p.locator('#unknown-button').click();
@@ -361,13 +359,13 @@ try {
     await check('service worker installs, then supports a fresh offline launch and quiz', async () => {
       const c = await context();
       const p = await c.newPage();
-      await p.goto(base);
+      await p.goto(base);await openPractice(p);
       await p.evaluate(() => navigator.serviceWorker.ready);
       await p.waitForFunction(() => navigator.serviceWorker.controller !== null);
       await p.locator('#start-button').click();
       await p.locator('#unknown-button').click();
       await c.setOffline(true);
-      await p.reload();
+      await p.reload();await openPractice(p);
       await p.locator('#start-button').click();
       assert.match(await p.locator('#staff-caption').innerText(), /Skipped · Answer:/);
       await p.locator('#next-button').click();
@@ -379,7 +377,7 @@ try {
       let backendUnavailable = false;
       if (engine === 'webkit') {
         const probe = await c.newPage();
-        await probe.goto(base);
+        await probe.goto(base);await openPractice(probe);
         await probe.evaluate(() => {
           const button = document.createElement('button');
           button.id = 'audio-backend-probe';
@@ -423,7 +421,7 @@ try {
       });
       const p = await c.newPage();
       p.on('pageerror', error => report.errors.push(error.message));
-      await p.goto(base);
+      await p.goto(base);await openPractice(p);
       await p.locator('#start-button').click();
       await p.locator('#unknown-button').click();
       await p.locator('#hear-button').click();

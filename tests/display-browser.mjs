@@ -1,3 +1,4 @@
+import { openPractice, selectActivity } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -30,7 +31,7 @@ async function setup(mode='ready',fullscreen='fake') {
     Element.prototype.webkitRequestFullscreen=undefined;
     document.exitFullscreen=async()=>{element=null;test.exits++;document.dispatchEvent(new Event('fullscreenchange'));};
   },{mode,fullscreen});
-  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);return page;
+  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);await openPractice(page);return page;
 }
 async function check(label,run){await run();report.checks.push(label);console.log('PASS '+label);}
 try{
@@ -41,7 +42,7 @@ try{
     await page.locator('#pause-button').click();assert.equal(await page.evaluate(()=>displayTest.locks[0].released),false);
     await page.locator('#settings-button').click();assert.match(await page.locator('#wake-status').innerText(),/stays awake/);
     await page.locator('#wake-setting').uncheck();assert.equal(await page.evaluate(()=>displayTest.locks[0].released),true);
-    await page.reload();await page.locator('#settings-button').click();assert.equal(await page.locator('#wake-setting').isChecked(),false);
+    await page.reload();await openPractice(page);await page.locator('#settings-button').click();assert.equal(await page.locator('#wake-setting').isChecked(),false);
     await page.locator('[data-close="settings-dialog"]').click();await page.locator('#start-button').click();assert.equal(await page.evaluate(()=>displayTest.requests),0);
     await page.locator('#settings-button').click();await page.locator('#wake-setting').check();await page.waitForFunction(()=>displayTest.locks.length===1);
     await page.locator('[data-close="settings-dialog"]').click();await page.locator('#home-button').click();assert.equal(await page.evaluate(()=>displayTest.locks[0].released),true);
@@ -49,7 +50,7 @@ try{
   await check('metronome, touch rhythm and MIDI sight-reading all keep the practice screen awake',async()=>{
     const page=await setup();
     for(const [i,activity] of ['metronome','rhythm','sight'].entries()){
-      await page.selectOption('#activity-select',activity);await page.locator('#start-button').click();await page.waitForFunction(n=>displayTest.locks.length===n,i+1);
+      await selectActivity(page,activity);await page.locator('#start-button').click();await page.waitForFunction(n=>displayTest.locks.length===n,i+1);
       assert.equal(await page.evaluate(i=>displayTest.locks[i].released,i),false);
       await page.locator('#training-back').click();assert.equal(await page.evaluate(i=>displayTest.locks[i].released,i),true);
     }

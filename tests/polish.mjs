@@ -1,3 +1,4 @@
+import { openPractice, selectActivity } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -20,9 +21,9 @@ async function check(label, run) {
   if (process.env.POLISH_CHECK && !label.includes(process.env.POLISH_CHECK)) return;
   await run(); report.checks.push(label); console.log('PASS ' + label);
 }
-async function home() { await page.goto(base); }
+async function home() { await page.goto(base);await openPractice(page); }
 async function startRhythm() {
-  await page.selectOption('#activity-select','rhythm');
+  await selectActivity(page,'rhythm');
   await page.locator('#start-button').click();
   await page.locator('#training-visual').click();
   await page.waitForFunction(() => document.getElementById('training-screen').dataset.running === 'true');
@@ -38,7 +39,7 @@ try {
   await mkdir('docs/images',{recursive:true});
   await check('initial count-in never adds a phantom beat in either meter or after resume', async () => {
     for (const meter of [3,4]) {
-      await home(); await page.selectOption('#activity-select','rhythm');
+      await home(); await selectActivity(page,'rhythm');
       await page.locator('#customize-button').click(); await page.selectOption('#training-meter',String(meter));
       await page.locator('#training-bpm').fill('200'); await page.locator('#training-form button[type=submit]').click();
       await page.locator('#start-button').click();
@@ -70,7 +71,7 @@ try {
     }
   });
   await check('dense accidentals clear the time signature and extreme notes stay inside the staff', async () => {
-    await home(); await page.selectOption('#activity-select','sight'); await page.locator('#start-button').click();
+    await home(); await selectActivity(page,'sight'); await page.locator('#start-button').click();
     await page.waitForFunction(() => document.getElementById('midi-status').textContent.startsWith('Connected'));
     await page.locator('#training-toggle').click(); await page.locator('#training-visual').click();
     await page.locator('#training-toggle').click();
@@ -109,8 +110,8 @@ try {
     await page.evaluate(() => { for(const edge of ['top','bottom','left','right']) document.documentElement.style.setProperty('--safe-'+edge,'0px'); });
     await home(); await startRhythm(); await page.locator('#training-toggle').click();
     report.contrast = [];
-    for (const theme of THEMES.filter(t=>t.id!=='system')) {
-      await page.locator('#settings-button').click(); await page.locator(`[data-theme="${theme.id}"]`).click(); await page.locator('[data-close="settings-dialog"]').click();
+    for (const theme of ['light','dark'].map(id=>({id}))) {
+      await page.locator('#settings-button').click(); await page.locator(`[data-appearance="${theme.id}"]`).click(); await page.locator('[data-close="settings-dialog"]').click();
       const contrast = await page.evaluate(() => {
         const color = value => value.match(/[\d.]+/g).slice(0,3).map(Number).map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;}).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
         const ratio = (a,b) => (Math.max(a,b)+.05)/(Math.min(a,b)+.05);

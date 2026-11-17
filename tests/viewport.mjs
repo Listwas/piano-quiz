@@ -1,3 +1,4 @@
+import { openPractice } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -44,9 +45,8 @@ async function rotationFrame(page, profile, mode, reserved = 0) {
   assert.ok(Math.abs(geometry.shell.bottom - profile.height + reserved) <= 1, JSON.stringify(geometry));
   assert.ok(geometry.content.scroll <= geometry.content.height + 1, `Rotation clipped quiz content: ${JSON.stringify(geometry)}`);
   assert.ok(geometry.staff.height >= 30, 'Staff must retain readable space');
-  const selectors = mode === 'midi' ? ['#midi-skip-button', '#midi-recheck-quiz', '#midi-action-hint', '#pause-button'] : ['#check-button', '#unknown-button', '#pause-button', '#letters'];
+  const selectors = mode === 'midi' ? ['#midi-skip-button', '#midi-recheck-quiz', '#staff-caption', '#pause-button'] : ['#check-button', '#unknown-button', '#pause-button', '#letters'];
   for (const selector of selectors) {
-    if (selector === '#midi-action-hint' && profile.height - reserved < 420) continue;
     const box = await page.locator(selector).boundingBox();
     assert.ok(box, `${selector} must remain visible`);
     assert.ok(box.y >= (profile.top || 0) && box.y + box.height <= profile.height - reserved - (profile.bottom || 0) + 1, `${selector} cropped after rotation or browser chrome resize: ${JSON.stringify(box)}`);
@@ -83,7 +83,7 @@ try {
     context.on('page', page => page.on('pageerror', error => report.errors.push(error.message)));
     const page = await context.newPage();
     activePage = page;
-    await page.goto(base);
+    await page.goto(base);await openPractice(page);
     await page.evaluate(profile => {
       for (const [name, value] of Object.entries({ top: profile.top || 0, bottom: profile.bottom || 0, left: profile.left || 0, right: profile.right || 0 })) document.documentElement.style.setProperty(`--safe-${name}`, `${value}px`);
     }, profile);
@@ -133,7 +133,7 @@ try {
     await page.locator('#pause-button').click();
     assert.ok(Math.abs(await frame(page, profile, '#paused-panel', '#resume-button') - top) <= 1);
     await page.locator('#settings-button').click();
-    await page.locator('#theme-options [data-theme="midnight"]').click();
+    await page.locator('#theme-options [data-appearance="dark"]').click();
     const modalScroll = await page.locator('#settings-dialog').evaluate(dialog => { dialog.scrollTop = dialog.scrollHeight; return { scroll: dialog.scrollTop, max: dialog.scrollHeight - dialog.clientHeight }; });
     if (modalScroll.max > 1) assert.ok(modalScroll.scroll > 0, `${profile.name} settings cannot scroll`);
     await page.locator('[data-close="settings-dialog"]').click();
@@ -164,7 +164,7 @@ try {
     const page = await context.newPage();
     activePage = page;
     page.on('pageerror', error => report.errors.push(error.message));
-    await page.goto(base);
+    await page.goto(base);await openPractice(page);
     if (mode === 'touch') {
       await page.locator('#customize-button').click();
       await page.locator('[data-mode="chords"]').click();
@@ -231,7 +231,7 @@ try {
   const fallback = await fallbackContext.newPage();
   activePage = fallback;
   fallback.on('pageerror', error => report.errors.push(error.message));
-  await fallback.goto(base);
+  await fallback.goto(base);await openPractice(fallback);
   await fallback.setViewportSize({ width: 932, height: 430 });
   await fallback.waitForFunction(() => document.body.getBoundingClientRect().height === 430);
   report.checks.push('Window resize fallback sizes the app when VisualViewport is unavailable');

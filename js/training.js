@@ -2,12 +2,12 @@ import { poolFor, selectedNamesFor, octavesFor, NOTE_OPTIONS } from './quiz.js';
 import { makeTone } from './notes.js';
 
 export const TRAINING_KEY = 'pianoQuiz.training.v1';
-export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', pace: 'practice', accuracy: 'beginner', volume: .3, muted: false, offset: 0 };
+export const TRAINING_DEFAULTS = { bpm: 60, meter: 4, bars: 4, complexity: 'simple', style: 'guided', input: 'touch', pace: 'practice', accuracy: 'beginner', behavior: 'retry-bar', volume: .3, muted: false, offset: 0 };
 export function normalizeTraining(raw) {
   const settings = { ...TRAINING_DEFAULTS };
   if (raw && typeof raw === 'object') {
     for (const [key, min, max] of [['bpm',40,200],['offset',-250,250],['volume',0,1]]) if (Number.isFinite(raw[key])) settings[key] = Math.max(min, Math.min(max, key === 'volume' ? raw[key] : Math.round(raw[key])));
-    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','steady','eighths','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
+    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','steady','eighths','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], behavior:['retry-bar','continue'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
     if (typeof raw.muted === 'boolean') settings.muted = raw.muted;
   }
   return settings;
@@ -18,10 +18,11 @@ const timingKeys = ['early','centered','late','absoluteMs'];
 const freshBar = () => ({ retries:0, issues:Object.fromEntries(issueKeys.map(key=>[key,0])), timing:{early:0,centered:0,late:0,absoluteMs:0} });
 const nonnegative = n => Number.isFinite(n) && n >= 0;
 const count = n => Number.isSafeInteger(n) && n >= 0;
+export const isSightFlow = result => result.activity === 'sight' && result.comparison?.behavior === 'continue';
 export const totalIssues = bar => issueKeys.reduce((sum,key)=>sum+bar.issues[key],0);
 export function hardestBar(result) {
   const bars = result.report.bars;
-  const scores = bars.map((bar,i)=>result.practisedBars?.[i] ? 0 : result.activity === 'sight' ? bar.retries : totalIssues(bar));
+  const scores = bars.map((bar,i)=>result.practisedBars?.[i] ? 0 : result.activity === 'sight' && !isSightFlow(result) ? bar.retries : totalIssues(bar));
   const max = Math.max(0,...scores);
   return max ? scores.indexOf(max) : -1;
 }
@@ -56,12 +57,13 @@ export function replayPhrase(result, bar) {
 export const slowerReplayTempo = bpm => Math.max(40,Math.round(bpm*.8));
 const HISTORY_LIMIT = 60;
 export function comparisonSetup(phrase, settings, quizSettings) {
-  return {level:settings.complexity,pace:settings.pace,
+  return {level:settings.complexity,pace:settings.pace,behavior:phrase.rhythm?'continue':settings.behavior ?? 'retry-bar',
     notes:phrase.rhythm ? [] : [...selectedNamesFor(quizSettings)].sort(),
     octaves:phrase.rhythm ? [] : [...octavesFor(quizSettings,phrase.clef)].sort()};
 }
 function validComparison(value) {
   return value && Object.hasOwn(RHYTHM_LEVELS,value.level) && ['practice','flow'].includes(value.pace) &&
+    (value.behavior === undefined || ['retry-bar','continue'].includes(value.behavior)) &&
     Array.isArray(value.notes) && value.notes.length<=NOTE_OPTIONS.length && value.notes.every(name=>NOTE_OPTIONS.some(note=>note.name===name)) &&
     Array.isArray(value.octaves) && value.octaves.length<=4 && value.octaves.every(octave=>[1,2,3,4,5,6].includes(octave));
 }
@@ -328,7 +330,7 @@ export class ExerciseSession {
       if (!pitch && this.retryOnError) { this.fail('pitch',event.timeStamp,target.bar); return; }
       const result = { pitch, onset:true, duration:null, error, on:time, status:pitch ? 'holding' : 'wrong' };
       this.results.set(target.id, result); this.holding.set(key, { target, result });
-      this.feedback = !pitch ? 'Different note — keep following the beat.' : `Key received · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}.`;
+      this.feedback = !pitch ? 'Wrong note · keep following the beat.' : `${this.phrase.rhythm ? 'On the beat' : 'Pitch correct'} · hold for ${target.durationBeats} beat${target.durationBeats === 1 ? '' : 's'}.`;
     } else {
       const held = this.holding.get(key);
       if (!held) return;

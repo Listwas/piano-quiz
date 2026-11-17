@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = join(root, 'dist');
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist);
-for (const entry of ['index.html', 'styles.css', 'manifest.webmanifest', 'js', 'icons', 'audio']) await cp(join(root, entry), join(dist, entry), { recursive: true });
+for (const entry of ['index.html', 'styles.css', 'studio.css', 'fonts', 'manifest.webmanifest', 'js', 'icons', 'audio']) await cp(join(root, entry), join(dist, entry), { recursive: true });
 const paths = [];
 async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {

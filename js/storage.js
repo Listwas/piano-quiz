@@ -28,7 +28,7 @@ export function restoreState(raw) {
       const last = answers.at(-1);
       const feedback = a.feedback ? { ...a.feedback, item: pool.get(a.feedback.item.id) } : null;
       if ((!retrying || last && !last.correct && last.item.id === a.current?.id) && (!feedback || last && feedback.item.id === a.current?.id && feedback.item.id === last.item.id && (retrying || feedback.correct === last.correct))) {
-        state.active = { id: a.id, settings, answers, retryAfter: Object.fromEntries(Object.entries(a.retryAfter).filter(([id, index]) => pool.has(id) && Number.isInteger(index) && index >= 0 && index <= settings.length + 4)), current: a.current ? pool.get(a.current.id) : null, feedback, retrying, elapsed: Math.min(a.elapsed, 3600000), startedAt: a.startedAt };
+        state.active = { id: a.id, settings, answers, retryAfter: Object.fromEntries(Object.entries(a.retryAfter).filter(([id, index]) => pool.has(id) && Number.isInteger(index) && index >= 0 && index <= settings.length + 4)), current: a.current ? pool.get(a.current.id) : null, feedback, retrying, assisted: a.assisted === true, elapsed: Math.min(a.elapsed, 3600000), startedAt: a.startedAt };
       }
     }
   }

@@ -1,3 +1,4 @@
+import { openPractice } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -14,7 +15,7 @@ async function open(item,viewport={width:1280,height:800}){
  const state=freshState();state.settings=settings;state.active=createRound(settings,{},Date.now(),()=>0);state.active.current=item;
  const page=await context.newPage();page.on('pageerror',error=>report.errors.push(error.message));
  await page.addInitScript(state=>localStorage.setItem('pianoQuiz.state.v1',JSON.stringify(state)),state);
- await page.goto(origin);await page.locator('#start-button').tap();return {page,context};
+ await page.goto(origin);await openPractice(page);await page.locator('#start-button').tap();return {page,context};
 }
 const active=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.state.v1')).active);
 try{

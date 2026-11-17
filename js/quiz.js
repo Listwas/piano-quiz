@@ -144,14 +144,15 @@ export function recordAnswer(round, history, answer, elapsed, now = Date.now()) 
   const item = round.current;
   const correct = grade(item, answer);
   const time = Math.max(0, Math.min(Number.isFinite(elapsed) ? elapsed : 0, 3600000));
-  const feedback = { item, correct, answer: answer ? structuredClone(answer) : null, elapsed: time, at: now };
+  const independent = correct && !round.assisted;
+  const feedback = { item, correct, assisted: Boolean(round.assisted), input: answer?.source === 'midi' ? 'midi' : round.settings.inputMode, answer: answer ? structuredClone(answer) : null, elapsed: time, at: now };
   if (round.retrying) { round.feedback = feedback; round.elapsed = 0; return feedback; }
   const old = history[item.id] || { attempts: 0, correct: 0, stage: 0, totalMs: 0, correctMs: 0, due: 0, lastSeen: 0 };
   const reviewDue = old.stage === 0 || old.due <= now;
-  const stage = correct ? Math.min(old.stage + Number(reviewDue), INTERVAL_DAYS.length) : 0;
-  const due = correct ? (reviewDue ? now + INTERVAL_DAYS[stage - 1] * DAY : old.due) : now;
-  history[item.id] = { attempts: old.attempts + 1, correct: old.correct + Number(correct), stage, totalMs: old.totalMs + time, correctMs: old.correctMs + (correct ? time : 0), due, lastSeen: now };
-  if (correct) delete round.retryAfter[item.id];
+  const stage = independent ? Math.min(old.stage + Number(reviewDue), INTERVAL_DAYS.length) : 0;
+  const due = independent ? (reviewDue ? now + INTERVAL_DAYS[stage - 1] * DAY : old.due) : now;
+  history[item.id] = { attempts: old.attempts + 1, correct: old.correct + Number(independent), stage, totalMs: old.totalMs + time, correctMs: old.correctMs + (independent ? time : 0), due, lastSeen: now };
+  if (independent) delete round.retryAfter[item.id];
   else round.retryAfter[item.id] = round.answers.length + 4;
   round.answers.push(feedback);
   round.feedback = feedback;
@@ -171,6 +172,7 @@ export function advance(round, history, now = Date.now(), random = Math.random) 
   if (!round.feedback) return false;
   round.feedback = null;
   round.retrying = false;
+  round.assisted = false;
   if (round.answers.length >= round.settings.length) { round.current = null; return false; }
   round.current = selectItem(poolFor(round.settings), history, round, now, random);
   round.elapsed = 0;
@@ -178,6 +180,6 @@ export function advance(round, history, now = Date.now(), random = Math.random) 
 }
 
 export function summarize(round) {
-  const correct = round.answers.filter(a => a.correct);
-  return { id: round.id, total: round.answers.length, correct: correct.length, accuracy: Math.round(correct.length / Math.max(1, round.answers.length) * 100), meanMs: correct.length ? Math.round(correct.reduce((sum, a) => sum + a.elapsed, 0) / correct.length) : null, difficult: [...new Map(round.answers.filter(a => !a.correct).map(a => [a.item.id, a.item])).values()] };
+  const correct = round.answers.filter(a => a.correct && !a.assisted);
+  return { id: round.id, total: round.answers.length, correct: correct.length, accuracy: Math.round(correct.length / Math.max(1, round.answers.length) * 100), meanMs: correct.length ? Math.round(correct.reduce((sum, a) => sum + a.elapsed, 0) / correct.length) : null, difficult: [...new Map(round.answers.filter(a => !a.correct || a.assisted).map(a => [a.item.id, a.item])).values()] };
 }

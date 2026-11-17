@@ -1,3 +1,4 @@
+import { openPractice } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -35,7 +36,7 @@ async function setup(mode = 'ready') {
   }, mode);
   const page = await context.newPage();
   page.on('pageerror', error => report.errors.push(error.message));
-  await page.goto(base);
+  await page.goto(base);await openPractice(page);
   return page;
 }
 const state = async page => { await page.waitForTimeout(100); return page.evaluate(key => JSON.parse(localStorage.getItem(key)), key); };
@@ -163,7 +164,7 @@ try {
     assert.equal(saved.history[id].attempts, 2);
     await send(page, [0x80,61,0]);
     await send(page, [0x80,73,0]);
-    await page.reload();
+    await page.reload();await openPractice(page);
     assert.equal(await page.evaluate(() => window.midiTest.calls.length), 0);
     await page.locator('#start-button').click();
     await ready(page);
@@ -174,7 +175,8 @@ try {
     await page.locator('#letters [data-letter="0"]').click();
     await page.locator('#accidentals [data-alteration="1"]').click();
     await page.locator('#check-button').click();
-    assert.equal((await state(page)).active.feedback.correct, false, 'Touch still distinguishes C-sharp from D-flat');
+    assert.equal((await state(page)).active.answers.at(-1).correct, false, 'Touch still distinguishes C-sharp from D-flat');
+    assert.equal((await state(page)).active.retrying, true);
   });
   await check('MIDI chords grade full overlapping phrases and ignore paused, feedback and held keys', async () => {
     const page = await setup();
@@ -224,7 +226,7 @@ try {
       round.feedback={item:round.current,correct:false,answer:{source:'midi',notes:[60]},elapsed:100,at:Date.now()};
       localStorage.setItem(key,JSON.stringify(saved));
     },key);
-    await page.reload();await connect(page);await page.locator('#start-button').click();await ready(page);
+    await page.reload();await openPractice(page);await connect(page);await page.locator('#start-button').click();await ready(page);
     notes=(await state(page)).active.current.tones.map(tone=>tone.midi);
     await play(page,notes);assert.equal((await state(page)).active.retrying,false,'Legacy chord feedback must not leave capture inactive');
     await page.evaluate(() => window.midiTest.remove('a'));
@@ -255,7 +257,7 @@ try {
     contexts.push(context);
     await context.grantPermissions(['midi', 'midi-sysex'], { origin: base });
     const page = await context.newPage();
-    await page.goto(base);
+    await page.goto(base);await openPractice(page);
     report.nativeApi = await page.evaluate(async () => {
       if (!navigator.requestMIDIAccess) return { available: false };
       try {

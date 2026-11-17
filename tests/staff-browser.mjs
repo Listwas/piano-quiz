@@ -1,3 +1,4 @@
+import { openPractice } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -12,7 +13,7 @@ const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', arg
 try {
   await mkdir('docs/images', { recursive: true });
   for (const [width, height] of [[430, 932], [800, 1280], [1280, 800], [932, 430]]) {
-    for (const input of ['touch', 'midi']) for (const theme of ['light', 'nocturne']) {
+    for (const input of ['touch', 'midi']) for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, reducedMotion: 'reduce' });
       await context.addInitScript(() => {
         const port = { id: 'staff-test', name: 'Test keyboard', state: 'connected', connection: 'closed', async open() { this.connection = 'open'; }, async close() { this.connection = 'closed'; } };
@@ -20,9 +21,9 @@ try {
       });
       const page = await context.newPage();
       page.on('pageerror', error => report.errors.push(error.message));
-      await page.goto(origin);
+      await page.goto(origin);await openPractice(page);
       await page.locator('#settings-button').click();
-      await page.locator(`#theme-options [data-theme=${theme}]`).click();
+      await page.locator(`#theme-options [data-appearance=${theme}]`).click();
       await page.locator('[data-close=settings-dialog]').click();
       await page.locator(`.practice-card [data-input-mode=${input}]`).click();
       await page.locator('#start-button').click();
@@ -61,7 +62,7 @@ try {
         return out;
       });
       assert.ok(bounds.every(b => b.inside), `${label}: extreme notes clipped ${JSON.stringify(bounds)}`);
-      if (width === 1280 && input === 'midi' && theme === 'nocturne') {
+      if (width === 1280 && input === 'midi' && theme === 'dark') {
         for (const clef of ['treble', 'bass']) {
           await page.evaluate(async clef => {
             const { renderStaff } = await import('./js/staff.js');

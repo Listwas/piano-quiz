@@ -1,7 +1,7 @@
 import { BeatClock } from './timing.js';
 import { loadTraining, saveTraining, normalizeTraining, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
-import { renderScore, scoreX } from './score.js';
-import { firstTryBars, renderTrainingDetails, renderTrainingReport } from './training-report.js';
+import { renderMeasure, scoreX } from './score.js';
+import { renderTrainingDetails, renderTrainingReport } from './training-report.js';
 import { groupSessions, historyLabel, renderHistoryGroup } from './training-history.js';
 import { MidiCalibration } from './calibration.js';
 
@@ -26,19 +26,14 @@ export class Activities {
     this.request = 0;
     this.phraseIndex = 0;
     this.phraseHistory = new Map();
-    $('activity-select').value = this.state.activity;
-    $('activity-select').onchange = event => {
-      this.stop(); this.state.activity = event.target.value; saveTraining(this.state); renderHome();
-    };
     $('training-back').onclick = () => this.drill ? this.backFromDrill() : goHome();
     $('training-configure').onclick = () => this.configure();
     $('training-toggle').onclick = () => this.clock.running || this.starting ? this.pause() : void this.start(this.active && !this.completed);
     $('training-sound').onclick = () => { this.settings.muted = !this.settings.muted; this.sound(); if (!this.drill) saveTraining(this.state); };
     $('training-visual').onclick = () => { this.visualOnly = true; void this.start(this.active && !this.completed); };
     $('training-details').onclick = () => this.drill ? this.backFromDrill() : this.showReport(this.recommendedBar());
-    $('last-session-button').onclick = () => this.showReport(-1,this.latestForActivity());
-    $('training-history-button').onclick = () => this.showHistory();
     $('report-back-history').onclick = () => { $('training-report-dialog').close(); this.showHistory(true); };
+    $('history-activity').onchange = event => this.showHistory(false,event.target.value);
     $('history-group-select').onchange = event => this.renderHistory(Number(event.target.value));
     $('training-history-content').onclick = event => {
       const button = event.target.closest('[data-history-result]');
@@ -75,7 +70,7 @@ export class Activities {
     $('training-form').onsubmit = event => {
       event.preventDefault();
       const old = this.settings;
-      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','input','pace','accuracy'].map(key => [key,$(`training-${key}`).value])) });
+      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','input','pace','accuracy','behavior'].map(key => [key,$(`training-${key}`).value])) });
       $('training-dialog').close(); saveTraining(this.state); renderHome();
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
@@ -101,6 +96,7 @@ export class Activities {
 
   get activity() { return this.state.activity; }
   get settings() { return this.drill?.settings ?? this.state.settings; }
+  get flow() { return this.activity === 'sight' && !this.drill && this.settings.behavior === 'continue'; }
   get exercise() { return this.activity === 'rhythm' || this.activity === 'sight'; }
   get requiresMidi() { return this.activity === 'sight' || this.activity === 'rhythm' && this.settings.input === 'midi'; }
   get supported() { return !this.requiresMidi || this.midi.status.state !== 'unsupported'; }
@@ -133,41 +129,26 @@ export class Activities {
 
   home() {
     const quiz = this.activity === 'quiz';
-    $('activity-select').value = this.activity;
     $('start-button').disabled = !this.supported;
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
     this.inputControls();
-    $('resume-note').textContent = 'Your unfinished round is ready when you are.';
-    $('last-session-button').hidden = true;
-    $('training-history-button').hidden = !this.exercise;
     if (quiz) { $('customize-button').innerHTML = 'Choose notes <span aria-hidden="true">↗</span>'; return; }
     $('practice-title').textContent = labels[this.activity];
-    const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? 'MIDI keyboard · retry each bar' : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
+    const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? `MIDI keyboard · ${this.flow ? 'Flow' : 'Practice'}` : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
     $('practice-detail').textContent = this.supported ? `${this.settings.bpm} BPM · ${this.settings.meter}/4 · ${detail}` : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
     $('customize-button').textContent = 'Set up ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
-    const recent = this.latestForActivity();
-    $('resume-note').hidden = recent?.activity !== this.activity || Boolean(recent?.report);
-    if (recent?.activity === this.activity) {
-      if (recent.report) {
-        $('last-session-button').hidden = false;
-        $('last-session-button').textContent = `Last session · ${this.activity==='sight' ? `${firstTryBars(recent)}/${recent.report.bars.length} bars first try` : `${recent.onset}% on the beat`} ↗`;
-      } else $('resume-note').textContent = this.activity === 'sight' ? `Last practice: ${recent.retries} retries` : `Last practice: ${recent.onset}% on the beat · ${recent.holds}% note lengths`;
-    }
-  }
-
-  latestForActivity() {
-    return this.state.lastResult?.activity === this.activity ? this.state.lastResult : this.state.history.find(result=>result.activity===this.activity);
+    $('resume-note').hidden = true;
   }
 
   configure() {
     this.pause();
     $('training-setup-title').textContent = `${labels[this.activity]} setup`;
-    for (const key of ['bpm','meter','volume','offset','bars','complexity','input','pace','accuracy']) $(`training-${key}`).value = this.settings[key];
+    for (const key of ['bpm','meter','volume','offset','bars','complexity','input','pace','accuracy','behavior']) $(`training-${key}`).value = this.settings[key];
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Play your selected notes on the beat. A wrong pitch, missed beat, bad hold or rest mistake restarts the whole bar on the next downbeat. Watch the countdown and release cue.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. With Beginner tolerance, the full meter means you can release; keep your next press on the beat. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    $('training-setup-help').textContent = this.activity === 'sight' ? 'Practice retries a failed bar on the downbeat. Flow keeps the beat moving and previews the next bar.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. With Beginner tolerance, the full meter means you can release; keep your next press on the beat. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
     this.openDialog('training-dialog');
   }
 
@@ -188,7 +169,10 @@ export class Activities {
     $('training-screen').dataset.activity = this.activity;
     $('training-screen').dataset.running = String(this.clock.running);
     $('training-screen').dataset.complete = String(Boolean(this.completed));
+    $('training-body').classList.toggle('scroll-region', Boolean(this.completed));
     $('training-back').textContent = this.drill ? '‹ Report' : '‹ Home';
+    $('reading-style-badge').hidden = this.activity !== 'sight' || Boolean(this.completed);
+    $('reading-style-badge').textContent = this.flow ? 'Flow' : 'Practice';
     $('training-configure').hidden = Boolean(this.drill);
     $('training-title').textContent = this.drill ? this.completed ? 'Bar practised' : `Practise bar ${this.drill.bar+1}` : this.completed ? 'Session complete' : labels[this.activity];
     $('training-progress').textContent = this.drill ? `Bar ${this.drill.bar+1} · ${this.settings.bpm} BPM` : this.completed ? 'Practice complete' : `${this.settings.bpm} BPM · ${this.settings.meter}/4`;
@@ -228,10 +212,10 @@ export class Activities {
           const key = `${this.activity}:${this.settings.complexity}:${this.settings.meter}`;
           const quizSettings = this.getQuizSettings();
           this.phrase = generatePhrase(this.settings,quizSettings,{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
-          this.sessionComparison = comparisonSetup(this.phrase,this.settings,quizSettings);
+          this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,pace:this.flow?'flow':this.settings.pace},quizSettings);
           this.phraseHistory.set(key,this.phrase);
         }
-        this.session = new ExerciseSession(this.phrase,{...this.settings,retryOnError:this.activity==='sight'});
+        this.session = new ExerciseSession(this.phrase,{...this.settings,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }
     this.drawSignature = null;
@@ -282,7 +266,7 @@ export class Activities {
       this.message(`Read bar ${position.bar+1} · count in ${Math.ceil(position.remaining)}`);
       return;
     }
-    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : this.activity === 'sight' ? 'Follow the beat. Complete this bar to move on.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Different|Try |Between|Rest here|Rest means/.test(this.session.feedback));
+    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : this.flow ? 'Keep the pulse. Read the next bar ahead.' : this.activity === 'sight' ? 'Follow the beat. Complete this bar to move on.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Wrong note|Try |Between|Rest here|Rest means/.test(this.session.feedback));
   }
 
   draw(time) {
@@ -293,7 +277,7 @@ export class Activities {
     const signature = `${bar}:${current}:` + [...this.session.results.entries()].map(([id,result])=>`${id}${result.status}`).join(',');
     if (signature !== this.drawSignature) {
       this.drawSignature = signature;
-      $('exercise-score').innerHTML = renderScore(this.phrase,bar,this.session.results,current);
+      $('exercise-score').innerHTML = renderMeasure(this.phrase,bar,this.session.results,current) + (this.flow && bar+1<this.phrase.bars ? renderMeasure(this.phrase,bar+1).replace('class="measure"','class="measure upcoming"') : '');
     }
     for (const measure of $('exercise-score').children) {
       const cursor = measure.querySelector('[data-cursor]');
@@ -323,7 +307,7 @@ export class Activities {
     if (this.retryFailure(performance.now())) return;
     if (performance.now() < this.session.startTime) { this.draw(performance.now()); this.countdown(performance.now()); return; }
     if (this.session.done) this.finish();
-    else { this.draw(performance.now()); if (this.session.feedback) this.message(this.session.feedback); }
+    else { this.draw(performance.now()); if (this.session.feedback) this.message(this.session.feedback, /Too |Wrong note|Between|Rest here/.test(this.session.feedback)); }
   }
 
   countdown(time) {
@@ -364,8 +348,10 @@ export class Activities {
     if (!status.connected && this.clock.running) this.pause('Keyboard disconnected. Recheck MIDI, then Resume.');
     else if (status.connected && !this.clock.running) { this.refresh(); this.message('Keyboard connected. Tap Resume when ready.'); }
   }
-  showHistory(preserve = false) {
-    this.historyGroups = groupSessions(this.state.history,this.activity);
+  showHistory(preserve = false, activity = preserve ? this.historyActivity : this.activity) {
+    this.historyActivity = activity;
+    $('history-activity').value = activity;
+    this.historyGroups = groupSessions(this.state.history,activity);
     const select = $('history-group-select');
     select.replaceChildren(...this.historyGroups.map((group,i)=>{
       const option = document.createElement('option');
@@ -377,7 +363,7 @@ export class Activities {
     const group = preserve && this.historyGroups[this.historyGroup] ? this.historyGroup : 0;
     select.value = group;
     this.renderHistory(group);
-    this.openDialog('training-history-dialog');
+    if (!$('training-history-dialog').open) this.openDialog('training-history-dialog');
   }
   renderHistory(index) {
     this.historyGroup = index;
@@ -418,7 +404,8 @@ export class Activities {
   }
   startDrill(bar,bpm) {
     const result = this.reportResult, replay = result?.replay;
-    if (result?.activity !== this.activity || !replay?.bars[bar] || ![replay.bpm,slowerReplayTempo(replay.bpm)].includes(bpm) || $('report-practise').disabled) return;
+    if (!replay?.bars[bar] || ![replay.bpm,slowerReplayTempo(replay.bpm)].includes(bpm) || $('report-practise').disabled) return;
+    this.state.activity = result.activity;
     const fromSummary = this.active && this.completed && result === this.state.lastResult;
     const input = this.midi.status.state === 'unsupported' ? 'touch' : replay.input;
     this.drill = {bar,fromSummary,result,fromHistory:this.reportFromHistory,phrase:replayPhrase(result,bar),
