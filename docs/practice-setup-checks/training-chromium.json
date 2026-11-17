@@ -1,0 +1,33 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "7036df5faa0e51",
+  "testedAt": "2026-11-17T20:38:57.671Z",
+  "checks": [
+    "metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup",
+    "activity switching preserves an unfinished quiz and MIDI is not requested by the metronome",
+    "metronome controls remain visible and touchable through phone/tablet rotation",
+    "rhythm touch holds distinguish a one-beat release from a required two-beat half note",
+    "rhythm score and touch pad fit rotating phone and tablet layouts",
+    "rhythm MIDI accepts different keys and scores their physical hold lengths",
+    "sight-reading resets the entire bar on wrong pitches and short holds, then waits for the downbeat",
+    "sight-reading retries missed beats while retaining already completed bars",
+    "sight-reading pauses on disconnect, rechecks, rotates and resumes with its score intact",
+    "missing MIDI does not block touch rhythm, metronome or the original quiz",
+    "note selection keeps Save visible at both ends of the list on rotated phones and tablets",
+    "rhythm input is selected on Home and leaves the exercise screen clear",
+    "long presses cancel native menus without interrupting the touch hold",
+    "beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note",
+    "MIDI eighths reach the full hold meter and accept articulated releases at 200 BPM",
+    "MIDI calibration is visible at the top of App settings and returns there on close",
+    "four rhythm levels save, introduce their own note values, and keep a single readable bar",
+    "eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses",
+    "MIDI timing calibration suggests an offset, saves only on Apply, and stops on disconnect"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached.",
+    "Calibration uses scheduled clicks from a controlled audio clock and simulated MIDI."
+  ],
+  "result": "passed"
+}

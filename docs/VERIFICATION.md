@@ -1,5 +1,7 @@
 # Verification
 
+Release `7036df5faa0e51` puts the key settings beside each exercise in Practice. Browser checks cover values applying at Start, settings surviving reload, the original quiz resuming from Today, and the shorter More options dialog. The Studio suite passed 11 scenarios each in Chromium, Firefox and WebKit and on [production](https://22ce5eec.piano-quiz.pages.dev/). Unit, quiz, MIDI, training, and viewport checks also passed. The [release reports](practice-setup-checks/) include all 50 served assets matched against the build.
+
 Release `74a750bc606079` adds **Delete all data**. The confirmation keeps data intact on Cancel and clears settings, history and the browser backup on confirmation. Other open tabs reset and reloads start with empty history. All 110 unit tests passed. The Studio suite passed 10 scenarios in each of Chromium, Firefox and WebKit, and on the [production deployment](https://81812c93.piano-quiz.pages.dev/). The [verification reports](data-deletion-checks/) also include a byte comparison of all 50 served files.
 
 The original Studio release `8741a3ae49a8f0` introduced the redesigned UI. The [production deployment](https://b1640236.piano-quiz.pages.dev/) was built from `ab1a108`. The [asset comparison](studio-checks/live-assets.json) verified all 50 served files against the local build.

@@ -1,0 +1,18 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "checks": [
+    "small-phone setup, safe areas, fixed feedback and pause controls",
+    "iphone setup, safe areas, fixed feedback and pause controls",
+    "iphone-landscape setup, safe areas, fixed feedback and pause controls",
+    "tablet setup, safe areas, fixed feedback and pause controls",
+    "tablet-landscape setup, safe areas, fixed feedback and pause controls",
+    "compact-tablet setup, safe areas, fixed feedback and pause controls",
+    "desktop setup, safe areas, fixed feedback and pause controls",
+    "legacy palette and progress, independent recall, stable reveal, export, all eight palette contrasts",
+    "Delete all data confirms, supports cancellation, clears the backup and resets other tabs",
+    "Inline choices apply at Start and persist, Today resumes an unfinished quiz, and More options omits duplicate fields",
+    "Flow previews the next bar, keeps time through a wrong MIDI note, and records the error in the report"
+  ],
+  "errors": []
+}

@@ -1,0 +1,30 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "7036df5faa0e51",
+  "testedAt": "2026-11-17T20:38:57.666Z",
+  "checks": [
+    "initial count-in never adds a phantom beat in either meter or after resume",
+    "dense accidentals clear the time signature and extreme notes stay inside the staff",
+    "training feedback stays readable in all palettes"
+  ],
+  "errors": [],
+  "limits": [
+    "Safe areas and screen sizes are simulated. MIDI is simulated and audio is deliberately unavailable to test the visual fallback. Dense notation uses deliberate edge-case fixtures. Physical devices are not attached."
+  ],
+  "contrast": [
+    {
+      "theme": "light",
+      "text": 5.829329655899158,
+      "wrongNote": 13.317501615636873,
+      "correctNote": 13.317501615636873
+    },
+    {
+      "theme": "dark",
+      "text": 8.769113175362524,
+      "wrongNote": 10.69293816733249,
+      "correctNote": 10.69293816733249
+    }
+  ],
+  "result": "passed"
+}
