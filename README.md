@@ -23,7 +23,7 @@ MIDI keyboard.
 
 1. [Open the app](https://piano-quiz.pages.dev/) and start the suggested session on **Today**.
 2. To choose your own session, open **Practice**. Select **Notes**, **Chords**, **Rhythm**, **Sight-reading**, or **Metronome**.
-3. Set the range and input, then start. Open **Progress** later to revisit results or practise a difficult bar.
+3. Set the options beside the exercise and start. Open **Notes & octaves** to pick exact spellings and ranges, or **More options** for timing and calibration. Open **Progress** later to revisit results or practise a difficult bar.
 
 With tap answers, choose the letter and accidental, then **Check answer**. For
 chords, choose the root and chord type too. With MIDI, play the exact displayed
@@ -45,7 +45,7 @@ independent first attempts. **Clear answer** resets a selection without submitti
 | Short sessions | 10 or 20 questions, with pause and resume |
 | Your favourite look | Light, dark or device appearance, with four accents |
 
-Want higher C? In **Choose notes → Staff range**, select **C5–B5** under Treble.
+Want higher C? In **Notes & octaves → Staff range**, select **C5–B5** under Treble.
 C5 sits in the third space. Keep C4–B4 selected if you want to practise both.
 
 Choosing C♯ does not add D♭ to the quiz. Tap answers check the written spelling;
@@ -66,7 +66,7 @@ Use the pad or any MIDI key. A half note lasts two
 beats; letting go after one beat counts as too short. The music keeps moving
 through mistakes, and the results show beat timing and note lengths separately.
 
-Choose a **Rhythm level** in **Set up**:
+Choose a **Rhythm level** directly in **Practice**:
 
 | Level | What it adds |
 | --- | --- |
@@ -82,15 +82,14 @@ more notes also gives melodies more variety.
 The hold meter shows when to release; green appears after a correct release.
 A valid release briefly keeps the meter completely full before the next note.
 Beginner timing is more forgiving, and a full-bar count-in between bars gives
-you time to read ahead. In **Set up**, choose **Strict** timing or **Keep playing**
-when you want a challenge, and adjust the tempo and exercise length.
+you time to read ahead. Choose **Strict** timing or **Keep playing** in **More options**, and adjust the tempo and exercise length directly in **Practice**.
 Pausing restarts the interrupted
 bar with a count-in. Rhythm results save separately from your quiz history.
 
 ### Sight-reading
 
 Choose **Sight-reading** and use your MIDI keyboard to play short melodies.
-The exercise uses the notes, octaves, and clefs you chose in **Choose notes**.
+The exercise uses the notes, octaves, and clefs you chose in **Notes & octaves**.
 Your keyboard supplies the piano sound; the app supplies the beat.
 
 Play each note on the metronome beat and hold it for its full value. Choose
@@ -99,7 +98,7 @@ what went wrong and when to start again. Choose **Flow** to keep playing through
 mistakes with the next bar visible. Review the pitch, timing, and hold scores
 afterward, then replay difficult bars at the original or a slower tempo.
 
-Use **Choose notes** directly in **Practice** or above the score to change your melody
+Use **Notes & octaves** in **Practice** or **Choose notes** above the score to change your melody
 notes. **Save practice** stays visible while you browse the choices.
 
 In Practice, one bar fills the score area and the next appears during its count-in.

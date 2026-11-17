@@ -18,3 +18,9 @@ export async function openLastTrainingReport(page) {
   await page.locator('[data-tab=progress]').click();
   await page.locator('[data-training-report]').first().click();
 }
+
+export async function setPracticeTempo(page, bpm) {
+  const tempo = page.locator('#setup-bpm');
+  await tempo.fill(String(bpm));
+  await tempo.blur();
+}

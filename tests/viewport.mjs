@@ -103,11 +103,13 @@ try {
       await devtools.detach();
     }
 
+    await page.locator('#setup-content').selectOption('mixed');
+    await page.locator('#setup-chord-types').click();
+    while (await page.locator('#quality-options button[aria-pressed="false"]').count()) await page.locator('#quality-options button[aria-pressed="false"]').first().click();
+    await page.locator('#apply-button').click();
     await page.locator('#customize-button').click();
-    await page.locator('[data-mode="mixed"]').click();
     await page.locator('[data-preset="none"]').click();
     await page.locator('#pitch-options [data-note="C♯"]').click();
-    while (await page.locator('#quality-options button[aria-pressed="false"]').count()) await page.locator('#quality-options button[aria-pressed="false"]').first().click();
     await page.locator('[data-range="all"]').click();
     await page.locator('#apply-button').click();
     await frame(page, profile, '#home-screen', '#start-button');
@@ -166,9 +168,7 @@ try {
     page.on('pageerror', error => report.errors.push(error.message));
     await page.goto(base);await openPractice(page);
     if (mode === 'touch') {
-      await page.locator('#customize-button').click();
-      await page.locator('[data-mode="chords"]').click();
-      await page.locator('#apply-button').click();
+      await page.locator('#setup-content').selectOption('chords');
     }
     if (mode === 'midi') await touch(page, '.practice-card [data-input-mode="midi"]');
     await touch(page, '#start-button');

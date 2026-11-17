@@ -28,6 +28,7 @@ let suppressCheckClick = false;
 let answer = blankAnswer();
 let draft;
 let sightNoteSetup = false;
+let notationEditor = 'range';
 let registration;
 let updating = false;
 let pendingWorker;
@@ -44,6 +45,12 @@ const clefName = clef => ({ treble: 'Treble clef', bass: 'Bass clef', mixed: 'Mi
 const modeName = mode => ({ notes: 'Note names', chords: 'Chord names', mixed: 'Notes & chords' })[mode];
 function blankAnswer() { return { letter: null, alteration: 0, qualityId: null }; }
 const hasAnswerSelection = () => answer.letter !== null || answer.alteration !== 0 || answer.qualityId !== null;
+const quizSetupKey = settings => JSON.stringify([
+  settings.mode, settings.clef, [...selectedNamesFor(settings)].sort(),
+  settings.mode === 'notes' ? [] : [...settings.qualities].sort(),
+  settings.length, rangeKey(settings),
+]);
+const matchesSavedRound = settings => state.active && quizSetupKey(state.active.settings) === quizSetupKey(settings);
 
 const isMidiMode = () => (screen==='quiz' ? state.active?.settings.inputMode ?? state.settings.inputMode : state.settings.inputMode) === 'midi';
 function renderInputMode() {
@@ -125,8 +132,9 @@ function renderHome() {
     return `${settings.clef === 'mixed' ? clef === 'treble' ? 'Treble ' : 'Bass ' : ''}${spans.map(([first, last]) => `C${first}–B${last}`).join(', ')}`;
   }).join(' / ');
   $('practice-detail').textContent = `${clefName(settings.clef)} · ${selection}${types} · ${settings.length} questions · ${ranges}`;
-  $('start-button').innerHTML = `${state.active?.settings.mode === settings.mode ? 'Resume practice' : 'Start session'} <span aria-hidden="true">→</span>`;
-  $('resume-note').hidden = !state.active || state.active.settings.mode === settings.mode;
+  const canResume = matchesSavedRound(settings);
+  $('start-button').innerHTML = `${canResume ? 'Resume practice' : 'Start session'} <span aria-hidden="true">→</span>`;
+  $('resume-note').hidden = !state.active || canResume;
   $('resume-note').textContent='Starting this exercise replaces the unfinished quiz.';
   const done = state.daily[localDay()] || 0;
   $('daily-title').textContent = done ? 'Daily practice complete' : 'Your daily practice';
@@ -149,10 +157,13 @@ function reviewHistory(input, settings = state.active?.settings ?? state.setting
     return record ? [[id, record]] : [];
   }));
 }
-function start() {
+function start({ resumeSaved = false } = {}) {
   if (activities.activity !== 'quiz') { pause(false); showScreen('training'); void activities.start(); return; }
-  if (!state.active || state.active.settings.mode !== state.settings.mode) state.active = createRound(state.settings, reviewHistory(state.settings.inputMode, state.settings));
-  state.settings.mode = state.active.settings.mode;
+  if (!state.active || (!resumeSaved && !matchesSavedRound(state.settings))) {
+    state.active = createRound(state.settings, reviewHistory(state.settings.inputMode, state.settings));
+  } else if (!resumeSaved) {
+    state.active.settings.inputMode = state.settings.inputMode;
+  }
   paused = false;
   showScreen('quiz');
   renderQuestion();
@@ -343,10 +354,17 @@ function openDialog(id) {
   if (screen === 'training') pause(false);
   $(id).showModal();
 }
-function openCustomize(forSight = activities?.activity === 'sight') {
+function openCustomize(forSight = activities?.activity === 'sight', editor = 'range') {
   sightNoteSetup = forSight;
-  $('mode-options').closest('fieldset').hidden = forSight;
-  $('length-options').closest('fieldset').hidden = forSight;
+  notationEditor = editor;
+  const qualitiesOnly = editor === 'qualities';
+  $('customize-title').textContent = qualitiesOnly ? 'Chord types' : 'Notes & octaves';
+  for (const field of document.querySelectorAll('[data-notation-quick]')) {
+    field.hidden = editor !== 'full' || forSight && field !== $('clef-options').closest('fieldset');
+  }
+  $('range-preview').hidden = qualitiesOnly;
+  $('range-settings').hidden = qualitiesOnly;
+  document.querySelector('[data-pitch-editor]').hidden = qualitiesOnly;
   draft = structuredClone(state.settings);
   draft.noteNames = [...selectedNamesFor(draft)];
   draft.octaves = Object.fromEntries(['treble', 'bass'].map(clef => [clef, [...octavesFor(draft, clef)]]));
@@ -362,7 +380,7 @@ function renderDraft() {
     $(`${clef}-octaves`).hidden = draft.clef !== 'mixed' && draft.clef !== clef;
     for (const button of $(`${clef}-octaves`).querySelectorAll('[data-octave]')) button.setAttribute('aria-pressed', String(draft.octaves[clef].includes(Number(button.dataset.octave))));
   }
-  $('chord-settings').hidden = sightNoteSetup || draft.mode === 'notes';
+  $('chord-settings').hidden = sightNoteSetup || draft.mode === 'notes' || notationEditor === 'range';
   $('pitch-legend').textContent = sightNoteSetup ? 'Notes to practise' : draft.mode === 'chords' ? 'Chord roots to practise' : draft.mode === 'mixed' ? 'Notes & chord roots to practise' : 'Notes to practise';
   $('selection-summary').textContent = `${draft.noteNames.length} selected. Only these written spellings will appear.`;
   $('setup-error').hidden = true;
@@ -411,7 +429,7 @@ function renderMidi(status) {
   if (studio && ['home','today','progress'].includes(screen)) studio.render();
 }
 const midi = new MidiKeyboard({ onStatus: renderMidi, onPhrase: notes => { if (canAcceptMidi() && state.active.current.kind === 'chord') submitMidi(notes); }, onNote: event => { if (activities?.calibration.receive(event)) return; if (screen === 'training') { activities?.receive(event); return; } if (event.type === 'on' && canAcceptMidi() && state.active.current.kind === 'note') submitMidi([event.note]); } });
-activities = new Activities({ goHome, showTraining:() => showScreen('training'), openDialog, openNotes:()=>openCustomize(true), renderHome, getQuizSettings: () => state.settings, midi });
+activities = new Activities({ goHome, showTraining:() => showScreen('training'), openDialog, openNotes: () => openCustomize(true, screen === 'training' ? 'full' : 'range'), renderHome, getQuizSettings: () => state.settings, midi });
 document.querySelectorAll('[data-input-mode]').forEach(button => { button.onclick = () => setInputMode(button.dataset.inputMode); });
 $('midi-use-touch').onclick = () => setInputMode('touch');
 $('midi-connect').onclick = () => { setInputMode('midi'); void midi.connect(); };
@@ -464,8 +482,16 @@ $('pause-button').onclick = () => pause();
 $('resume-button').onclick = resume;
 for (const id of ['home-button', 'pause-home-button', 'result-home-button']) $(id).onclick = goHome;
 $('again-button').onclick = start;
-$('customize-button').onclick = () => activities.activity === 'quiz' ? openCustomize() : activities.configure();
-$('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(false); };
+$('customize-button').onclick = () => activities.activity === 'quiz' ? openCustomize() : activities.configure({ quickOnPractice: true });
+$('setup-chord-types').onclick = () => openCustomize(false, 'qualities');
+for (const [id, key] of [['setup-clef', 'clef'], ['setup-questions', 'length'], ['setup-content', 'mode']]) {
+  $(id).onchange = event => {
+    state.settings[key] = key === 'length' ? Number(event.target.value) : event.target.value;
+    persist();
+    renderHome();
+  };
+}
+$('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(false, 'full'); };
 $('about-button').onclick = () => { $('settings-dialog').close(); openDialog('about-dialog'); };
 $('settings-button').onclick = () => {
   activities.calibration.sync();

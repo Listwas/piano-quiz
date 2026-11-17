@@ -132,23 +132,30 @@ export class Activities {
     $('start-button').disabled = !this.supported;
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
     this.inputControls();
-    if (quiz) { $('customize-button').innerHTML = 'Choose notes <span aria-hidden="true">↗</span>'; return; }
+    if (quiz) { $('customize-button').textContent = 'Notes & octaves ↗'; return; }
     $('practice-title').textContent = labels[this.activity];
-    const detail = this.activity === 'metronome' ? 'A steady beat, your own pace' : `${this.settings.bars} bars · ${this.activity === 'sight' ? `MIDI keyboard · ${this.flow ? 'Flow' : 'Practice'}` : this.settings.input === 'midi' ? 'MIDI key holds' : 'Touch and hold'}`;
-    $('practice-detail').textContent = this.supported ? `${this.settings.bpm} BPM · ${this.settings.meter}/4 · ${detail}` : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
-    $('customize-button').textContent = 'Set up ↗';
+    $('practice-detail').textContent = this.supported ? '' : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
+    $('customize-button').textContent = 'More options ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
     $('resume-note').hidden = true;
   }
 
-  configure() {
+  configure({ quickOnPractice = false } = {}) {
     this.pause();
-    $('training-setup-title').textContent = `${labels[this.activity]} setup`;
+    $('training-setup-title').textContent = quickOnPractice ? 'More options' : `${labels[this.activity]} setup`;
     for (const key of ['bpm','meter','volume','offset','bars','complexity','input','pace','accuracy','behavior']) $(`training-${key}`).value = this.settings[key];
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-setup-help').textContent = this.activity === 'sight' ? 'Practice retries a failed bar on the downbeat. Flow keeps the beat moving and previews the next bar.' : this.activity === 'rhythm' ? 'Choose Touch pad or MIDI keyboard on Home. A half note lasts two beats. With Beginner tolerance, the full meter means you can release; keep your next press on the beat. Count in gives you a full bar to read ahead.' : 'The first beat is accented. Changes during playback start at the next bar.';
+    for (const field of document.querySelectorAll('[data-training-quick]')) {
+      const visibleInActivity =
+        (!field.hasAttribute('data-exercise-setting') || this.exercise) &&
+        (!field.hasAttribute('data-sight-setting') || this.activity === 'sight') &&
+        (!field.hasAttribute('data-rhythm-setting') || this.activity === 'rhythm');
+      field.hidden = quickOnPractice || !visibleInActivity;
+    }
+    $('training-pace').closest('label').hidden = !this.exercise || this.flow;
+    $('training-setup-help').textContent = this.activity === 'metronome' ? 'Tempo changes apply on the next bar.' : '';
     this.openDialog('training-dialog');
   }
 

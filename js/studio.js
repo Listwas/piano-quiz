@@ -8,10 +8,13 @@ import {
 import { renderStaff } from './staff.js';
 import { makeTone } from './notes.js';
 import { poolFor } from './quiz.js';
-import { saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
+import { QUALITIES } from './chords.js';
+import { normalizeTraining, saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
 import { canSaveProgress, RESET_KEY, restoreState, STORAGE_KEY } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
+const QUICK_TRAINING_FIELDS = ['bpm', 'meter', 'bars', 'complexity', 'behavior'];
+const NUMERIC_TRAINING_FIELDS = new Set(['bpm', 'meter', 'bars']);
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -160,23 +163,34 @@ export class Studio {
     document
       .querySelectorAll('[data-tab]')
       .forEach((b) => (b.onclick = () => this.open(b.dataset.tab)));
+    const cards = [
+      ['quiz', 'notes', '♩', 'Notes', 'Read and name each note'],
+      ['quiz', 'chords', '♬', 'Chords', 'Recognise roots and shapes'],
+      ['rhythm', '', '◷', 'Rhythm', 'Press, hold and release'],
+      ['sight', '', '♫', 'Sight-reading', 'Bring pitch and pulse together'],
+      ['metronome', '', '◴', 'Metronome', 'Find a steady pulse'],
+    ];
+    $('activity-cards').innerHTML = cards
+      .map(
+        ([id, m, icon, title, detail]) =>
+          `<button class="activity-card" data-activity="${id}" data-quiz-mode="${m}" aria-pressed="false"><span class="activity-symbol" aria-hidden="true">${icon}</span><strong>${title}</strong><small>${detail}</small></button>`,
+      )
+      .join('');
+    $('activity-cards').onclick = (e) => {
+      const b = e.target.closest('[data-activity]');
+      if (b) this.select(b.dataset.activity, b.dataset.quizMode);
+    };
     $('recommendation-edit').onclick = () => this.open('home');
     $('recommendation-start').onclick = () => this.startRecommendation();
-    $('setup-bpm').onchange = () => {
-      const a = this.getActivities();
-      a.state.settings.bpm = Math.max(
-        40,
-        Math.min(200, Number($('setup-bpm').value) || 60),
-      );
-      saveTraining(a.state);
-      this.renderHome();
-    };
-    $('setup-behavior').onchange = () => {
-      const a = this.getActivities();
-      a.state.settings.behavior = $('setup-behavior').value;
-      saveTraining(a.state);
-      this.renderHome();
-    };
+    for (const key of QUICK_TRAINING_FIELDS) {
+      $(`setup-${key}`).onchange = event => {
+        const a = this.getActivities();
+        const value = NUMERIC_TRAINING_FIELDS.has(key) ? Number(event.target.value) : event.target.value;
+        a.state.settings = normalizeTraining({ ...a.state.settings, [key]: value });
+        saveTraining(a.state);
+        this.renderHome();
+      };
+    }
     $('lesson-button').onclick = () => this.lesson();
     $('lesson-practise').onclick = () => {
       $('lesson-dialog').close();
@@ -261,23 +275,11 @@ export class Studio {
       a = this.getActivities();
     if (!a) return;
     const mode = state.settings.mode;
-    const cards = [
-      ['quiz', 'notes', '♩', 'Notes', 'Read and name each note'],
-      ['quiz', 'chords', '♬', 'Chords', 'Recognise roots and shapes'],
-      ['rhythm', '', '◷', 'Rhythm', 'Press, hold and release'],
-      ['sight', '', '♫', 'Sight-reading', 'Bring pitch and pulse together'],
-      ['metronome', '', '◴', 'Metronome', 'Find a steady pulse'],
-    ];
-    $('activity-cards').innerHTML = cards
-      .map(
-        ([id, m, icon, title, detail]) =>
-          `<button class="activity-card" data-activity="${id}" data-quiz-mode="${m}" aria-pressed="${a.activity === id && (id !== 'quiz' || (m === 'notes' ? mode !== 'chords' : mode === 'chords'))}"><span class="activity-symbol" aria-hidden="true">${icon}</span><strong>${title}</strong><small>${detail}</small></button>`,
-      )
-      .join('');
-    $('activity-cards').onclick = (e) => {
-      const b = e.target.closest('[data-activity]');
-      if (b) this.select(b.dataset.activity, b.dataset.quizMode);
-    };
+    for (const button of $('activity-cards').querySelectorAll('[data-activity]')) {
+      const { activity, quizMode } = button.dataset;
+      const selected = activity === a.activity && (activity !== 'quiz' || quizMode === (mode === 'chords' ? 'chords' : 'notes'));
+      button.setAttribute('aria-pressed', String(selected));
+    }
     document
       .querySelectorAll('[data-tab]')
       .forEach((b) =>
@@ -315,26 +317,31 @@ export class Studio {
     $('today-stats').hidden = facts.length === 0;
     $('today-stats').innerHTML = facts.map(([value,label]) => `<div class="mini-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
     const training = a.activity !== 'quiz';
-    $('setup-quick-controls').hidden = !training;
+    $('setup-clef-label').hidden = training && a.activity !== 'sight';
+    for (const field of document.querySelectorAll('[data-practice-timed]')) field.hidden = !training;
+    $('setup-content-label').hidden = training;
+    $('setup-questions-label').hidden = training;
+    $('setup-clef').value = state.settings.clef;
+    $('setup-content').value = state.settings.mode;
+    $('setup-questions').value = state.settings.length;
+    $('setup-chord-types').hidden = training || mode === 'notes';
+    const types = QUALITIES.filter(quality => state.settings.qualities.includes(quality.id));
+    $('setup-chord-summary').textContent = types.length <= 2 ? types.map(quality => quality.name).join(', ') : `${types.length} selected`;
+    for (const field of document.querySelectorAll('[data-practice-exercise]')) field.hidden = !a.exercise;
     $('setup-behavior-label').hidden = a.activity !== 'sight';
-    $('setup-bpm').value = a.settings.bpm;
-    $('setup-behavior').value = a.settings.behavior;
+    for (const key of QUICK_TRAINING_FIELDS) $(`setup-${key}`).value = a.settings[key];
     const wantsMidi =
       a.activity === 'sight' ||
       (a.activity === 'rhythm' && a.settings.input === 'midi') ||
       (a.activity === 'quiz' && state.settings.inputMode === 'midi');
-    $('home-staff').hidden = training && a.activity !== 'sight';
+    $('home-staff').hidden = training;
     $('setup-input-status').textContent = wantsMidi
       ? a.midi.status.connected
         ? `MIDI connected · ${a.midi.status.selectedName}`
         : a.midi.status.state === 'unsupported'
           ? 'MIDI unavailable · use a supported browser'
           : 'MIDI selected · connect your keyboard to start'
-      : a.activity === 'metronome'
-        ? 'Listen and follow the beat'
-        : a.activity === 'rhythm'
-          ? 'Touch pad · any MIDI key works when MIDI is selected'
-          : 'Tap names · choose the written spelling, without octave numbers';
+      : '';
     this.progress();
     this.appearance();
   }
@@ -343,10 +350,8 @@ export class Studio {
       r = this.recommendation;
     if (r.kind === 'resume' || r.kind === 'review') {
       a.state.activity = 'quiz';
-      if (r.kind === 'resume')
-        this.getState().settings.mode = this.getState().active.settings.mode;
       saveTraining(a.state);
-      this.start();
+      this.start({ resumeSaved: r.kind === 'resume' });
     } else if (r.kind === 'bar') {
       a.state.activity = r.result.activity;
       saveTraining(a.state);

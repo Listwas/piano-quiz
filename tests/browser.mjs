@@ -138,10 +138,8 @@ try {
     assert.deepEqual((await state(page)).settings, before);
   });
   await check('chord quiz requires root plus quality, and Skip briefly reveals the bass chord', async () => {
-    await page.locator('#customize-button').click();
-    await page.locator('[data-mode="chords"]').click();
-    await page.locator('[data-clef="bass"]').click();
-    await page.locator('#apply-button').click();
+    await page.locator('#setup-content').selectOption('chords');
+    await page.locator('#setup-clef').selectOption('bass');
     await page.locator('#start-button').click();
     const item = (await state(page)).active.current;
     await page.locator(`#letters [data-letter="${item.tones[0].letter}"]`).click();
@@ -203,8 +201,8 @@ try {
         const p = await c.newPage();
         await p.goto(base);await openPractice(p);
         if (mode === 'chords') {
-          await p.locator('#customize-button').click();
-          await p.locator('[data-mode="chords"]').click();
+          await p.locator('#setup-content').selectOption('chords');
+          await p.locator('#setup-chord-types').click();
           while (await p.locator('#quality-options button[aria-pressed="false"]').count()) await p.locator('#quality-options button[aria-pressed="false"]').first().click();
           await p.locator('#apply-button').click();
         }
@@ -268,9 +266,9 @@ try {
     const p = await c.newPage();
     p.on('pageerror', error => report.errors.push(error.message));
     await p.goto(base);await openPractice(p);
+    await p.locator('#setup-content').selectOption('mixed');
+    await p.locator('#setup-clef').selectOption('mixed');
     await p.locator('#customize-button').click();
-    await p.locator('[data-mode="mixed"]').click();
-    await p.locator('[data-clef="mixed"]').click();
     await p.locator('[data-preset="all"]').click();
     await p.locator('#apply-button').click();
     await p.locator('#start-button').click();

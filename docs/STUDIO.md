@@ -1,6 +1,6 @@
 # Studio redesign
 
-Today suggests a short session, Practice configures a chosen activity, and Progress opens earlier results. Exercises use a fixed footer and share the notation surface and feedback styles. Sight-reading Practice retries a failed bar. Flow previews the next measure, keeps the same clock through mistakes, and saves a separate comparison setup.
+Today suggests a short session, Practice shows the selected exercise’s clef, question or bar count, content, input and timing controls as applicable, and Progress opens earlier results. More options holds timing tolerance, between-bar pacing, click volume and calibration. Dedicated pickers hold exact spellings, octaves and chord types. Exercises use a fixed footer and share the notation surface and feedback styles. Sight-reading Practice retries a failed bar. Flow previews the next measure, keeps the same clock through mistakes, and saves a separate comparison setup.
 
 Studio adds `pianoQuiz.studio.v2` for appearance, quiz reports, and review schedules by input. It retains the existing quiz and training keys. On first load it copies both legacy strings into `pianoQuiz.backup.preStudio.v1` before writing to either. An old between-bar pace of `flow` still means no gap in Practice. Only the new `continue` behavior selects Flow. A successful drill keeps the original report and adds its practised tempo.
 

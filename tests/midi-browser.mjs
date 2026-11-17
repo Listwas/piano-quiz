@@ -181,10 +181,12 @@ try {
   await check('MIDI chords grade full overlapping phrases and ignore paused, feedback and held keys', async () => {
     const page = await setup();
     await connect(page);
+    await page.locator('#setup-content').selectOption('chords');
     await page.locator('#customize-button').click();
-    await page.locator('[data-mode="chords"]').click();
     await page.locator('[data-preset="none"]').click();
     await page.locator('[data-note="C"]').click();
+    await page.locator('#apply-button').click();
+    await page.locator('#setup-chord-types').click();
     await page.locator('#quality-options [data-quality="maj"]').click();
     await page.locator('#quality-options [data-quality="min"]').click();
     await page.locator('#quality-options [data-quality="dom7"]').click();

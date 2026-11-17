@@ -1,4 +1,4 @@
-import { openPractice, selectActivity } from './studio-navigation.mjs';
+import { setPracticeTempo, openPractice, selectActivity } from './studio-navigation.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
@@ -40,8 +40,8 @@ try {
   await check('initial count-in never adds a phantom beat in either meter or after resume', async () => {
     for (const meter of [3,4]) {
       await home(); await selectActivity(page,'rhythm');
-      await page.locator('#customize-button').click(); await page.selectOption('#training-meter',String(meter));
-      await page.locator('#training-bpm').fill('200'); await page.locator('#training-form button[type=submit]').click();
+      await page.selectOption('#setup-meter',String(meter));
+      await setPracticeTempo(page, 200);
       await page.locator('#start-button').click();
       for (let attempt=0; attempt<2; attempt++) {
         await page.evaluate(() => {
