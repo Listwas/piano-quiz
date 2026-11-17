@@ -6,9 +6,9 @@ Project: `piano-quiz`, production branch `main`, account
 `3bbe51d8973c406839b993e52753a08c`. This is an independent static Pages app;
 the original `random-piano` app is unchanged.
 
-Release `7dd374b5692487` was published as production deployment
-`08e17e65-1ded-45a9-8170-557216871752`:
-https://08e17e65.piano-quiz.pages.dev/
+Release `8741a3ae49a8f0` was published as production deployment
+`b1640236-e6c3-4e00-8b2b-0d42252a6327`:
+https://b1640236.piano-quiz.pages.dev/
 
 ## Publish an update
 
@@ -22,7 +22,7 @@ npm run deploy
 
 `npm run deploy` rebuilds and publishes `dist/` to the existing project. The
 deployment script verifies account access with `wrangler whoami` first and pins
-the account and project. It does not publish or modify a Worker.
+the account and project. For a preview, run `PIANO_PAGES_BRANCH=studio-redesign npm run deploy`.
 
 Wrangler uses the normal OAuth credentials outside this repository. If the login
 cannot refresh, run `npx wrangler login` in an interactive terminal. No credentials

@@ -1,48 +1,21 @@
 # Verification
 
-Touch quiz confirmation and accidental-skip guards published on 2026-11-17.
+The Studio release `8741a3ae49a8f0` is live on [Piano Quiz](https://piano-quiz.pages.dev/). The [production deployment](https://b1640236.piano-quiz.pages.dev/) was built from `ab1a108`. The [asset comparison](studio-checks/live-assets.json) verified all 50 served files against the local build.
 
-- Play: **https://piano-quiz.pages.dev/**
-- Release: `7dd374b5692487`
-- Production deployment: `08e17e65-1ded-45a9-8170-557216871752`
-- Immutable URL: https://08e17e65.piano-quiz.pages.dev/
-- Repository: https://github.com/Listwas/piano-quiz
+| Check | Result |
+| --- | --- |
+| Unit tests | 110 passed |
+| Studio flows in Chromium, Firefox, and WebKit | 9 in each engine ([Chromium](studio-checks/chromium.json), [Firefox](studio-checks/firefox.json), [WebKit](studio-checks/webkit.json)) |
+| Preview and production Studio flows | 9 on [preview](studio-checks/preview.json), 9 on [production](studio-checks/production.json) |
+| Touch quiz and pointer capture | [144 passed](studio-checks/touch-quiz-chromium.json) |
+| Safe areas, pinch and rotation | [10 passed](studio-checks/viewport-chromium.json) |
+| Earlier integration checks during the redesign | [Quiz and offline](studio-checks/browser-chromium.json), [MIDI](studio-checks/midi-chromium.json), [training](studio-checks/training-chromium.json), [fullscreen and wake lock](studio-checks/display-chromium.json), [update](studio-checks/update-chromium.json), [staff scale](studio-checks/staff-scale.json), [notation and contrast](studio-checks/polish-chromium.json) |
 
-## Current release
+A separate production check exported, restored and imported seeded data. The exact spelling (D♭), selected octaves and +42 ms MIDI adjustment survived the round trip. Integration reports list the build they tested. The phone and tablet profiles simulate dimensions, safe areas, rotation and visual viewport changes. Physical devices and instrument timing need a hardware check. Native Chromium also graded a note through the host's virtual MIDI loopback.
 
-**106 unit tests passed.** Touch answers accept a written note name independently
-of its octave; MIDI still requires the displayed register. The reported
-`D · D3 · Moving on` caption identifies the unanswered/skip path.
+Screenshots: [Today](images/studio-today.png), [Practice on tablet](images/studio-practice.png), [quiz](images/studio-quiz.png), and [Flow report](images/studio-flow.png).
 
-After selecting an answer, the quiet action now clears it without grading or
-advancing. Only an empty selection can be skipped. Skipped questions show
-`Skipped · Answer: D3` with neutral notation. They remain unanswered in the
-first-attempt score.
-
-Check snapshots its answer and question on pointer-down, captures the pointer,
-and submits on release even if the layout moved beneath a stationary finger.
-Dragging away cancels it. Its compatibility click cannot activate newly
-displayed feedback actions; keyboard Enter still works.
-
-| Check | Result | Origin |
-| --- | --- | --- |
-| Unit suite, including all-register touch/MIDI distinction | [106 passed](unit.json) | Source |
-| All 136 spellings/registers, six skip/clear cases, moving layout, drag cancellation and keyboard | [144 passed](touch-quiz-chromium.json) | Local Chromium |
-| D/D♯/D♭ across all registers and six clear/skip layouts | [30 passed](touch-quiz-firefox.json) | Local Firefox |
-| Same D spelling/register and clear/skip checks | [30 passed](touch-quiz-webkit.json) | Local WebKit |
-| General quiz, themes, persistence, offline and audio checks | [20 passed](touch-general-chromium.json) | Local Chromium |
-| Phone/tablet safe areas, rotation and action alignment | [10 passed](touch-viewport-chromium.json) | Local Chromium |
-| D range, clear/skip and pointer confirmation checks | [32 passed](live-touch-quiz-chromium.json) | Production |
-
-All browser tests use headless engines and simulated viewports. The moving-layout
-case sends real Chromium touch events and deliberately moves the buttons between
-press and release. No physical Honor MagicPad 2 or iPhone was attached, so the
-original device's exact touch sequence is not reproduced. No uncaught page errors
-were recorded in the passing checks.
-
-Earlier training, calibration and bar-practice features were not changed. Their
-wider exercise suites were not rerun for this quiz fix; see the
-[practice-progress audit](https://github.com/Listwas/piano-quiz/blob/d5ffddca8d08d9bb65bc9e6d308b70ce92143fbb/docs/VERIFICATION.md).
+The earlier touch quiz release and its full checks are available in the [pre-Studio branch](https://github.com/Listwas/piano-quiz/tree/backup/pre-studio-2026-11-17).
 
 ## Earlier feature baseline
 

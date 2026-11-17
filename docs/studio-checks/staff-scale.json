@@ -1,0 +1,28 @@
+{
+  "build": "64b595f4bce172",
+  "origin": "http://127.0.0.1:8421/",
+  "testedAt": "2026-11-17T20:08:03.461Z",
+  "checks": [
+    "430x932, touch, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "430x932, touch, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "430x932, midi, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "430x932, midi, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "800x1280, touch, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "800x1280, touch, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "800x1280, midi, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "800x1280, midi, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "1280x800, touch, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "1280x800, touch, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "1280x800, midi, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "1280x800, midi, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "932x430, touch, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "932x430, touch, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "932x430, midi, light: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works",
+    "932x430, midi, dark: equal staff spacing and notehead sizes for seven notes and a chord, extreme notes fit, Pause/Resume works"
+  ],
+  "errors": [],
+  "limits": [
+    "Tablet and phone viewports and the MIDI connection are simulated; physical devices are not attached."
+  ],
+  "result": "passed"
+}
