@@ -2769,3 +2769,177 @@ dialog::backdrop {
   #home-sight-tools { margin: 0; }
   #home-sight-tools button { min-height: 24px; padding-block: 3px; }
 }
+
+/* Let the options scroll independently when the viewport is short. */
+.practice-card {
+  max-height: 100%;
+}
+.practice-options {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 2px;
+}
+.practice-options > * {
+  flex-shrink: 0;
+}
+.practice-options > p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.practice-options > p:empty {
+  display: none;
+}
+.practice-options .setup-staff {
+  flex: none;
+  flex-direction: column;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  color: var(--paper-ink);
+}
+#home-staff {
+  height: 72px;
+}
+#home-staff .staff {
+  height: 100%;
+}
+#setup-example-caption {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 6px 4px;
+  text-align: center;
+}
+#setup-volume {
+  accent-color: var(--accent);
+}
+#progress-content {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+#progress-content > * {
+  margin: 0;
+}
+#progress-full-history {
+  margin-top: 8px;
+}
+.settings-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.settings-field input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.settings-field input[type='number'] {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Inset focus is visible against clipped edges of scrolling forms. */
+dialog :is(button, input, select, a):focus-visible,
+.practice-options :is(button, input, select):focus-visible {
+  outline-offset: -4px;
+}
+.choice-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  position: relative;
+  min-width: 0;
+}
+.report-filter .choice-field {
+  flex: 1;
+}
+.choice-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+  padding-inline-end: 24px !important;
+}
+.tempo-controls .choice-field select {
+  width: 75px;
+}
+.choice-trigger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  border-radius: 10px;
+  outline-offset: -4px;
+}
+.choice-trigger:active:not(:disabled) {
+  transform: none;
+}
+.choice-trigger::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: calc(50% - 5px);
+  width: 6px;
+  height: 6px;
+  border: solid var(--muted);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.choice-field:has(#answer-quality-picker) .choice-trigger {
+  top: 8px;
+}
+#choice-dialog {
+  width: min(390px, calc(100% - var(--safe-left) - var(--safe-right) - 24px));
+  display: none;
+}
+#choice-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+#choice-dialog .dialog-heading {
+  margin-bottom: 12px;
+}
+#choice-options {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+}
+.choice-option {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 1fr 1em;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  text-align: start;
+  line-height: 1.4;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.choice-option[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+.choice-option[aria-pressed='true']::after {
+  content: '✓';
+}
+@media (max-width: 400px) {
+  #setup-quick-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.pattern-field {
+  grid-column: span 2;
+}

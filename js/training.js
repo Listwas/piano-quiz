@@ -11,6 +11,10 @@ export function normalizeTraining(raw) {
     for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','steady','eighths','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], behavior:['retry-bar','continue'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
     if (typeof raw.muted === 'boolean') settings.muted = raw.muted;
   }
+  settings.patterns = Object.fromEntries(['rhythm', 'sight'].map(activity => {
+    const pattern = raw?.patterns?.[activity];
+    return [activity, Object.hasOwn(RHYTHM_LEVELS, pattern) ? pattern : settings.complexity];
+  }));
   return settings;
 }
 const issueReasons = { pitch:'Wrong note', missed:'Missed note', offBeat:'Off the beat', short:'Too short', long:'Too long', rest:'Played during a rest' };
@@ -117,10 +121,10 @@ export function saveTraining(state) {
 }
 
 export const RHYTHM_LEVELS = {
-  simple: { name:'Starter', values:[2,1], restChance:0, paired:false },
-  steady: { name:'Steady', values:[4,2,1], restChance:.3, paired:false },
-  eighths: { name:'Moving', values:[2,1,.5], restChance:.3, paired:true },
-  mixed: { name:'Challenge', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
+  simple: { name:'Starter', description:'Quarter and half notes', values:[2,1], restChance:0, paired:false },
+  steady: { name:'Steady', description:'Long holds and rests', values:[4,2,1], restChance:.3, paired:false },
+  eighths: { name:'Moving', description:'Eighth-note pairs', values:[2,1,.5], restChance:.3, paired:true },
+  mixed: { name:'Challenge', description:'Dotted notes and offbeats', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
 };
 const patternCache = new Map();
 function rhythmPatterns(level, meter) {

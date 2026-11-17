@@ -1,5 +1,5 @@
 import { BeatClock } from './timing.js';
-import { loadTraining, saveTraining, normalizeTraining, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
+import { loadTraining, saveTraining, normalizeTraining, RHYTHM_LEVELS, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
 import { renderMeasure, scoreX } from './score.js';
 import { renderTrainingDetails, renderTrainingReport } from './training-report.js';
 import { groupSessions, historyLabel, renderHistoryGroup } from './training-history.js';
@@ -12,13 +12,23 @@ export class Activities {
   constructor({ goHome, showTraining, openDialog, openNotes, renderHome, getQuizSettings, midi }) {
     Object.assign(this, { goHome, showTraining, openDialog, openNotes, renderHome, getQuizSettings, midi });
     this.state = loadTraining();
+    for (const id of ['setup-complexity', 'training-complexity']) {
+      $(id).replaceChildren(...Object.entries(RHYTHM_LEVELS).map(([value, level]) => new Option(level.description, value)));
+    }
+    for (const [id, key] of [['click-volume-setting', 'volume'], ['timing-offset-setting', 'offset']]) {
+      $(id).onchange = event => {
+        this.updateSettings({ [key]: Number(event.target.value) });
+        this.syncSoundSettings();
+        this.sound();
+        renderHome();
+      };
+    }
     this.calibration = new MidiCalibration({midi,openDialog,getOffset:()=>this.state.settings.offset,applyOffset:offset=>{
-      this.state.settings.offset = offset;
-      $('training-offset').value = offset;
-      return saveTraining(this.state);
+      const saved = this.updateSettings({ offset });
+      this.syncSoundSettings();
+      return saved;
     }});
     $('midi-calibrate').onclick = () => this.calibration.open('settings-dialog');
-    $('training-calibrate').onclick = () => this.calibration.open('training-dialog');
     this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: () => this.pause('Audio stopped. Tap Resume when ready.',true) });
     this.active = false;
     this.starting = false;
@@ -69,9 +79,11 @@ export class Activities {
     $('live-meter').onchange = event => { this.settings.meter = Number(event.target.value); this.clock.change(this.settings.bpm, this.settings.meter); saveTraining(this.state); this.refresh(); };
     $('training-form').onsubmit = event => {
       event.preventDefault();
-      const old = this.settings;
-      this.state.settings = normalizeTraining({ ...old, ...Object.fromEntries(['bpm','meter','volume','offset','bars'].map(key => [key,Number($(`training-${key}`).value)])), ...Object.fromEntries(['complexity','input','pace','accuracy','behavior'].map(key => [key,$(`training-${key}`).value])) });
-      $('training-dialog').close(); saveTraining(this.state); renderHome();
+      const fields = [...$('training-form').querySelectorAll('input, select')];
+      this.updateSettings(Object.fromEntries(fields.filter(field => !field.closest('[hidden]')).map(field => [
+        field.id.replace('training-', ''), field.tagName === 'INPUT' || ['meter', 'bars'].includes(field.id.replace('training-', '')) ? Number(field.value) : field.value,
+      ])));
+      $('training-dialog').close(); renderHome();
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
     $('training-touchpad').onpointerdown = event => {
@@ -96,6 +108,23 @@ export class Activities {
 
   get activity() { return this.state.activity; }
   get settings() { return this.drill?.settings ?? this.state.settings; }
+  get complexity() { return this.settings.patterns[this.activity] ?? this.settings.complexity; }
+
+  updateSettings(updates) {
+    const settings = { ...this.state.settings, ...updates };
+    if (this.exercise && updates.complexity) {
+      settings.patterns = { ...settings.patterns, [this.activity]: updates.complexity };
+    }
+    this.state.settings = normalizeTraining(settings);
+    return saveTraining(this.state);
+  }
+
+  syncSoundSettings() {
+    $('click-volume-setting').value = this.state.settings.volume;
+    $('timing-offset-setting').value = this.state.settings.offset;
+    this.calibration.sync();
+  }
+
   get flow() { return this.activity === 'sight' && !this.drill && this.settings.behavior === 'continue'; }
   get exercise() { return this.activity === 'rhythm' || this.activity === 'sight'; }
   get requiresMidi() { return this.activity === 'sight' || this.activity === 'rhythm' && this.settings.input === 'midi'; }
@@ -132,28 +161,22 @@ export class Activities {
     $('start-button').disabled = !this.supported;
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
     this.inputControls();
-    if (quiz) { $('customize-button').textContent = 'Notes & octaves ↗'; return; }
+    $('customize-button').hidden = !quiz;
+    if (quiz) return;
     $('practice-title').textContent = labels[this.activity];
     $('practice-detail').textContent = this.supported ? '' : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
-    $('customize-button').textContent = 'More options ↗';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
     $('resume-note').hidden = true;
   }
 
-  configure({ quickOnPractice = false } = {}) {
+  configure() {
     this.pause();
-    $('training-setup-title').textContent = quickOnPractice ? 'More options' : `${labels[this.activity]} setup`;
-    for (const key of ['bpm','meter','volume','offset','bars','complexity','input','pace','accuracy','behavior']) $(`training-${key}`).value = this.settings[key];
+    $('training-setup-title').textContent = `${labels[this.activity]} setup`;
+    for (const key of ['bpm','meter','bars','input','pace','accuracy','behavior']) $(`training-${key}`).value = this.settings[key];
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    for (const field of document.querySelectorAll('[data-training-quick]')) {
-      const visibleInActivity =
-        (!field.hasAttribute('data-exercise-setting') || this.exercise) &&
-        (!field.hasAttribute('data-sight-setting') || this.activity === 'sight') &&
-        (!field.hasAttribute('data-rhythm-setting') || this.activity === 'rhythm');
-      field.hidden = quickOnPractice || !visibleInActivity;
-    }
+    $('training-complexity').value = this.complexity;
     $('training-pace').closest('label').hidden = !this.exercise || this.flow;
     $('training-setup-help').textContent = this.activity === 'metronome' ? 'Tempo changes apply on the next bar.' : '';
     this.openDialog('training-dialog');
@@ -216,10 +239,10 @@ export class Activities {
       try {
         if (this.drill) this.phrase = this.drill.phrase;
         else {
-          const key = `${this.activity}:${this.settings.complexity}:${this.settings.meter}`;
+          const key = `${this.activity}:${this.complexity}:${this.settings.meter}`;
           const quizSettings = this.getQuizSettings();
-          this.phrase = generatePhrase(this.settings,quizSettings,{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
-          this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,pace:this.flow?'flow':this.settings.pace},quizSettings);
+          this.phrase = generatePhrase({...this.settings, complexity:this.complexity},quizSettings,{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
+          this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,complexity:this.complexity,pace:this.flow?'flow':this.settings.pace},quizSettings);
           this.phraseHistory.set(key,this.phrase);
         }
         this.session = new ExerciseSession(this.phrase,{...this.settings,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});

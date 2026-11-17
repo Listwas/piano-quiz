@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium, firefox, webkit } from 'playwright';
 import { freshState } from '../js/storage.js';
 
@@ -15,7 +15,7 @@ const profiles = [
   ['small-phone',320,568,0,0,0],
   ['iphone',430,932,59,34,0],
   ['iphone-landscape',932,430,0,21,59],
-  ['tablet',800,1280,0,0,0],
+  ['honor-magicpad-2',800,1280,0,0,0],
   ['tablet-landscape',1280,800,0,0,0],
   ['compact-tablet',1024,600,0,0,0],
   ['desktop',1440,900,0,0,0],
@@ -178,6 +178,9 @@ try {
   checks.push('Delete all data confirms, supports cancellation, clears the backup and resets other tabs');
 
   const quick = await open({ width: 320, height: 568 });
+  await tap(quick.page, '[data-tab=progress]');
+  assert.equal(await quick.page.locator('#progress-full-history').count(), 0);
+  assert.ok(await quick.page.locator('.empty-state').isVisible());
   await tap(quick.page, '[data-tab=home]');
   await quick.page.locator('#setup-clef').selectOption('bass');
   await quick.page.locator('#setup-questions').selectOption('20');
@@ -205,16 +208,68 @@ try {
   await tap(quick.page, '.activity-card[data-activity=rhythm]');
   await quick.page.locator('#setup-bars').selectOption('8');
   await quick.page.locator('#setup-complexity').selectOption('eighths');
-  await tap(quick.page, '#customize-button');
-  assert.equal(await quick.page.locator('#training-complexity').isVisible(), false);
-  assert.equal(await quick.page.locator('#training-offset').isVisible(), true);
-  await tap(quick.page, '#training-dialog [data-close]');
+  assert.equal(await quick.page.locator('#customize-button').isVisible(), false);
+  await quick.page.locator('#setup-accuracy').selectOption('strict');
+  await quick.page.locator('#setup-pace').selectOption('flow');
+  await tap(quick.page, '.activity-card[data-activity=sight]');
+  assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'simple');
+  assert.match(await quick.page.locator('#home-sight-tools').innerText(), /MIDI keyboard only/);
+  await quick.page.locator('#setup-complexity').selectOption('mixed');
+  await tap(quick.page, '.activity-card[data-activity=rhythm]');
   await quick.page.reload();
   await tap(quick.page, '[data-tab=home]');
   assert.equal(await quick.page.locator('#setup-bars').inputValue(), '8');
   assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'eighths');
+  assert.equal(await quick.page.locator('#setup-accuracy').inputValue(), 'strict');
+  assert.equal(await quick.page.locator('#setup-pace').inputValue(), 'flow');
+  await tap(quick.page, '.activity-card[data-activity=sight]');
+  assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'mixed');
+  await tap(quick.page, '#settings-button');
+  const exported = quick.page.waitForEvent('download');
+  await tap(quick.page, '#data-export');
+  const exportPath = await (await exported).path();
+  await tap(quick.page, '#settings-dialog [data-close]');
+  await quick.page.locator('#setup-complexity').selectOption('steady');
+  await tap(quick.page, '#settings-button');
+  await quick.page.locator('#data-import').setInputFiles({
+    name: 'progress.json', mimeType: 'application/json', buffer: await readFile(exportPath),
+  });
+  await quick.page.locator('#recommendation-start').waitFor();
+  assert.deepEqual((await read(quick.page, 'training.v1')).settings.patterns, {rhythm:'eighths',sight:'mixed'});
   await quick.context.close();
-  checks.push('Inline choices apply at Start and persist, Today resumes an unfinished quiz, and More options omits duplicate fields');
+  checks.push('Inline choices persist, including distinct Rhythm and Sight-reading patterns, and Today resumes an unfinished quiz');
+
+  const picker = await open({width:430,height:932},true);
+  await tap(picker.page, '[data-tab=home]');
+  await tap(picker.page, '.activity-card[data-activity=metronome]');
+  await tap(picker.page, '#setup-meter + .choice-trigger');
+  await picker.page.locator('#choice-dialog button[aria-pressed=true]').press('ArrowDown');
+  await picker.page.locator('#choice-dialog button:focus').press('Enter');
+  assert.equal(await picker.page.locator('#setup-meter').inputValue(), '3');
+  await picker.page.locator('#setup-meter + .choice-trigger:focus').waitFor();
+  await tap(picker.page, '#start-button');
+  await tap(picker.page, '#training-configure');
+  await tap(picker.page, '#training-meter + .choice-trigger');
+  await picker.page.setViewportSize({width:932,height:430});
+  await within(picker.page, '#choice-dialog button[aria-pressed=true]', 0);
+  if (engine === 'chromium') await picker.page.screenshot({path:output+'/rotated-picker.png'});
+  const selectedChoice = picker.page.locator('#choice-dialog button[aria-pressed=true]');
+  await selectedChoice.press('Escape');
+  // WebKit gives the browser's fullscreen exit priority over the open dialog.
+  if (engine === 'webkit' && await selectedChoice.isVisible()) {
+    await picker.page.waitForFunction(() => !document.fullscreenElement && !document.webkitFullscreenElement);
+    await selectedChoice.press('Escape');
+  }
+  assert.equal(await picker.page.locator('#training-dialog').isVisible(), true);
+  const focusedField = picker.page.locator('#training-meter + .choice-trigger:focus');
+  await focusedField.waitFor();
+  assert.ok(await focusedField.evaluate(field => parseInt(getComputedStyle(field).outlineOffset) < 0));
+  await tap(picker.page, '#training-meter + .choice-trigger');
+  await tap(picker.page, '#choice-options button:text-is("4/4")');
+  await tap(picker.page, '#training-form button[type=submit]');
+  assert.equal((await read(picker.page, 'training.v1')).settings.meter, 4);
+  await picker.context.close();
+  checks.push('The themed picker supports keyboard and pointer selection, rotation, Escape and focus restoration inside Set up');
 
   const flow=await open({width:430,height:932},false,true);
   await tap(flow.page,'[data-tab=home]');

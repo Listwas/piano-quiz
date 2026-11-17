@@ -365,3 +365,10 @@ test('dotted notes and rests render their dots with the correct open or filled h
  let svg=renderScore(p,0,new Map(),0);assert.equal((svg.match(/class="score-dot"/g)||[]).length,2);assert.ok(!svg.includes('score-head-open'));
  p.events=[{...p.events[0],durationBeats:3},{...p.events[1],beat:3,durationBeats:1}];svg=renderScore(p,0,new Map(),0);assert.match(svg,/score-head-open/);assert.match(svg,/score-dot/);
 });
+
+test('previous rhythm level initializes both pattern choices and separate choices survive storage', () => {
+  const legacy = normalizeTraining({complexity:'eighths'});
+  assert.deepEqual(legacy.patterns,{rhythm:'eighths',sight:'eighths'});
+  const data = JSON.stringify({activity:'sight',settings:{...legacy,patterns:{rhythm:'mixed',sight:'steady'}}});
+  assert.deepEqual(loadTraining({getItem:()=>data}).settings.patterns,{rhythm:'mixed',sight:'steady'});
+});

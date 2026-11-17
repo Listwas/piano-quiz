@@ -1,6 +1,6 @@
 import { Studio, backupBeforeStudio } from './studio.js';
 import { noteHint, recordQuizSession, recordLearningAnswer, loadStudio } from './learning.js';
-import { LETTERS, makeTone } from './notes.js';
+import { LETTERS } from './notes.js';
 import { QUALITIES } from './chords.js';
 import { poolFor, createRound, recordAnswer, retryQuestion, advance, answerName, localDay, NOTE_OPTIONS, selectedNamesFor, OCTAVE_OPTIONS, octavesFor, rangeKey } from './quiz.js';
 import { loadState, saveState, completeRound, observeProgressReset, RESET_KEY } from './storage.js';
@@ -11,6 +11,7 @@ import { fitViewport } from './viewport.js';
 import { Activities } from './activities.js';
 import { loadTraining, saveTraining } from './training.js';
 import { PracticeDisplay } from './display.js';
+import { installChoicePicker } from './choices.js';
 
 fitViewport();
 
@@ -38,6 +39,7 @@ let midiCueTimer;
 let activities;
 let studio;
 let questionCueTimer;
+let triedAutoFullscreen = false;
 const display = new PracticeDisplay({ onChange:renderDisplay });
 display.setEnabled(state.settings.keepAwake);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -109,6 +111,7 @@ function renderDisplay() {
   $('fullscreen-setting').textContent = label;
   $('fullscreen-setting').disabled = !supported && !active;
   $('fullscreen-status').textContent = display.fullscreenError ? 'Fullscreen was blocked. Tap Enter fullscreen to try again.' : active ? 'Fullscreen is on. Use the arrows above or your device’s Back gesture to leave.' : supported ? 'Hide browser controls and system bars while you practise.' : 'This browser does not offer fullscreen for the app. Installed apps use the screen mode allowed by your browser.';
+  $('auto-fullscreen-setting').checked = state.settings.autoFullscreen;
   $('wake-setting').checked = state.settings.keepAwake;
   $('wake-setting').disabled = !display.wakeSupported;
   const messages = { active:'Screen stays awake during practice.', requesting:'Keeping the screen awake…', denied:'Your device declined to keep the screen awake. Battery saver can prevent it.', released:'Your device released the screen lock. Retry to keep it awake.', idle:state.settings.keepAwake ? 'Automatically keeps the screen awake while a quiz or exercise is open.' : 'Your usual screen timeout applies.' };
@@ -439,7 +442,6 @@ $('midi-disconnect').onclick = () => midi.disconnect();
 $('midi-input').onchange = () => midi.select($('midi-input').value);
 renderMidi(midi.status);
 
-$('home-staff').innerHTML = renderStaff({ tones: [makeTone(2, 0, 4)] }, 'treble');
 $('letters').innerHTML = LETTERS.map((letter, i) => `<button data-letter="${i}" aria-label="${letter}" aria-pressed="false">${letter}</button>`).join('');
 $('pitch-options').innerHTML = [[0, 'Naturals'], [1, 'Sharps'], [-1, 'Flats']].map(([alteration, title]) => `<div class="note-group"><p class="eyebrow">${title}</p><div class="note-grid">${NOTE_OPTIONS.filter(note => note.alteration === alteration).map(note => `<button type="button" data-note="${note.name}" aria-pressed="false">${note.name}</button>`).join('')}</div></div>`).join('');
 $('octave-options').innerHTML = ['treble', 'bass'].map(clef => `<div id="${clef}-octaves" class="note-group"><p class="eyebrow">${clefName(clef)}</p><div class="octave-grid">${OCTAVE_OPTIONS[clef].map(octave => `<button type="button" data-range-clef="${clef}" data-octave="${octave}" aria-label="${clefName(clef)} octave ${octave}, C${octave} to B${octave}" aria-pressed="false">C${octave}–B${octave}</button>`).join('')}</div></div>`).join('');
@@ -482,7 +484,7 @@ $('pause-button').onclick = () => pause();
 $('resume-button').onclick = resume;
 for (const id of ['home-button', 'pause-home-button', 'result-home-button']) $(id).onclick = goHome;
 $('again-button').onclick = start;
-$('customize-button').onclick = () => activities.activity === 'quiz' ? openCustomize() : activities.configure({ quickOnPractice: true });
+$('customize-button').onclick = () => openCustomize();
 $('setup-chord-types').onclick = () => openCustomize(false, 'qualities');
 for (const [id, key] of [['setup-clef', 'clef'], ['setup-questions', 'length'], ['setup-content', 'mode']]) {
   $(id).onchange = event => {
@@ -494,18 +496,35 @@ for (const [id, key] of [['setup-clef', 'clef'], ['setup-questions', 'length'], 
 $('practice-settings-button').onclick = () => { $('settings-dialog').close(); openCustomize(false, 'full'); };
 $('about-button').onclick = () => { $('settings-dialog').close(); openDialog('about-dialog'); };
 $('settings-button').onclick = () => {
-  activities.calibration.sync();
+  activities.syncSoundSettings();
   studio.appearance();
   studio.syncDataActions();
   $('sound-setting').checked = state.settings.sound;
   openDialog('settings-dialog');
 };
-async function toggleFullscreen() { if (!await display.toggleFullscreen()) openDialog('settings-dialog'); }
+async function toggleFullscreen() {
+  triedAutoFullscreen = true;
+  if (!await display.toggleFullscreen()) openDialog('settings-dialog');
+}
+document.addEventListener('click', event => {
+  const startsPractice = event.target.closest('[data-tab="home"], #recommendation-edit, #recommendation-start, #start-button');
+  if (!startsPractice || !event.isTrusted || triedAutoFullscreen || !state.settings.autoFullscreen ||
+      !matchMedia('(pointer: coarse)').matches || !display.fullscreenSupported) return;
+  triedAutoFullscreen = true;
+  if (!display.fullscreen && !matchMedia('(display-mode: fullscreen)').matches && !navigator.standalone) {
+    void display.toggleFullscreen();
+  }
+});
+$('auto-fullscreen-setting').onchange = event => {
+  state.settings.autoFullscreen = event.target.checked;
+  persist();
+};
 $('fullscreen-button').onclick = toggleFullscreen;
 $('fullscreen-setting').onclick = () => { $('settings-dialog').close(); void toggleFullscreen(); };
 $('wake-setting').onchange = () => { state.settings.keepAwake = $('wake-setting').checked; persist(); display.setEnabled(state.settings.keepAwake); };
 $('wake-retry').onclick = () => display.sync();
 document.querySelectorAll('[data-close]').forEach(button => { button.onclick = () => $(button.dataset.close).close(); });
+installChoicePicker();
 for (const [group, key] of [['mode-options', 'mode'], ['clef-options', 'clef'], ['length-options', 'length']]) $(group).onclick = event => {
   const button = event.target.closest(`[data-${key}]`);
   if (button) { draft[key] = key === 'length' ? Number(button.dataset[key]) : button.dataset[key]; renderDraft(); }

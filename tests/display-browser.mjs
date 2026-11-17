@@ -7,9 +7,9 @@ const engine=process.env.BROWSER||'chromium',origin=process.env.PIANO_URL||'http
 const report={engine,origin,build:JSON.parse(await readFile('dist/version.json')).version,testedAt:new Date().toISOString(),checks:[],errors:[],limits:['Wake lock lifecycle and fullscreen refusal are simulated. Native fullscreen is checked separately when supported. Physical Honor MagicPad 2 system bars and screen timeout are not verified by headless tests.']};
 const browser=await {chromium,firefox,webkit}[engine].launch({headless:true,...(engine==='chromium'?{executablePath:'/usr/bin/chromium',args:['--mute-audio']}: {})});
 const contexts=[];
-async function setup(mode='ready',fullscreen='fake') {
+async function setup(mode='ready',fullscreen='fake',automatic=false) {
   const context=await browser.newContext({viewport:{width:800,height:1280},hasTouch:true,reducedMotion:'reduce'});contexts.push(context);
-  await context.addInitScript(({mode,fullscreen})=>{
+  await context.addInitScript(({mode,fullscreen,automatic})=>{
     const test=window.displayTest={requests:0,locks:[],fullRequests:[],exits:0};
     if(mode==='native'){
       if(navigator.wakeLock){const request=navigator.wakeLock.request.bind(navigator.wakeLock);navigator.wakeLock.request=async type=>{test.requests++;const lock=await request(type);test.locks.push(lock);return lock;};}
@@ -21,6 +21,9 @@ async function setup(mode='ready',fullscreen='fake') {
     Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>({inputs:new Map([[port.id,port]])})});
     let hidden=false;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});
     test.hide=value=>{hidden=value;document.dispatchEvent(new Event('visibilitychange'));};
+    if (!automatic && !localStorage.getItem('pianoQuiz.state.v1')) {
+      localStorage.setItem('pianoQuiz.state.v1', JSON.stringify({version:1,settings:{autoFullscreen:false}}));
+    }
     if(fullscreen==='native')return;
     let element=null;Object.defineProperty(document,'fullscreenEnabled',{configurable:true,value:fullscreen!=='unsupported'});
     Object.defineProperty(document,'fullscreenElement',{configurable:true,get:()=>element});
@@ -30,7 +33,7 @@ async function setup(mode='ready',fullscreen='fake') {
     };
     Element.prototype.webkitRequestFullscreen=undefined;
     document.exitFullscreen=async()=>{element=null;test.exits++;document.dispatchEvent(new Event('fullscreenchange'));};
-  },{mode,fullscreen});
+  },{mode,fullscreen,automatic});
   const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);await openPractice(page);return page;
 }
 async function check(label,run){await run();report.checks.push(label);console.log('PASS '+label);}
@@ -85,6 +88,25 @@ try{
     const denied=await setup('denied','denied');await denied.locator('#fullscreen-button').click();await denied.waitForFunction(()=>document.getElementById('settings-dialog').open);assert.match(await denied.locator('#fullscreen-status').innerText(),/blocked/);
     await denied.locator('[data-close="settings-dialog"]').click();await denied.locator('#start-button').click();await denied.locator('#settings-button').click();
     assert.match(await denied.locator('#fullscreen-status').innerText(),/blocked/);assert.match(await denied.locator('#wake-status').innerText(),/declined/);assert.equal(await denied.locator('#wake-retry').isVisible(),true);
+  });
+  await check('automatic fullscreen starts on the first Practice tap and respects exit and opt-out',async()=>{
+    const page=await setup('ready','fake',true);
+    if (!await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)) return;
+    assert.equal(await page.evaluate(()=>displayTest.fullRequests.length),1);
+    await page.locator('#fullscreen-button').tap();
+    await page.locator('#start-button').tap();
+    assert.equal(await page.locator('#quiz-screen').isVisible(),true);
+    assert.equal(await page.evaluate(()=>displayTest.fullRequests.length),1);
+    await page.locator('#settings-button').click();
+    await page.locator('#auto-fullscreen-setting').uncheck();
+    await page.reload();
+    await openPractice(page);
+    assert.equal(await page.evaluate(()=>displayTest.fullRequests.length),0);
+
+    const denied=await setup('ready','denied',true);
+    assert.equal(await denied.locator('#settings-dialog').isVisible(),false);
+    await denied.locator('#start-button').tap();
+    assert.equal(await denied.locator('#quiz-screen').isVisible(),true);
   });
   await check('native browser fullscreen enters and exits when available',async()=>{
     const page=await setup('ready','native');

@@ -9,12 +9,12 @@ import { renderStaff } from './staff.js';
 import { makeTone } from './notes.js';
 import { poolFor } from './quiz.js';
 import { QUALITIES } from './chords.js';
-import { normalizeTraining, saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
+import { saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
 import { canSaveProgress, RESET_KEY, restoreState, STORAGE_KEY } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
-const QUICK_TRAINING_FIELDS = ['bpm', 'meter', 'bars', 'complexity', 'behavior'];
-const NUMERIC_TRAINING_FIELDS = new Set(['bpm', 'meter', 'bars']);
+const QUICK_TRAINING_FIELDS = ['bpm', 'meter', 'bars', 'complexity', 'behavior', 'accuracy', 'pace', 'volume'];
+const NUMERIC_TRAINING_FIELDS = new Set(['bpm', 'meter', 'bars', 'volume']);
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -178,7 +178,10 @@ export class Studio {
       .join('');
     $('activity-cards').onclick = (e) => {
       const b = e.target.closest('[data-activity]');
-      if (b) this.select(b.dataset.activity, b.dataset.quizMode);
+      if (b) {
+        this.select(b.dataset.activity, b.dataset.quizMode);
+        document.querySelector('.practice-options').scrollTop = 0;
+      }
     };
     $('recommendation-edit').onclick = () => this.open('home');
     $('recommendation-start').onclick = () => this.startRecommendation();
@@ -186,8 +189,7 @@ export class Studio {
       $(`setup-${key}`).onchange = event => {
         const a = this.getActivities();
         const value = NUMERIC_TRAINING_FIELDS.has(key) ? Number(event.target.value) : event.target.value;
-        a.state.settings = normalizeTraining({ ...a.state.settings, [key]: value });
-        saveTraining(a.state);
+        a.updateSettings({ [key]: value });
         this.renderHome();
       };
     }
@@ -310,7 +312,13 @@ export class Studio {
       item = pool[0] ?? { tones: [makeTone(2, 0, 4)], clef: 'treble' };
     const todayItem = state.active?.current ?? item;
     $('today-staff').innerHTML = renderStaff(todayItem, todayItem.clef);
-    $('home-staff').innerHTML = renderStaff(item, item.clef);
+    const example = mode === 'mixed' ? pool.find(note => note.kind === 'chord') ?? item : item;
+    $('home-staff').innerHTML = renderStaff(example, example.clef);
+    const root = example.tones[0];
+    const quality = QUALITIES.find(option => option.id === example.qualityId);
+    const name = quality ? `${root.name} ${quality.name.toLowerCase()}` : `${root.name}${root.octave}`;
+    const clef = example.clef === 'bass' ? 'Bass clef' : 'Treble clef';
+    $('setup-example-caption').textContent = `Example from your selection · ${name} · ${clef}`;
     const recent = this.state.sessions.find(session => session.input === state.settings.inputMode);
     const facts = recent ? [[`${recent.correct}/${recent.total}`, 'First tries in your last quiz']] : [];
     if (a.state.history.length) facts.push([a.state.history.length, 'Timed sessions saved']);
@@ -330,11 +338,14 @@ export class Studio {
     for (const field of document.querySelectorAll('[data-practice-exercise]')) field.hidden = !a.exercise;
     $('setup-behavior-label').hidden = a.activity !== 'sight';
     for (const key of QUICK_TRAINING_FIELDS) $(`setup-${key}`).value = a.settings[key];
+    $('setup-complexity').value = a.complexity;
+    $('setup-pace-label').hidden = !a.exercise || a.flow;
+    $('setup-volume-label').hidden = a.activity !== 'metronome';
     const wantsMidi =
       a.activity === 'sight' ||
       (a.activity === 'rhythm' && a.settings.input === 'midi') ||
       (a.activity === 'quiz' && state.settings.inputMode === 'midi');
-    $('home-staff').hidden = training;
+    $('setup-example').hidden = training;
     $('setup-input-status').textContent = wantsMidi
       ? a.midi.status.connected
         ? `MIDI connected · ${a.midi.status.selectedName}`
@@ -399,7 +410,7 @@ export class Studio {
     let html = `<div class="progress-summary"><div><strong>${sessions.length + training.length}</strong><span>Recorded sessions</span></div><div><strong>${attempts ? Math.round((100 * correct) / attempts) + '%' : '—'}</strong><span>First tries · ${input === 'midi' ? 'MIDI' : 'Touch'} · ${attempts} answers</span></div><div><strong>${due}</strong><span>Names ready for review · ${input === 'midi' ? 'MIDI' : 'Touch'}</span></div></div>`;
     if (!sessions.length && !training.length)
       html +=
-        '<div class="empty-state"><h2>Your practice has a place here.</h2><p>Finish a session to see what is getting easier and what deserves another try. Your earlier note-learning schedule stays saved.</p></div>';
+        '<div class="empty-state"><h2>Your practice has a place here.</h2><p>Finish a session to see your results here.</p></div>';
     if (weak.length)
       html += `<section class="progress-section"><h2>Names to revisit</h2><div class="skill-list">${weak.map(([id, v]) => `<span class="skill-chip">${esc(v.label)} · ${esc(v.clef)}<small> · ${id.startsWith('midi:') ? 'MIDI' : 'Touch'} · ${v.correct}/${v.attempts}</small></span>`).join('')}</div></section>`;
     if (sessions.length) {
@@ -417,15 +428,14 @@ export class Studio {
         )
         .join('')}</div></section>`;
     }
-    html += `<section class="progress-section"><h2>Rhythm & sight-reading</h2><div class="session-list">${
+    if (training.length) html += `<section class="progress-section"><h2>Rhythm & sight-reading</h2><div class="session-list">${
       training
         .slice(0, 15)
         .map(
           (r, i) =>
             `<button class="session-row" data-training-report="${i}"><span><strong>${r.activity === 'sight' ? `Sight-reading · ${r.comparison?.behavior === 'continue' ? 'Flow' : 'Practice'}` : 'Rhythm'}</strong><small>${date(r.at)} · ${r.replay.bpm} BPM · ${r.replay.bars.length} bars</small></span><span class="session-result">${r.activity === 'sight' && r.comparison?.behavior !== 'continue' ? r.report.bars.filter((b) => !b.retries).length + '/' + r.report.bars.length : r.activity === 'sight' ? r.pitch + '%' : r.onset + '%'}</span></button>`,
         )
-        .join('') ||
-      '<p class="small muted">Complete a rhythm or sight-reading session to see it here.</p>'
+        .join('')
     }</div><button class="text-button" id="progress-full-history">Compare training sessions ↗</button></section>`;
     $('progress-content').innerHTML = html;
     $('progress-content').onclick = (e) => {

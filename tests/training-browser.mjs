@@ -51,7 +51,7 @@ async function running(page){
 }
 async function setupSight(page){
  await page.locator('#customize-button').click();await page.locator('[data-preset="none"]').click();await page.locator('[data-note="C"]').click();await page.locator('[data-range-clef="treble"][data-octave="4"]').click();await page.locator('[data-range-clef="treble"][data-octave="5"]').click();await page.locator('#apply-button').click();
- await selectActivity(page,'sight');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.locator('#customize-button').click();await page.selectOption('#training-pace','flow');await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
+ await selectActivity(page,'sight');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
  await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
  assert.equal(await page.locator('.measure').count(),1);
  assert.ok((await page.locator('[data-event]').evaluateAll(elements=>elements.every(n=>n.dataset.rest==='true'||n.dataset.midi==='72'))));
@@ -84,7 +84,7 @@ try{
   }
  });
  await check('rhythm touch holds distinguish a one-beat release from a required two-beat half note',async()=>{
-  const page=await setup(true);await selectActivity(page,'rhythm');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.locator('#customize-button').click();await page.selectOption('#training-pace','flow');await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await running(page);
+  const page=await setup(true);await selectActivity(page,'rhythm');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].filter(n=>n.dataset.rest==='false').map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   const pad=await page.locator('#training-touchpad').boundingBox();await page.mouse.move(pad.x+pad.width/2,pad.y+pad.height/2);
@@ -107,7 +107,7 @@ try{
   await page.screenshot({path:`docs/images/rhythm-${engine}.png`});
  });
  await check('rhythm MIDI accepts different keys and scores their physical hold lengths',async()=>{
-  const page=await setup(true,true);await selectActivity(page,'rhythm');await page.locator('#home-training-input [data-training-input=midi]').tap();await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.locator('#customize-button').click();await page.selectOption('#training-pace','flow');await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
+  const page=await setup(true,true);await selectActivity(page,'rhythm');await page.locator('#home-training-input [data-training-input=midi]').tap();await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   assert.equal(data.events.length,2,'Only the current bar is rendered during count-in');
@@ -306,7 +306,7 @@ try{
  });
  await check('beginner MIDI rhythm keeps holds pending and counts in the next bar before its first note',async()=>{
   const page=await setup(true,true);await selectActivity(page,'rhythm');await page.locator('#home-training-input [data-training-input=midi]').tap();
-  await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.locator('#customize-button').click();await page.locator('#training-form button[type=submit]').click();
+  await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');
   await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<100);
   assert.equal(await page.locator('.measure').count(),1);
@@ -325,9 +325,7 @@ try{
   const page=await setup(true,true);await selectActivity(page,'rhythm');
   await page.locator('#home-training-input [data-training-input=midi]').click();
   await setPracticeTempo(page, 200);
-  await page.selectOption('#setup-complexity','eighths');await page.selectOption('#setup-bars','2');await page.locator('#customize-button').click();
-  await page.selectOption('#training-pace','flow');await page.selectOption('#training-accuracy','beginner');
-  await page.locator('#training-form button[type=submit]').click();await page.evaluate(()=>{Math.random=()=>.999999;});
+  await page.selectOption('#setup-complexity','eighths');await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.selectOption('#setup-accuracy','beginner');await page.evaluate(()=>{Math.random=()=>.999999;});
   await page.locator('#start-button').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));
   await page.locator('#training-toggle').click();await running(page);
   await page.evaluate(()=>{
@@ -383,8 +381,7 @@ try{
  });
  await check('eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses',async()=>{
   const page=await setup(true);await selectActivity(page,'rhythm');await setPracticeTempo(page, 200);
-  await page.selectOption('#setup-bars','8');await page.locator('#customize-button').click();await page.selectOption('#training-pace','flow');
-  await page.locator('#training-form button[type=submit]').click();await page.locator('#start-button').click();await running(page);
+  await page.selectOption('#setup-bars','8');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await running(page);
   await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
   const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.training.v1')).lastResult);
   assert.equal(result.report.bars.length,8);assert.equal(result.report.bars.reduce((n,bar)=>n+bar.issues.missed,0),result.total);
@@ -413,8 +410,8 @@ try{
  });
  await check('MIDI timing calibration suggests an offset, saves only on Apply, and stops on disconnect',async()=>{
   const page=await setup(false,true,true);report.limits.push('Calibration uses scheduled clicks from a controlled audio clock and simulated MIDI.');
-  await selectActivity(page,'rhythm');await setPracticeTempo(page, 95);await page.locator('#customize-button').click();
-  await page.locator('#training-calibrate').click();await page.locator('#calibration-connect').click();
+  await selectActivity(page,'rhythm');await setPracticeTempo(page, 95);await page.locator('#settings-button').click();
+  await page.locator('#midi-calibrate').click();await page.locator('#calibration-connect').click();
   await page.locator('#calibration-start').click();
   await page.waitForFunction(()=>window.calibrationClicks.length>0);
   await page.evaluate(()=>{
@@ -436,9 +433,8 @@ try{
   await page.waitForFunction(()=>document.getElementById('calibration-status').textContent.includes('disconnected')||document.getElementById('calibration-status').textContent.includes('MIDI input changed'));
   assert.equal(await page.locator('#calibration-apply').isVisible(),false);
   await page.locator('[data-close="calibration-dialog"]').click();
-  await page.locator('#training-dialog').waitFor({state:'visible'});
-  assert.equal(await page.locator('#setup-bpm').inputValue(),'95');assert.equal(await page.locator('#training-offset').inputValue(),String(offset));
-  await page.locator('[data-close=training-dialog]').click();await page.locator('#settings-button').click();
+  await page.locator('#settings-dialog').waitFor({state:'visible'});
+  assert.equal(await page.locator('#setup-bpm').inputValue(),'95');assert.equal(await page.locator('#timing-offset-setting').inputValue(),String(offset));
   assert.match(await page.locator('#midi-timing-summary').innerText(),new RegExp(`current correction: \\+${offset} ms`));
   await page.locator('#midi-calibrate').click();await page.locator('#calibration-dialog').waitFor({state:'visible'});
   assert.match(await page.locator('#calibration-current').innerText(),new RegExp(`\\+${offset} ms`));
