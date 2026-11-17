@@ -1,51 +1,48 @@
 # Verification
 
-Saved bar-practice progress and completed-session button spacing fixed on
-2026-11-12.
+Touch quiz confirmation and accidental-skip guards published on 2026-11-17.
 
 - Play: **https://piano-quiz.pages.dev/**
-- Release: `93e676ec562736`
-- Production deployment: `717038c9-7275-4cd4-b02e-5cebe8375f9b`
-- Immutable URL: https://717038c9.piano-quiz.pages.dev/
+- Release: `7dd374b5692487`
+- Production deployment: `08e17e65-1ded-45a9-8170-557216871752`
+- Immutable URL: https://08e17e65.piano-quiz.pages.dev/
 - Repository: https://github.com/Listwas/piano-quiz
 
 ## Current release
 
-**105 unit tests passed.** A successful bar drill now stores a check and its
-best achieved BPM with the original session. History and Last session retain
-the same mark after reloading. The hardest-bar recommendation moves to the
-remaining unpractised bars. Original retry, timing, duration and first-try
-statistics are preserved; a drill does not add a full history session.
+**106 unit tests passed.** Touch answers accept a written note name independently
+of its octave; MIDI still requires the displayed register. The reported
+`D · D3 · Moving on` caption identifies the unanswered/skip path.
 
-Unit cases cover updating separate saved copies, selecting the next bar,
-preserving original stats, keeping the best tempo, round-trip storage, rejecting
-failed drills, and ignoring malformed saved practice marks.
+After selecting an answer, the quiet action now clears it without grading or
+advancing. Only an empty selection can be skipped. Skipped questions show
+`Skipped · Answer: D3` with neutral notation. They remain unanswered in the
+first-attempt score.
 
-| Check | Chromium | Firefox | WebKit |
-| --- | --- | --- | --- |
-| Failed-bar retry, original/slower successful drills, marked summaries, saved reload and history | [Passed](live-practice-progress-chromium.json) | [Passed](practice-progress-firefox.json) | [Passed](practice-progress-webkit.json) |
-| Eight-bar Rhythm summary, dense report and compact controls | Included above | Included above | Included above |
+Check snapshots its answer and question on pointer-down, captures the pointer,
+and submits on release even if the layout moved beneath a stationary finger.
+Dragging away cancels it. Its compatibility click cannot activate newly
+displayed feedback actions; keyboard Enter still works.
 
-Each report contains two end-to-end scenarios; Chromium uses production,
-Firefox and WebKit use the local build. The Sight-reading scenario checks
-at least 12 px below the completed-session buttons in six phone/tablet
-layouts, including simulated safe areas. The eight-bar report additionally
-checks 320 × 568, 568 × 320, 667 × 375 and 1280 × 800.
+| Check | Result | Origin |
+| --- | --- | --- |
+| Unit suite, including all-register touch/MIDI distinction | [106 passed](unit.json) | Source |
+| All 136 spellings/registers, six skip/clear cases, moving layout, drag cancellation and keyboard | [144 passed](touch-quiz-chromium.json) | Local Chromium |
+| D/D♯/D♭ across all registers and six clear/skip layouts | [30 passed](touch-quiz-firefox.json) | Local Firefox |
+| Same D spelling/register and clear/skip checks | [30 passed](touch-quiz-webkit.json) | Local WebKit |
+| General quiz, themes, persistence, offline and audio checks | [20 passed](touch-general-chromium.json) | Local Chromium |
+| Phone/tablet safe areas, rotation and action alignment | [10 passed](touch-viewport-chromium.json) | Local Chromium |
+| D range, clear/skip and pointer confirmation checks | [32 passed](live-touch-quiz-chromium.json) | Production |
 
-[Phone summary](images/practised-bars-firefox.png) and
-[tablet summary](images/practised-bars-tablet-firefox.png) were visually
-inspected. [Unit report](unit.json). No uncaught page errors were recorded
-in the passing scenarios.
+All browser tests use headless engines and simulated viewports. The moving-layout
+case sends real Chromium touch events and deliberately moves the buttons between
+press and release. No physical Honor MagicPad 2 or iPhone was attached, so the
+original device's exact touch sequence is not reproduced. No uncaught page errors
+were recorded in the passing checks.
 
-MIDI and device sizes are simulated. Firefox and WebKit use the explicit visual
-exercise clock on this headless host. The initial native Firefox audio run
-timed out before the baseline Sight-reading exercise completed; it is not
-reported as passing. Physical devices and their audio timing were not retested.
-
-The earlier eighth-note and calibration fixes are included in this runtime.
-Their wider tests were not rerun for the report update; see the
-[Rhythm/calibration audit](https://github.com/Listwas/piano-quiz/blob/48170b5e9dd8e3814138c6b02b652ddcddd76234/docs/VERIFICATION.md)
-and [feature baseline](https://github.com/Listwas/piano-quiz/blob/4474695025269ee75c8c9180e33dcacef3c7fdfe/docs/VERIFICATION.md).
+Earlier training, calibration and bar-practice features were not changed. Their
+wider exercise suites were not rerun for this quiz fix; see the
+[practice-progress audit](https://github.com/Listwas/piano-quiz/blob/d5ffddca8d08d9bb65bc9e6d308b70ce92143fbb/docs/VERIFICATION.md).
 
 ## Earlier feature baseline
 

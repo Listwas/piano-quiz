@@ -1,7 +1,7 @@
 {
-  "build": "93e676ec562736",
+  "build": "7dd374b5692487",
   "origin": "https://piano-quiz.pages.dev/",
-  "testedAt": "2026-11-12T19:24:12.389Z",
+  "testedAt": "2026-11-17T15:19:00.879Z",
   "files": [
     {
       "path": "audio/A2.mp3",
@@ -116,7 +116,7 @@
     {
       "path": "js/app.js",
       "status": 200,
-      "sha256": "f2877e4d4c54f76d4d090518d283e2cab20358e3d8c80949f8df999518fbfbd1"
+      "sha256": "9e0d0f5422f2b252e2e5f822e9e8a28225ab8418f4afef0117bd50dbd2ff99c9"
     },
     {
       "path": "js/audio.js",
@@ -211,12 +211,12 @@
     {
       "path": "sw.js",
       "status": 200,
-      "sha256": "02bb38061946c12516b9e9435550c905b57af6ccfba58aa1fbed0f2befa23bd1"
+      "sha256": "9ed319cc9dafcceb5b3bef7aeb74a9a164e740a637e4812983f4260fd6ea4193"
     },
     {
       "path": "version.json",
       "status": 200,
-      "sha256": "0ce9d76915ac8992f053cb7a108877a084435a16c4a6ef3ce09ab4320dda6c1f"
+      "sha256": "71b24f04c981b0a9095e124cbd9e68f7c7335ceb9ecfef54f8ae6027f407505c"
     }
   ],
   "errors": [],
