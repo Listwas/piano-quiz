@@ -289,6 +289,71 @@ try{
   assert.equal(await page.locator('#training-touchpad').isVisible(),true);
   assert.equal(await page.locator('#training-input-row').isVisible(),false);
  });
+ await check('double-beamed sixteenths score individually on touch and MIDI and survive a slower replay',async()=>{
+  const page=await setup(true,true,true);
+  await selectActivity(page,'rhythm');await setPracticeTempo(page,100);
+  await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');
+  await page.selectOption('#setup-complexity','sixteenths');
+  const exerciseStart = () => page.evaluate(()=>Number(document.getElementById('exercise-score').dataset.startTime));
+  const until = async at => {
+   const remaining = await page.evaluate(time=>time-performance.now(),at);
+   if (remaining>0) await page.waitForTimeout(remaining);
+  };
+  const group = () => page.locator('[data-duration="0.25"]').evaluateAll(nodes=>nodes.slice(0,4).map(node=>Number(node.dataset.beat)));
+  await page.locator('#start-button').tap();await running(page);
+  for(const size of [{width:320,height:568},{width:1280,height:800}]){
+   await page.setViewportSize(size);
+   const beam=await page.locator('.score-beam-double').first().boundingBox();
+   assert.ok(beam&&beam.width>12&&beam.height>1&&beam.x>=0&&beam.x+beam.width<=size.width);
+  }
+  await page.setViewportSize({width:430,height:932});
+  const beats=await group();
+  const start=await exerciseStart();
+  const cdp=engine==='chromium' ? await page.context().newCDPSession(page) : null;
+  for(const beat of beats){
+   const at=start+beat*600;
+   await until(at-35);
+   const pad=await page.locator('#training-touchpad').boundingBox();
+   const x=pad.x+pad.width/2,y=pad.y+pad.height/2;
+   if(!cdp) await page.mouse.move(x,y);
+   await until(at);
+   if(cdp) await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+   else await page.mouse.down();
+   await until(at+118);
+   if(cdp) await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   else await page.mouse.up();
+  }
+  assert.equal(await page.locator('[data-duration="0.25"].correct').count(),4,
+   JSON.stringify(await page.locator('[data-duration="0.25"]').evaluateAll(nodes=>nodes.map(e=>[e.dataset.beat,e.classList.value]))));
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  await page.reload();await openPractice(page);
+  await openLastTrainingReport(page);
+  await page.selectOption('#report-bar-select','0');
+  assert.equal(await page.locator('#report-practise-tempo').inputValue(),'80');
+  await page.locator('#report-practise').tap();await running(page);
+  assert.deepEqual(await group(),beats);
+  assert.match(await page.locator('#training-progress').innerText(),/80 BPM/);
+  await page.locator('#training-back').tap();
+  if(await page.locator('#training-report-dialog').isVisible()) await page.locator('[data-close="training-report-dialog"]').tap();
+
+  await selectActivity(page,'rhythm');await page.locator('#home-training-input [data-training-input=midi]').tap();
+  await page.locator('#start-button').tap();
+  await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));
+  await page.locator('#training-toggle').tap();await running(page);
+  const midiBeats=await group();
+  await page.evaluate(async beats=>{
+   const score=document.getElementById('exercise-score');
+   const start=Number(score.dataset.startTime);
+   const sendAt=(time,data)=>new Promise(resolve=>setTimeout(()=>{
+    window.trainingMidi.send(data,time);resolve();
+   },Math.max(0,time-performance.now())));
+   for(const beat of beats){
+    const time=start+beat*600;
+    await sendAt(time,[0x90,60,100]);await sendAt(time+110,[0x80,60,0]);
+   }
+  },midiBeats);
+  assert.equal(await page.locator('[data-duration="0.25"].correct').count(),4);
+ });
  await check('a stalled audio clock on a Rhythm bar replay falls back to a working count-in',async()=>{
   const page=await setup(true,false,true);
   await selectActivity(page,'rhythm');await setPracticeTempo(page,200);

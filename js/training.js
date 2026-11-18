@@ -39,15 +39,30 @@ export function saveReplay(phrase, {bpm,input,accuracy,offset}) {
     }))) };
 }
 const validTone = tone => Array.isArray(tone) && tone.length===3 && count(tone[0]) && tone[0]<=6 && [-1,0,1].includes(tone[1]) && [1,2,3,4,5,6].includes(tone[2]);
+function validSixteenthGroups(bar) {
+  let beat = 0;
+  for (let index = 0; index < bar.length; index++) {
+    const duration = bar[index].beats;
+    if (duration === .25) {
+      const group = bar.slice(index,index+4);
+      if (!Number.isInteger(beat) || group.length !== 4 || group.some(note => note.beats !== .25)) return false;
+      index += 3;
+      beat += 1;
+    } else {
+      beat += duration;
+    }
+  }
+  return true;
+}
 function validReplay(replay, result) {
   return replay && [3,4].includes(replay.meter) && ['treble','bass'].includes(replay.clef) &&
     count(replay.bpm) && replay.bpm>=40 && replay.bpm<=200 && ['midi','touch'].includes(replay.input) &&
     ['beginner','strict'].includes(replay.accuracy) && Number.isInteger(replay.offset) && Math.abs(replay.offset)<=250 &&
     Array.isArray(replay.bars) && replay.bars.length===result.report.bars.length && replay.bars.every(bar =>
-      Array.isArray(bar) && bar.length<=8 && bar.some(e=>e?.rest===false) &&
-      bar.every(e=>e && [.5,1,1.5,2,3,4].includes(e.beats) && typeof e.rest==='boolean' &&
+      Array.isArray(bar) && bar.length<=replay.meter*4 && bar.some(e=>e?.rest===false) &&
+      bar.every(e=>e && [.25,.5,1,1.5,2,3,4].includes(e.beats) && (e.beats !== .25 || !e.rest) && typeof e.rest==='boolean' &&
         (e.rest || result.activity==='rhythm' ? e.tone===null : validTone(e.tone))) &&
-      bar.reduce((sum,e)=>sum+e.beats,0)===replay.meter);
+      bar.reduce((sum,e)=>sum+e.beats,0)===replay.meter && validSixteenthGroups(bar));
 }
 export function replayPhrase(result, bar) {
   const {meter,clef,bars} = result.replay;
@@ -125,7 +140,8 @@ export const RHYTHM_LEVELS = {
   steady: { name:'Steady', description:'Long holds and rests', values:[4,2,1], restChance:.3, paired:false },
   eighths: { name:'Moving', description:'Eighth-note pairs', values:[2,1,.5], restChance:.3, paired:true },
   mixed: { name:'Challenge', description:'Dotted notes and offbeats', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
-  mix: { name:'Mix', description:'All note values and rests', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
+  sixteenths: { name:'Sixteenths', description:'Groups of four fast notes', values:[1,.5,.25], restChance:0, paired:true },
+  mix: { name:'Mix', description:'All note values and rests', values:[4,3,2,1.5,1,.5,.25], restChance:.4, paired:false },
 };
 const patternCache = new Map();
 function rhythmPatterns(level, meter) {
@@ -135,6 +151,10 @@ function rhythmPatterns(level, meter) {
     function fill(position, values) {
       if (position === meter) { patterns.push(values); return; }
       for (const value of config.values) {
+        if (value === .25) {
+          if (Number.isInteger(position)) fill(position+1,[...values,.25,.25,.25,.25]);
+          continue;
+        }
         if (value > meter-position || config.paired && position % 1 !== 0 && value !== .5) continue;
         fill(position+value,[...values,value]);
       }
@@ -144,6 +164,10 @@ function rhythmPatterns(level, meter) {
   return patternCache.get(key);
 }
 const patternKey = values => values.join(',');
+const sixteenthStart = values => {
+  const index = values.indexOf(.25);
+  return index < 0 ? -1 : values.slice(0,index).reduce((sum,value) => sum+value,0);
+};
 
 export function generatePhrase(settings, quizSettings, { rhythm = false, clefIndex = 0, random = Math.random, previousPhrase = null } = {}) {
   const clef = quizSettings.clef === 'mixed' ? clefIndex % 2 ? 'bass' : 'treble' : quizSettings.clef;
@@ -158,12 +182,18 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
   const chosen = [];
   const heardValues = new Set();
   const variety = values => new Set(values.filter(value => !heardValues.has(value))).size;
-  let previous, beforePrevious, previousStart;
+  let previous, beforePrevious, previousStart, previousGroupBeat;
   for (let bar = 0; bar < settings.bars; bar++) {
     const least = Math.min(...patterns.map(values=>usage.get(patternKey(values)) || 0));
     let candidates = patterns.filter(values=>(usage.get(patternKey(values)) || 0) === least);
     const fresh = candidates.filter(values=>!history.includes(patternKey(values)));
     if (fresh.length) candidates = fresh;
+    if (level === 'sixteenths') {
+      const hasGroup = candidates.filter(values => values.includes(.25));
+      if (hasGroup.length) candidates = hasGroup;
+      const shifted = candidates.filter(values => sixteenthStart(values) !== previousGroupBeat);
+      if (shifted.length) candidates = shifted;
+    }
     if (bar === 0) {
       const featured = candidates.filter(values=>level === 'steady' ? values.length > 1 : level === 'eighths' ? values.includes(.5) : level === 'mixed' ? values.some(value=>[1.5,3].includes(value)) : true);
       if (featured.length) candidates = featured;
@@ -173,13 +203,14 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
       candidates = candidates.filter(values => variety(values) === best);
     }
     const values = pick(candidates), signature = patternKey(values);
+    previousGroupBeat = sixteenthStart(values);
     usage.set(signature,(usage.get(signature) || 0)+1);
     history.push(signature); if (history.length > 2) history.shift();
     chosen.push(signature);
     const rests = new Set();
     if (values.length > 1 && (level === 'steady' && bar === 0 || random() < config.restChance)) {
-      const places = values.map((_,i)=>i).filter(i=>level === 'mixed' || i > 0);
-      rests.add(pick(places));
+      const places = values.map((_,i)=>i).filter(i=>values[i] !== .25 && (level === 'mixed' || i > 0));
+      if (places.length) rests.add(pick(places));
       if (level === 'mixed' && values.length > 3 && random() < .25) {
         const extra = places.filter(i=>!rests.has(i) && !rests.has(i-1) && !rests.has(i+1));
         if (extra.length) rests.add(pick(extra));
@@ -271,8 +302,13 @@ export class ExerciseSession {
     return { value:target ? Math.min(1,Math.max(0,elapsed)/fillBeats) : 0, releasing,
       label:releasing ? rhythmWindow ? 'Release now · next press on the beat' : 'Release now' : target?.rest ? `Rest for ${target.durationBeats} beats` : `Hold for ${target?.durationBeats ?? 1} beat${target?.durationBeats === 1 ? '' : 's'}` };
   }
+  durationTolerance(target) {
+    const length = target.durationBeats * this.beatMs;
+    const tolerance = holdTolerance(length,this.accuracy);
+    return target.durationBeats === .25 ? Math.min(tolerance,length*.4) : tolerance;
+  }
   releaseBounds({ target, result }) {
-    const length = target.durationBeats*this.beatMs, tolerance = holdTolerance(length,this.accuracy);
+    const length = target.durationBeats*this.beatMs, tolerance = this.durationTolerance(target);
     let minimum = length-tolerance;
     if (this.phrase.rhythm && this.accuracy === 'beginner' && !this.guided) {
       // Leave room to re-articulate a valid late attack before the next beat.
@@ -427,7 +463,7 @@ export class ExerciseSession {
       if (!this.results.has(event.id) && now > this.expected(event) + this.window(event) + Math.max(0,this.offset)) this.results.set(event.id, { pitch:false, onset:false, duration:false, status:'missed' });
       const result = this.results.get(event.id);
       if (this.retryOnError && result?.status === 'missed' && now > this.expected(event)+this.window(event)+Math.max(0,this.offset)+35) { this.fail('missed',now,event.bar); return; }
-      if (this.retryOnError && result?.duration === null && now-this.offset-result.on > event.durationBeats*this.beatMs+holdTolerance(event.durationBeats*this.beatMs,this.accuracy)) { this.fail('long',now,event.bar); return; }
+      if (this.retryOnError && result?.duration === null && now-this.offset-result.on > event.durationBeats*this.beatMs+this.durationTolerance(event)) { this.fail('long',now,event.bar); return; }
       if (result?.duration === null && result.pitch && now - this.offset - result.on >= event.durationBeats * this.beatMs) this.feedback = 'Release now.';
     }
     const { beat } = this.position(now);

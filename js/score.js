@@ -9,21 +9,26 @@ function rest(x, duration) {
   return `<path d="M${x-5} 28l9 12 -6 7 7 10q-13 -7 -10 6q-10 -9 2 -13l-7 -10 7 -7z" fill="currentColor"/>`;
 }
 
-function eighthNoteBeams(events, phrase) {
+function noteBeams(events, phrase) {
   const stems = new Map();
   const beams = [];
-  for (let i = 0; i < events.length - 1; i++) {
-    const first = events[i], second = events[i + 1];
-    if (!Number.isInteger(first.beat) || second.beat !== first.beat + .5 ||
-        [first, second].some(event => event.rest || event.durationBeats !== .5)) continue;
-    const ys = [first, second].map(event => phrase.rhythm ? 48 : staffY(event.tone.staffStep, phrase.clef));
-    const up = ys[0] + ys[1] >= 96;
+  for (let i = 0; i < events.length; i++) {
+    const {beat, durationBeats} = events[i];
+    if (!Number.isInteger(beat) || ![.25,.5].includes(durationBeats)) continue;
+    const size = 1 / durationBeats;
+    const group = events.slice(i,i+size);
+    if (group.length !== size || group.some((event, index) =>
+      event.rest || event.durationBeats !== durationBeats || event.beat !== beat + index * durationBeats)) continue;
+    const ys = group.map(event => phrase.rhythm ? 48 : staffY(event.tone.staffStep, phrase.clef));
+    const up = ys.reduce((sum,y) => sum+y,0) >= 48 * size;
     const end = up ? Math.min(...ys) - 29 : Math.max(...ys) + 29;
-    const xs = [first, second].map(event => scoreX(event.beat % phrase.meter, phrase.meter) + (up ? 6 : -6));
-    stems.set(first.id, { up, end });
-    stems.set(second.id, { up, end });
-    beams.push(`<path class="score-beam" d="M${xs[0]} ${end}H${xs[1]}" fill="none" stroke="currentColor" stroke-width="4"/>`);
-    i++;
+    const stemX = event => scoreX(event.beat % phrase.meter, phrase.meter) + (up ? 6 : -6);
+    const x1 = stemX(group[0]), x2 = stemX(group.at(-1));
+    for (const event of group) stems.set(event.id, { up, end });
+    const secondary = end + (up ? 6 : -6);
+    const path = `M${x1} ${end}H${x2}` + (size === 4 ? `M${x1} ${secondary}H${x2}` : '');
+    beams.push(`<path class="score-beam${size === 4 ? ' score-beam-double' : ''}" d="${path}" fill="none" stroke="currentColor" stroke-width="4"/>`);
+    i += size - 1;
   }
   return { stems, drawing: beams.join('') };
 }
@@ -35,7 +40,7 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
   const bottom = phrase.rhythm ? 80 : Math.max(94,...ys.map(y=>y+40));
   const lines = phrase.rhythm ? [48] : [24,36,48,60,72];
   const alterations = new Map();
-  const beams = eighthNoteBeams(events, phrase);
+  const beams = noteBeams(events, phrase);
   const notes = events.map(event => {
     const x = scoreX(event.beat % phrase.meter,phrase.meter);
     let drawing;

@@ -391,3 +391,48 @@ test('on-beat eighths share a beam and remain separate scoring events', () => {
  assert.equal((markup.match(/data-event=/g) || []).length,4);
  assert.match(markup,/c0 9 15 10/);
 });
+
+test('sixteenths form complete double-beamed beats and vary their position', () => {
+ for (const meter of [3,4]) {
+  const settings = normalizeTraining({complexity:'sixteenths',meter,bars:4});
+  const phrase = generatePhrase(settings,copyDefaults(),{rhythm:true,random:()=>0});
+  const groupPositions = new Set();
+  for (let bar=0; bar<4; bar++) {
+   const notes = phrase.events.filter(event=>event.bar===bar && event.durationBeats===.25);
+   assert.ok(notes.length>=4);
+   for (let i=0;i<notes.length;i+=4) {
+    const start = notes[i].beat;
+    assert.ok(Number.isInteger(start));
+    assert.deepEqual(notes.slice(i,i+4).map(event=>event.beat-start),[0,.25,.5,.75]);
+    assert.ok(notes.slice(i,i+4).every(event=>!event.rest));
+    groupPositions.add(start%meter);
+   }
+   assert.match(renderScore(phrase,bar),/class="score-beam score-beam-double" d="M[^"]+H[^"]+M[^"]+H/);
+  }
+  assert.ok(groupPositions.size>1);
+ }
+});
+
+test('missing a sixteenth leaves its neighbors playable and dense replays survive reload', () => {
+ const settings = normalizeTraining({complexity:'sixteenths',bpm:160,pace:'flow'});
+ const events = Array.from({length:32},(_,id)=>({id,bar:Math.floor(id/16),beat:id/4,durationBeats:.25,rest:false}));
+ const phrase = {events,bars:2,meter:4,totalBeats:8,clef:'treble',rhythm:true};
+ const session = new ExerciseSession(phrase,settings);
+ session.startTime = 1000;
+ for (const event of events) {
+  const start = session.expected(event);
+  session.tick(start);
+  if (event.id===1) continue;
+  note(session,'on',60,start);
+  note(session,'off',60,start+85);
+ }
+ session.tick(5000);
+ assert.equal(session.results.get(1).status,'missed');
+ assert.equal(session.results.get(2).status,'correct');
+ const result = session.summary(5000);
+ result.replay = saveReplay(phrase,{...settings,offset:0});
+ result.comparison = comparisonSetup(phrase,settings,copyDefaults());
+ const stored = JSON.stringify({activity:'rhythm',history:[result]});
+ const [saved] = loadTraining({getItem:()=>stored}).history;
+ assert.deepEqual(replayPhrase(saved,0).events.map(event=>event.durationBeats),Array(16).fill(.25));
+});
