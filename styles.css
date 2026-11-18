@@ -613,3 +613,19 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 
 
 }
+
+.score-beat-shade{fill:var(--accent-soft);pointer-events:none}
+#training-screen[data-clap=true] .measure{background:var(--surface);padding-inline:clamp(6px,2vw,20px)}
+#training-screen[data-clap=true] .score-cursor{stroke-width:2;opacity:1}
+#training-screen[data-clap=true] .score-event.correct{color:var(--success,var(--accent))}
+#training-screen[data-clap=true] .score-event.correct .score-head-open{fill:var(--accent-soft)}
+#training-live-row{width:100%;flex-shrink:0}
+#training-screen[data-clap=true] #training-live-row{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
+#training-screen[data-clap=true] #training-live-status{min-height:0;font-weight:650}
+#training-screen[data-clap=true] .measure-label{display:none}
+#training-screen[data-clap=true] #training-touchpad{min-height:48px;margin-bottom:8px}
+#training-screen[data-clap=true] .training-action-row{gap:6px}
+#training-screen[data-clap=true] .training-action-row button{min-height:44px;padding:4px;font-size:clamp(11px,2.8vw,14px)}
+#training-summary [data-clap-metrics]>div:first-child{grid-column:span 2;background:var(--accent-soft)}
+#training-screen[data-clap=true] #training-move-on{min-height:44px;padding-inline:9px;flex-shrink:0;font-size:12px}
+#training-screen[data-clap=true] .measure{min-height:48px}

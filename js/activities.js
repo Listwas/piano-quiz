@@ -35,18 +35,27 @@ export class Activities {
       return saved;
     }});
     $('midi-calibrate').onclick = () => this.calibration.open('settings-dialog');
-    this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: ({countingIn}) => this.audioInterrupted(countingIn) });
+    this.clock = new BeatClock({ onFrame: frame => this.frame(frame),
+      onScheduled: tick => this.scheduleDemo(tick),
+      onSuspended: ({countingIn}) => this.audioInterrupted(countingIn) });
     this.active = false;
     this.starting = false;
     this.lastBeat = null;
     this.request = 0;
     this.phraseIndex = 0;
     this.phraseHistory = new Map();
+    this.finePointer = matchMedia('(pointer: fine)');
     $('training-back').onclick = () => this.drill ? this.backFromDrill() : goHome();
     $('training-configure').onclick = () => this.configure();
     $('training-toggle').onclick = () => this.clock.running || this.starting ? this.pause() : void this.start(this.active && !this.completed);
     $('training-sound').onclick = () => { this.settings.muted = !this.settings.muted; this.sound(); if (!this.drill) saveTraining(this.state); };
     $('training-visual').onclick = () => { this.visualOnly = true; void this.start(this.active && !this.completed); };
+    $('training-listen').onclick = () => {
+      if (!this.session?.clap || this.starting || this.completed) return;
+      if (this.clock.running) this.pause();
+      void this.start(true,true);
+    };
+    $('training-move-on').onclick = () => this.moveOn();
     $('training-details').onclick = () => this.drill ? this.backFromDrill() : this.showReport(this.recommendedBar());
     $('report-back-history').onclick = () => { $('training-report-dialog').close(); this.showHistory(true); };
     $('history-activity').onchange = event => this.showHistory(false,event.target.value);
@@ -101,7 +110,13 @@ export class Activities {
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
     $('training-touchpad').onpointerdown = event => {
-      if (event.button !== 0 || this.pointer !== undefined || !this.clock.running) return;
+      if (event.button !== 0 || !this.clock.running) return;
+      if (this.session?.clap) {
+        event.preventDefault();
+        this.receive({type:'on',timeStamp:event.timeStamp},'touch');
+        return;
+      }
+      if (this.pointer !== undefined) return;
       event.preventDefault(); this.pointer = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId);
       event.currentTarget.classList.add('pressed');
       this.receive({ type:'on', note:60, channel:16, timeStamp:event.timeStamp }, 'touch');
@@ -111,8 +126,20 @@ export class Activities {
       this.pointer = undefined; event.currentTarget.classList.remove('pressed');
       this.receive({ type:'off', note:60, channel:16, timeStamp:event.timeStamp }, 'touch');
     };
-    $('training-touchpad').onpointercancel = () => this.pause('Touch was interrupted. Resume to retry this bar.');
-    $('training-touchpad').onlostpointercapture = () => { if (this.pointer !== undefined) this.pause('Touch was interrupted. Resume to retry this bar.'); };
+    $('training-touchpad').onpointercancel = $('training-touchpad').onlostpointercapture = event => {
+      if (this.pointer === event.pointerId) this.pause('Touch was interrupted. Resume to retry this bar.');
+    };
+    $('training-touchpad').onclick = event => {
+      // Assistive technology can activate the button without a PointerEvent.
+      if (event.detail === 0 && this.session?.clap) this.receive({type:'on',timeStamp:event.timeStamp},'touch');
+    };
+    document.addEventListener('keydown', event => {
+      if (event.code !== 'Space' || event.ctrlKey || event.metaKey || event.altKey ||
+          !this.clock.running || !this.session?.clap || document.querySelector('dialog[open]')) return;
+      if (event.target !== $('training-touchpad') && event.target.closest?.('button, input, select, a, textarea, [contenteditable], [role="button"]')) return;
+      event.preventDefault();
+      if (!event.repeat) this.receive({type:'on',timeStamp:event.timeStamp},'keyboard');
+    });
     $('training-touchpad').onselectstart = event => event.preventDefault();
     // Android can start its long-press gesture independently of Pointer Events.
     // Keep the pointer stream for grading while cancelling the native gesture.
@@ -125,7 +152,7 @@ export class Activities {
 
   describePatterns(field) {
     const selected = Array.from(field.selectedOptions, option=>option.label);
-    field.dataset.choiceSummary = selected.length === 1 ? selected[0] : `${selected.length} selected`;
+    field.dataset.choiceSummary = selected.length === field.options.length ? 'All selected' : selected.length === 1 ? selected[0] : `${selected.length} selected`;
   }
 
   renderPatternSelection(field) {
@@ -233,6 +260,7 @@ export class Activities {
     $('training-screen').dataset.activity = this.activity;
     $('training-screen').dataset.running = String(this.clock.running);
     $('training-screen').dataset.complete = String(Boolean(this.completed));
+    $('training-screen').dataset.clap = String(Boolean(this.session?.clap && !this.completed));
     $('training-body').classList.toggle('scroll-region', Boolean(this.completed));
     $('training-back').textContent = this.drill ? '‹ Report' : '‹ Home';
     $('reading-style-badge').hidden = this.activity !== 'sight' || Boolean(this.completed);
@@ -254,18 +282,21 @@ export class Activities {
     $('hold-coach').hidden = !exercise || this.tapsOnly || Boolean(this.completed);
     $('training-touchpad').hidden = this.activity !== 'rhythm' || this.settings.input !== 'touch' || Boolean(this.completed);
     $('training-touchpad').disabled = !this.clock.running;
+    $('training-listen').hidden = !this.session?.clap || Boolean(this.completed);
+    $('training-listen').disabled = this.starting || Boolean(this.demoEvents);
+    $('training-move-on').hidden = !this.session?.clap?.retry || !this.clock.running || Boolean(this.demoEvents);
     $('training-recheck').hidden = !this.requiresMidi || !this.supported || Boolean(this.completed);
     $('training-sound').hidden = Boolean(this.completed);
     $('training-details').hidden = !this.completed;
     $('training-details').textContent = this.drill ? 'Back to report' : this.recommendedBar() >= 0 ? 'Practise hardest bar' : 'Session details';
-    $('training-live-status').hidden = Boolean(this.completed);
+    $('training-live-row').hidden = Boolean(this.completed);
     $('training-footnote').hidden = Boolean(this.completed);
-    $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.tapsOnly ? 'Play each note once on the beat. Stay silent during rests.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
+    $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.tapsOnly ? 'One tap per note. Count the beats between taps.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
     this.sound();
     this.inputControls();
   }
 
-  async start(resume = false) {
+  async start(resume = false, listen = false) {
     const request = ++this.request;
     this.sessionOffset = 0;
     this.active = true; this.paused = false; this.starting = true; this.completed = false; this.lastBeat = null;
@@ -279,9 +310,10 @@ export class Activities {
           this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,noteValues:this.noteValues,pace:this.flow?'flow':this.settings.pace},quizSettings);
           this.phraseHistory.set(key,this.phrase);
         }
-        this.session = new ExerciseSession(this.phrase,{...this.settings,tapOnly:this.tapsOnly,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});
+        this.session = new ExerciseSession(this.phrase,{...this.settings,tapOnly:this.tapsOnly,clapPractice:true,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }
+    this.demoEvents = listen ? this.session.clap.bars[this.session.clap.bar] : null;
     this.drawSignature = null;
     $('training-visual').hidden = true;
     this.refresh();
@@ -290,26 +322,31 @@ export class Activities {
       delete $('exercise-score').dataset.startTime;
       this.draw(performance.now());
     }
-    if (this.requiresMidi && !this.midi.status.connected) {
+    if (this.requiresMidi && !this.midi.status.connected && !listen) {
       this.starting = false; this.paused = true; this.refresh();
       this.message(this.supported ? 'Connect your keyboard, then tap Resume to begin.' : 'Web MIDI is unavailable in this browser. Rhythm can use touch input.',true);
       if (this.supported && !this.midi.wanted) void this.midi.connect();
       return;
     }
     this.message('Getting your beat ready…');
-    const running = await this.clock.start({ ...this.settings, countIn:this.exercise ? this.settings.meter : 0, visualOnly:this.visualOnly || this.drill?.visualOnly });
+    const running = await this.clock.start({ ...this.settings, countIn:this.exercise ? this.settings.meter * (listen ? 2 : 1) : 0, visualOnly:this.visualOnly || this.drill?.visualOnly });
     if (request !== this.request) return;
     if (!running && this.drill && !this.drill.visualOnly && !this.visualOnly) {
       this.drill.visualOnly = true;
       return this.start(true);
     }
     this.starting = false;
+    if (!running) this.demoEvents = null;
     if (this.session && running) {
       this.session.startTime = this.clock.exerciseStart;
       $('exercise-score').dataset.startTime = this.session.startTime;
     }
     this.refresh();
     if (!this.active) return;
+    if (running && this.session?.clap && this.finePointer.matches &&
+        [$('training-toggle'),$('training-listen')].includes(document.activeElement)) {
+      (this.requiresMidi ? $('exercise-score') : $('training-touchpad')).focus({preventScroll:true});
+    }
     $('training-visual').hidden = Boolean(running);
     this.message(running ? this.exercise ? 'Count in, then follow the score.' : this.visualOnly ? 'Visual beat · audio unavailable' : 'Find your beat. Take your time.' : 'Audio could not start. Try Start again, or use the visual beat.');
   }
@@ -324,6 +361,90 @@ export class Activities {
     $('training-visual').hidden = false;
   }
 
+  scheduleDemo({beat,time}) {
+    const meter = this.settings.meter;
+    if (!this.demoEvents || beat < -2*meter || beat >= -meter) return;
+    const localBeat = beat + 2*meter;
+    for (const event of this.demoEvents) {
+      const position = event.beat % meter;
+      if (!event.rest && Math.floor(position) === localBeat) {
+        this.clock.clap(time+(position-localBeat)*this.clock.step,true);
+      }
+    }
+  }
+
+  clapFrame(time, beat, clockStart) {
+    const {session} = this;
+    const {clap} = session;
+    if (this.demoEvents && time >= session.startTime) {
+      this.demoEvents = null;
+      $('training-listen').disabled = false;
+      if (this.requiresMidi && !this.midi.status.connected) {
+        this.pause('Connect your keyboard, then tap Resume to play this bar.');
+        return;
+      }
+    }
+    session.tick(time);
+    if (session.done) { this.finish(time); return; }
+    this.sessionOffset = session.startTime - clockStart;
+    $('exercise-score').dataset.startTime = session.startTime;
+    const position = session.position(time);
+    const demoBeat = beat + 2*this.phrase.meter;
+    const listening = this.demoEvents && demoBeat >= 0 && demoBeat < this.phrase.meter;
+    this.drawClap(time,listening ? demoBeat : null);
+    $('training-move-on').hidden = !clap.retry || !position.preparing || Boolean(this.demoEvents);
+    if (listening) this.message('Listen to this bar');
+    else if (position.preparing) {
+      const count = Math.min(this.phrase.meter,Math.ceil(position.remaining));
+      const cue = clap.retry || (time < clap.noticeUntil ? clap.notice : '');
+      const visual = this.drill?.visualOnly ? 'Visual beat · ' : '';
+      this.message(`${visual}${cue ? cue + ' · ' : ''}Get ready · ${count}`,Boolean(clap.retry));
+    } else this.message(time < clap.noticeUntil ? clap.notice : 'Your turn');
+  }
+
+  drawClap(time, demoBeat = null) {
+    const {session,phrase} = this;
+    const {bar,bars} = session.clap;
+    const position = session.position(time);
+    const score = $('exercise-score');
+    if (this.drawSignature !== bar) {
+      this.drawSignature = bar;
+      score.innerHTML = renderMeasure(phrase,bar);
+      this.clapNotes = Array.from(score.querySelectorAll('[data-event]'));
+      this.clapCursor = score.querySelector('[data-cursor]');
+      this.clapShade = score.querySelector('[data-beat-shade]');
+    }
+    const localBeat = demoBeat ?? position.beat - bar * phrase.meter;
+    const showCursor = demoBeat !== null || !position.preparing;
+    for (let index = 0; index < bars[bar].length; index++) {
+      const event = bars[bar][index];
+      const note = this.clapNotes[index];
+      const status = session.results.get(event.id)?.status;
+      const onset = event.beat - bar * phrase.meter;
+      note.classList.toggle('correct',status === 'correct');
+      note.classList.toggle('missed',status === 'missed');
+      note.classList.toggle('wrong',status === 'wrong');
+      note.classList.toggle('current',demoBeat !== null && localBeat >= onset && localBeat < onset+event.durationBeats);
+    }
+    const pulse = Math.min(phrase.meter-1,Math.floor(localBeat));
+    this.clapCursor.style.visibility = this.clapShade.style.visibility = showCursor ? 'visible' : 'hidden';
+    this.clapCursor.setAttribute('transform',`translate(${scoreX(localBeat,phrase.meter,true)} 0)`);
+    this.clapShade.setAttribute('x',scoreX(pulse,phrase.meter,true));
+    this.clapShade.setAttribute('width',scoreX(pulse+1,phrase.meter,true)-scoreX(pulse,phrase.meter,true));
+    const label = this.finePointer.matches ? 'Tap or press Space' : 'Tap the rhythm';
+    if ($('training-touchpad').textContent !== label) $('training-touchpad').textContent = label;
+    const progress = this.drill ? `Bar ${this.drill.bar+1} · ${this.settings.bpm} BPM` : `${this.settings.bpm} BPM · Bar ${bar+1}/${phrase.bars}`;
+    if ($('training-progress').textContent !== progress) $('training-progress').textContent = progress;
+  }
+
+  moveOn() {
+    const now = performance.now();
+    if (!this.session?.skipClap(now,this.clock.nextDownbeat(now+this.session.beatMs))) return;
+    if (this.session.done) { this.finish(now); return; }
+    this.clapFrame(now,this.clock.beatAt(now),this.clock.exerciseStart);
+    (this.requiresMidi ? $('exercise-score') : $('training-touchpad')).focus({preventScroll:true});
+  }
+
   frame({ time, beat, meterBeat = beat, startTime }) {
     if (this.renderedMeter !== this.clock.meter) this.refresh();
     const index = time < this.clock.startTime ? -1 : Math.max(0, Math.floor(meterBeat)) % this.clock.meter;
@@ -334,6 +455,7 @@ export class Activities {
     }
     if (!this.exercise || !this.session || this.completed) return;
     this.session.startTime = startTime + this.sessionOffset;
+    if (this.session.clap) { this.clapFrame(time,beat,startTime); return; }
     $('exercise-score').dataset.startTime = this.session.startTime;
     if (time < this.session.startTime) { this.draw(time); this.countdown(time); return; }
     this.session.tick(time);
@@ -350,6 +472,7 @@ export class Activities {
 
   draw(time) {
     if (!this.session || !this.phrase) return;
+    if (this.session.clap) { this.drawClap(time); return; }
     const progress = this.session.progress(time);
     const bar = this.session.guided ? this.session.current?.bar ?? this.phrase.bars-1 : Math.max(this.session.startBar, Math.min(this.phrase.bars-1, Math.floor(Math.max(0,progress)/this.phrase.meter)));
     const current = this.session.current?.id ?? -1;
@@ -362,7 +485,7 @@ export class Activities {
       const cursor = measure.querySelector('[data-cursor]');
       const visible = Number(measure.dataset.bar) === bar;
       cursor.style.visibility = visible ? 'visible' : 'hidden';
-      if (visible) cursor.setAttribute('transform',`translate(${scoreX(Math.max(0,Math.min(this.phrase.meter,progress-bar*this.phrase.meter)),this.phrase.meter)} 0)`);
+      if (visible) cursor.setAttribute('transform',`translate(${scoreX(Math.max(0,Math.min(this.phrase.meter,progress-bar*this.phrase.meter)),this.phrase.meter,this.phrase.rhythm)} 0)`);
     }
     if (this.session.tapOnly) {
       $('training-touchpad').textContent = 'Tap to the beat';
@@ -386,6 +509,20 @@ export class Activities {
     if (!this.active || !this.exercise || !this.clock.running || document.hidden || document.querySelector('dialog[open]') || source === 'midi' && !this.requiresMidi) return;
     if (event.type === 'reset') { this.pause('Keyboard notes reset. Resume to retry this bar.'); return; }
     this.session.startTime = this.clock.exerciseStart + this.sessionOffset;
+    if (this.session.clap) {
+      if (event.type !== 'on' || this.demoEvents && (event.timeStamp < this.session.startTime ||
+          this.requiresMidi && !this.midi.status.connected)) return;
+      const accepted = this.session.input(event);
+      if (accepted) this.clock.clap();
+      const pad = $('training-touchpad');
+      if (!pad.hidden) {
+        pad.classList.add('pressed');
+        clearTimeout(this.clapPulse);
+        this.clapPulse = setTimeout(() => pad.classList.remove('pressed'),65);
+      }
+      this.drawClap(performance.now());
+      return;
+    }
     this.session.input(event);
     if (this.retryFailure(performance.now())) return;
     if (performance.now() < this.session.startTime) { this.draw(performance.now()); this.countdown(performance.now()); return; }
@@ -419,12 +556,12 @@ export class Activities {
       this.session.pauseRun(now);
       this.session.restartBar(now);
     }
-    this.clock.stop(); this.starting = false;
+    this.clock.stop(); this.starting = false; this.demoEvents = null;
     this.pointer = undefined; $('training-touchpad').classList.remove('pressed');
     if (!this.active || this.completed) return;
     this.paused = true; this.refresh(); this.message(message);
   }
-  stop() { ++this.request; this.clock.stop(); this.active = false; this.starting = false; this.paused = false; this.session = null; this.drill = null; this.completed = false; this.pointer = undefined; $('training-touchpad').classList.remove('pressed'); }
+  stop() { ++this.request; this.clock.stop(); this.demoEvents = null; this.active = false; this.starting = false; this.paused = false; this.session = null; this.drill = null; this.completed = false; this.pointer = undefined; $('training-touchpad').classList.remove('pressed'); }
   midiChanged(status) {
     this.calibration.sync();
     this.inputControls();
@@ -522,6 +659,7 @@ export class Activities {
       saveTraining(this.state);
     }
     this.refresh();
+    if (this.drill && result.report.bars[0].outcome === 'skipped') $('training-title').textContent = 'Drill complete';
     $('training-summary').innerHTML = renderTrainingReport(result,Boolean(this.drill));
     $('training-summary').focus({preventScroll:true});
   }

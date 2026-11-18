@@ -2950,15 +2950,21 @@ dialog :is(button, input, select, a):focus-visible,
 
 .choice-field select[multiple] {
   height: 44px;
-  color: transparent;
+  visibility: hidden;
 }
 .choice-field select[multiple] + .choice-trigger {
-  padding: 0 24px 0 9px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0 21px 0 8px;
   text-align: start;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.training-fields .choice-field select[multiple] + .choice-trigger {
+  background: var(--surface);
 }
 #choice-apply {
   display: flex;

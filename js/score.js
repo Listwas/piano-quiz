@@ -1,7 +1,7 @@
 import { CLEFS, clefMarkup, staffY } from './staff.js';
 
 const width = 400;
-export const scoreX = (beat, meter) => 110 + beat / meter * 270;
+export const scoreX = (beat, meter, rhythm = false) => rhythm ? 64 + beat / meter * 328 : 110 + beat / meter * 270;
 
 function rest(x, duration) {
   if (duration >= 2) return `<rect x="${x-6}" y="${duration === 4 ? 36 : 42}" width="13" height="6" fill="currentColor"/>`;
@@ -22,7 +22,7 @@ function noteBeams(events, phrase) {
     const ys = group.map(event => phrase.rhythm ? 48 : staffY(event.tone.staffStep, phrase.clef));
     const up = ys.reduce((sum,y) => sum+y,0) >= 48 * size;
     const end = up ? Math.min(...ys) - 29 : Math.max(...ys) + 29;
-    const stemX = event => scoreX(event.beat % phrase.meter, phrase.meter) + (up ? 6 : -6);
+    const stemX = event => scoreX(event.beat % phrase.meter, phrase.meter, phrase.rhythm) + (up ? 6 : -6);
     const x1 = stemX(group[0]), x2 = stemX(group.at(-1));
     for (const event of group) stems.set(event.id, { up, end });
     const secondary = end + (up ? 6 : -6);
@@ -36,13 +36,13 @@ function noteBeams(events, phrase) {
 export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
   const events = phrase.events.filter(event => event.bar === bar);
   const ys = events.filter(e => e.tone).map(e => staffY(e.tone.staffStep, phrase.clef));
-  const top = phrase.rhythm ? 16 : Math.min(-3,...ys.map(y=>y-40));
+  const top = phrase.rhythm ? 9 : Math.min(-3,...ys.map(y=>y-40));
   const bottom = phrase.rhythm ? 80 : Math.max(94,...ys.map(y=>y+40));
   const lines = phrase.rhythm ? [48] : [24,36,48,60,72];
   const alterations = new Map();
   const beams = noteBeams(events, phrase);
   const notes = events.map(event => {
-    const x = scoreX(event.beat % phrase.meter,phrase.meter);
+    const x = scoreX(event.beat % phrase.meter,phrase.meter,phrase.rhythm);
     let drawing;
     const dotted = [1.5,3].includes(event.durationBeats);
     if (event.rest) {
@@ -71,7 +71,7 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
     const status = results.get(event.id)?.status || '';
     return `<g data-event="${event.id}" data-beat="${event.beat}" data-duration="${event.durationBeats}" data-midi="${event.tone?.midi ?? ''}" data-rest="${event.rest}" class="score-event ${status} ${current === event.id ? 'current' : ''}">${drawing}</g>`;
   }).join('');
-  return `<div class="measure" data-bar="${bar}"><span class="measure-label">${phrase.sourceBar ? `Bar ${phrase.sourceBar} · Drill` : `Bar ${bar+1} of ${phrase.bars}`}</span><svg class="exercise-staff" viewBox="0 ${top} ${width} ${bottom-top}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${phrase.rhythm?'Rhythm':phrase.clef+' clef'} bar ${bar+1}">${lines.map(y=>`<path d="M8 ${y}H${width-6}" class="staff__line"/>`).join('')}${phrase.rhythm?'':clefMarkup(phrase.clef)}<text x="${phrase.rhythm?36:65}" y="45" text-anchor="middle" class="score-meter">${phrase.meter}</text><text x="${phrase.rhythm?36:65}" y="65" text-anchor="middle" class="score-meter">4</text>${beams.drawing}${notes}<path d="M${width-6} ${phrase.rhythm?36:lines[0]}V${phrase.rhythm?60:lines.at(-1)}" class="staff__line"/><path data-cursor d="M0 ${top+4}V${bottom-4}" class="score-cursor" transform="translate(${scoreX(0,phrase.meter)} 0)"/></svg></div>`;
+  return `<div class="measure" data-bar="${bar}"><span class="measure-label">${phrase.sourceBar ? `Bar ${phrase.sourceBar} · Drill` : `Bar ${bar+1} of ${phrase.bars}`}</span><svg class="exercise-staff" viewBox="0 ${top} ${width} ${bottom-top}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${phrase.rhythm?'Rhythm':phrase.clef+' clef'} bar ${bar+1}">${phrase.rhythm ? `<rect data-beat-shade y="${top+2}" height="${bottom-top-4}" class="score-beat-shade"/>` : ''}${lines.map(y=>`<path d="M8 ${y}H${width-6}" class="staff__line"/>`).join('')}${phrase.rhythm?'':clefMarkup(phrase.clef)}<text x="${phrase.rhythm?30:65}" y="45" text-anchor="middle" class="score-meter">${phrase.meter}</text><text x="${phrase.rhythm?30:65}" y="65" text-anchor="middle" class="score-meter">4</text>${beams.drawing}${notes}<path d="M${width-6} ${phrase.rhythm?36:lines[0]}V${phrase.rhythm?60:lines.at(-1)}" class="staff__line"/><path data-cursor d="M0 ${top+4}V${bottom-4}" class="score-cursor" transform="translate(${scoreX(0,phrase.meter,phrase.rhythm)} 0)"/></svg></div>`;
 }
 
 export function renderScore(phrase, bar, results, current) {

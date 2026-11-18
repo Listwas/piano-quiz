@@ -474,3 +474,76 @@ test('selected patterns preserve complete eighth-note pairs and can add quarter 
  assert.equal(patternFits(['whole'],4),true);
  assert.equal(patternFits(['eighths'],3),true);
 });
+
+function clapSession(rhythms, settings = {}) {
+ const events = rhythms.flatMap((rhythm,bar)=>{
+  let beat = bar*4;
+  return rhythm.map(duration=>{
+   const event = {bar,beat,durationBeats:Math.abs(duration),rest:duration<0};
+   beat += Math.abs(duration);
+   return event;
+  });
+ }).map((event,id)=>({...event,id}));
+ const session = new ExerciseSession({events,bars:rhythms.length,meter:4,totalBeats:4*rhythms.length,rhythm:true},
+  {tapOnly:true,clapPractice:true,...settings});
+ session.startTime = 1000;
+ return session;
+}
+
+test('a whole note gets one tap and earns a clean bar only at the barline',()=>{
+ const session = clapSession([[4],[4]]);
+ note(session,'on',60,1000);
+ session.tick(4999);
+ assert.equal(session.results.get(0).status,'correct');
+ assert.equal(session.barStats[0].outcome,undefined);
+ // A slightly early downbeat is carried across the successful first bar.
+ note(session,'on',60,4950);
+ session.tick(5000);
+ assert.equal(session.barStats[0].outcome,'first-try');
+ assert.equal(session.results.get(1).status,'correct');
+ session.tick(9000);
+ assert.equal(session.done,true);
+ assert.deepEqual(session.summary(9000).report.bars.map(bar=>bar.outcome),['first-try','first-try']);
+});
+
+test('an extra tap during a whole note waits for the barline and a retry preserves first-pass mistakes',()=>{
+ const session = clapSession([[4],[4]],{pace:'practice'});
+ note(session,'on',60,1000);
+ note(session,'on',60,3000);
+ session.tick(4999);
+ assert.equal(session.clap.retry,'');
+ session.tick(5000);
+ assert.match(session.clap.retry,/Extra tap on beat 3/);
+ assert.equal(session.startTime,9000);
+ note(session,'on',60,6000);
+ assert.equal(session.results.size,0);
+ note(session,'on',60,9000);
+ session.tick(9000);
+ session.tick(13000);
+ assert.equal(session.startTime,17000);
+ note(session,'on',60,17000);
+ session.tick(21000);
+ const result = session.summary(21000);
+ assert.equal(result.onset,100);
+ assert.equal(result.extras,1);
+ assert.equal(result.retries,1);
+ assert.deepEqual(result.report.bars.map(bar=>bar.outcome),['retried','first-try']);
+});
+
+test('sixteenths match once each and skipping a failed bar does not count as first try',()=>{
+ const session = clapSession([[.25,.25,.25,.25,-1,2],[4]],{bpm:200});
+ for (const ms of [1000,1075,1150,1225]) note(session,'on',60,ms);
+ note(session,'on',60,1340);
+ note(session,'on',60,1560); // Outside the early window for the next note.
+ note(session,'on',60,1590); // Ten milliseconds early is a valid onset.
+ session.tick(2200);
+ assert.match(session.clap.retry,/rest on beat 2/);
+ assert.equal(session.skipClap(2300,3400),true);
+ note(session,'on',60,3400);
+ session.tick(4600);
+ const result = session.summary(4600);
+ assert.equal(result.onset,100);
+ assert.equal(result.extras,2);
+ assert.equal(result.restErrors,1);
+ assert.deepEqual(result.report.bars.map(bar=>bar.outcome),['skipped','first-try']);
+});

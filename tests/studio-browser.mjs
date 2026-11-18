@@ -219,7 +219,7 @@ try {
   await tap(quick.page, '.activity-card[data-activity=sight]');
   assert.deepEqual(await selectedPatterns(),['half','quarter']);
   assert.match(await quick.page.locator('#home-sight-tools').innerText(), /MIDI keyboard only/);
-  await quick.page.locator('#setup-complexity').selectOption(['dotted-quarter','eighths']);
+  await quick.page.locator('#setup-complexity').selectOption(['dotted-quarter','eighths'],{force:true});
   await tap(quick.page, '.activity-card[data-activity=rhythm]');
   await quick.page.reload();
   await tap(quick.page, '[data-tab=home]');
@@ -234,7 +234,7 @@ try {
   await tap(quick.page, '#data-export');
   const exportPath = await (await exported).path();
   await tap(quick.page, '#settings-dialog [data-close]');
-  await quick.page.locator('#setup-complexity').selectOption(['whole']);
+  await quick.page.locator('#setup-complexity').selectOption(['whole'],{force:true});
   await tap(quick.page, '#settings-button');
   await quick.page.locator('#data-import').setInputFiles({
     name: 'progress.json', mimeType: 'application/json', buffer: await readFile(exportPath),

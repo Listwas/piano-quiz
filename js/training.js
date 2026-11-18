@@ -17,7 +17,7 @@ export function normalizeTraining(raw) {
   }));
   settings.rhythmActions = {
     touch: raw?.rhythmActions?.touch === 'hold' ? 'hold' : 'tap',
-    midi: raw?.rhythmActions?.midi === 'tap' ? 'tap' : 'hold',
+    midi: raw?.rhythmActions?.midi === 'hold' ? 'hold' : 'tap',
   };
   return settings;
 }
@@ -103,7 +103,9 @@ export function recordBarPractice(state, original, bar, result, bpm, at = Date.n
       ![original.replay.bpm,slowerReplayTempo(original.replay.bpm)].includes(bpm) ||
       !count(at) || result?.activity !== original.activity || !result.report || result.report.bars.length !== 1 ||
       result.pitch !== (original.activity === 'rhythm' ? null : 100) || result.onset !== 100 || result.holds !== (original.replay.tapOnly ? null : 100) ||
-      result.missed || result.extras || result.restErrors) return false;
+      (result.report.bars[0].outcome
+        ? result.report.bars[0].outcome === 'skipped'
+        : result.missed || result.extras || result.restErrors)) return false;
   const identity = value => JSON.stringify([value.at,value.activity,value.replay,value.report]);
   const key = identity(original);
   for (const saved of new Set([original,state.lastResult,...(state.history || [])].filter(Boolean))) {
@@ -117,7 +119,8 @@ export function recordBarPractice(state, original, bar, result, bpm, at = Date.n
 function restoreTrainingResult(result) {
   if (result?.version !== 1 || !['rhythm','sight'].includes(result.activity) || !['guided','continuous'].includes(result.style) || !['pitch','onset','holds'].every(key => result[key] === null || nonnegative(result[key]) && result[key] <= 100) || !['total','extras','retries','missed','restTotal','restErrors','at'].every(key => nonnegative(result[key]))) return null;
   const { report, replay, comparison, practisedBars, ...legacy } = result;
-  if (!report || !nonnegative(report.elapsedMs) || !Array.isArray(report.bars) || ![2,4,8].includes(report.bars.length) || !report.bars.every(bar => count(bar?.retries) && issueKeys.every(key=>count(bar.issues?.[key])) && timingKeys.every(key=>(key==='absoluteMs'?nonnegative:count)(bar.timing?.[key])))) return legacy;
+  if (!report || !nonnegative(report.elapsedMs) || !Array.isArray(report.bars) || ![2,4,8].includes(report.bars.length) || !report.bars.every(bar => count(bar?.retries) && issueKeys.every(key=>count(bar.issues?.[key])) && timingKeys.every(key=>(key==='absoluteMs'?nonnegative:count)(bar.timing?.[key])) &&
+    (bar.outcome === undefined || result.activity === 'rhythm' && result.holds === null && ['first-try','retried','skipped'].includes(bar.outcome)))) return legacy;
   const restored = { ...legacy, report };
   if (validReplay(replay,result)) {
     restored.replay = replay;
@@ -289,7 +292,7 @@ export const holdTolerance = (milliseconds, accuracy = 'strict') => accuracy ===
 export const heldCorrectly = (actual, expected, accuracy) => Math.abs(actual - expected) <= holdTolerance(expected, accuracy);
 
 export class ExerciseSession {
-  constructor(phrase, { bpm = 60, offset = 0, guided = false, tapOnly = false, pace = 'flow', accuracy = 'strict', retryOnError = false } = {}) {
+  constructor(phrase, { bpm = 60, offset = 0, guided = false, tapOnly = false, clapPractice = false, pace = 'flow', accuracy = 'strict', retryOnError = false } = {}) {
     Object.assign(this, { phrase, bpm, offset, guided, accuracy, retryOnError, gapBeats:!guided && pace === 'practice' ? phrase.meter : 0, beatMs:60000 / bpm, startTime:0, startBar:0, currentIndex:0, done:false, feedback:'', guidedRestStart:null, failure:null, retryReason:'', barFailures:0, lastHold:null });
     this.tapOnly = phrase.rhythm && !guided && tapOnly;
     this.extraBars = []; this.retryBars = [];
@@ -302,6 +305,13 @@ export class ExerciseSession {
     this.barStats = Array.from({length:phrase.bars},freshBar);
     this.elapsedMs = 0;
     this.runStart = null;
+    if (this.tapOnly && clapPractice) {
+      this.clap = {
+        bar: 0, retry: '', notice: '', extras: [], pending: [], totalExtras: 0, matched: 0,
+        bars: Array.from({length:phrase.bars}, (_,bar) => phrase.events.filter(event => event.bar === bar)),
+        windows: new Map(phrase.events.filter(event => !event.rest).map(event => [event.id,this.window(event)])),
+      };
+    }
   }
   get extras() { return this.extraBars.length; }
   get retries() { return this.retryBars.length + this.barFailures; }
@@ -363,6 +373,11 @@ export class ExerciseSession {
   extraAt(time, rest = null) { this.extraBars.push({bar:this.guided ? this.current?.bar ?? this.phrase.bars-1 : this.position(time).bar,rest}); }
   expected(event) { return this.startTime + (event.beat - this.startBar * this.phrase.meter + (event.bar - this.startBar) * this.gapBeats) * this.beatMs; }
   position(now) {
+    if (this.clap) {
+      const elapsed = (now - this.startTime) / this.beatMs;
+      return { bar:this.clap.bar, preparing:elapsed < 0, remaining:Math.max(0,-elapsed),
+        beat:this.clap.bar * this.phrase.meter + Math.max(0,Math.min(this.phrase.meter,elapsed)) };
+    }
     const elapsed = Math.max(0, (now - this.startTime) / this.beatMs);
     const end = this.phrase.totalBeats - this.startBar * this.phrase.meter + (this.phrase.bars-1-this.startBar) * this.gapBeats;
     if (elapsed >= end) return { bar:this.phrase.bars-1, preparing:false, remaining:0, beat:this.phrase.totalBeats };
@@ -392,6 +407,7 @@ export class ExerciseSession {
   }
   input(event) {
     if (this.done || this.failure || event.type === 'reset') return;
+    if (this.clap) return event.type === 'on' && this.clapInput(event.timeStamp);
     const time = event.timeStamp - this.offset, key = `${event.channel}:${event.note}`;
     this.beginRun(event.timeStamp);
     if (event.type === 'on') {
@@ -482,9 +498,114 @@ export class ExerciseSession {
   durationFeedback(actual, expected) {
     return `${actual < expected ? 'Too short' : 'Too long'} · held ${(actual / this.beatMs).toFixed(1)} of ${(expected / this.beatMs).toFixed(1)} beats.`;
   }
+  clapInput(stamp) {
+    const time = stamp - this.offset;
+    const {bar,bars,windows} = this.clap;
+    const beat = (time - this.startTime) / this.beatMs;
+    const end = this.startTime + this.phrase.meter * this.beatMs;
+    const firstNext = bars[bar+1]?.[0];
+    // A correct early downbeat belongs to the next bar. Keep any additional
+    // taps before the barline in the current attempt.
+    const earlyDownbeat = firstNext && !firstNext.rest && this.clap.pending.length === 0 && time >= end - windows.get(firstNext.id);
+    if (!this.gapBeats && firstNext && (earlyDownbeat || time >= end)) {
+      this.clap.pending.push(stamp);
+      return true;
+    }
+    if (beat >= this.phrase.meter) return false;
+    const localBeat = event => event.beat - bar * this.phrase.meter;
+    for (const event of bars[bar]) {
+      if (event.rest || this.results.get(event.id)?.onset) continue;
+      const error = (beat - localBeat(event)) * this.beatMs;
+      if (Math.abs(error) <= windows.get(event.id)) {
+        this.results.set(event.id,{onset:true,error,status:'correct'});
+        return true;
+      }
+    }
+    if (beat < 0) return false;
+    const current = bars[bar].findLast(event => localBeat(event) <= beat);
+    this.clap.extras.push({event:current,beat});
+    if (current.rest) this.results.set(current.id,{status:'wrong'});
+    return true;
+  }
+  tickClap(now) {
+    const {bar,bars,windows} = this.clap;
+    const stats = this.barStats[bar];
+    if (this.clap.retry) {
+      stats.retries++;
+      this.barFailures++;
+      this.clap.retry = '';
+    }
+    const beat = (now - this.startTime) / this.beatMs;
+    const downbeat = bar * this.phrase.meter;
+    const events = bars[bar];
+    const end = this.startTime + this.phrase.meter * this.beatMs;
+    this.currentIndex = events.findLast(event => event.beat - downbeat <= beat)?.id ?? events[0].id;
+    for (const event of events) {
+      if (event.rest || this.results.has(event.id)) continue;
+      if ((beat - (event.beat - downbeat)) * this.beatMs > windows.get(event.id) + Math.max(0,this.offset)) {
+        this.results.set(event.id,{status:'missed'});
+      }
+    }
+    if (now < end + Math.max(0,this.offset)) return;
+
+    const missed = events.filter(event => !event.rest && !this.results.get(event.id)?.onset);
+    const extras = this.clap.extras;
+    const badRests = new Set(extras.filter(tap=>tap.event.rest).map(tap=>tap.event.id));
+    const matched = events.filter(event=>this.results.get(event.id)?.onset);
+    for (const event of matched) this.trackTiming(stats,this.results.get(event.id).error);
+    stats.issues.missed += missed.length;
+    stats.issues.rest += badRests.size;
+    stats.issues.offBeat += extras.filter(tap=>!tap.event.rest).length;
+    this.clap.totalExtras += extras.length;
+    if (missed.length || extras.length) {
+      const extra = extras[0];
+      const missedBeat = Math.floor(missed[0]?.beat - downbeat)+1;
+      this.clap.retry = extra
+        ? extra.event.rest ? `Extra tap during the rest on beat ${extra.event.beat-downbeat+1}`
+          : `Extra tap on beat ${Math.floor(extra.beat)+1}${extra.event.durationBeats > 1 ? ' · tap once, then keep counting' : ''}`
+        : missed.length === 1 ? `Missed a note on beat ${missedBeat}` : `${missed.length} missed · first on beat ${missedBeat}`;
+      this.clap.attemptMatched = matched.length;
+      this.resetClapAttempt();
+      this.startTime = end + this.phrase.meter * this.beatMs;
+      return;
+    }
+    stats.outcome = stats.retries ? 'retried' : 'first-try';
+    this.clap.matched += matched.length;
+    this.clap.notice = 'Clean bar ✓';
+    this.advanceClap(end + this.gapBeats * this.beatMs,now);
+  }
+  resetClapAttempt() {
+    for (const event of this.clap.bars[this.clap.bar]) this.results.delete(event.id);
+    this.clap.extras = [];
+    this.clap.pending = [];
+    this.currentIndex = this.clap.bars[this.clap.bar][0].id;
+  }
+  advanceClap(startTime, now) {
+    const pending = this.clap.pending;
+    this.resetClapAttempt();
+    this.clap.retry = '';
+    this.clap.noticeUntil = now + 850;
+    if (this.clap.bar === this.phrase.bars - 1) {
+      this.done = true;
+      return;
+    }
+    ++this.clap.bar;
+    this.startTime = startTime;
+    this.currentIndex = this.clap.bars[this.clap.bar][0].id;
+    for (const stamp of pending) this.clapInput(stamp);
+  }
+  skipClap(now, startTime) {
+    if (!this.clap?.retry || now >= this.startTime) return false;
+    this.barStats[this.clap.bar].outcome = 'skipped';
+    this.clap.matched += this.clap.attemptMatched;
+    this.clap.notice = 'Moved on';
+    this.advanceClap(startTime,now);
+    return true;
+  }
   tick(now) {
     if (this.done || this.failure || now < this.startTime) return;
     this.beginRun(now);
+    if (this.clap) return this.tickClap(now);
     this.retryReason = '';
     if (this.guided) {
       const target = this.current;
@@ -535,6 +656,10 @@ export class ExerciseSession {
     return target.beat + (began === null || began === undefined ? 0 : Math.min(target.durationBeats, Math.max(0,now - (target.rest ? 0 : this.offset) - began) / this.beatMs));
   }
   restartBar(now, failedBar) {
+    if (this.clap) {
+      this.resetClapAttempt();
+      return this.clap.bar;
+    }
     let bar = failedBar ?? (this.guided ? this.current?.bar ?? this.phrase.bars - 1 : Math.floor(Math.max(0,this.progress(now)) / this.phrase.meter));
     if (failedBar === undefined) for (const {target} of this.holding.values()) bar = Math.min(bar, target.bar);
     bar = Math.min(this.phrase.bars - 1,bar);
@@ -582,8 +707,13 @@ export class ExerciseSession {
     const tappedRests = new Set(this.extraBars.map(entry=>entry.rest));
     const failedRests = rests.filter(e => this.tapOnly ? tappedRests.has(e.id) : this.guided ? this.results.get(e.id)?.duration !== true : this.restFailed(e,now-this.offset));
     const bars = structuredClone(this.barStats);
-    if (!this.retryOnError) this.addPassStats(bars,now);
+    if (!this.retryOnError && !this.clap) this.addPassStats(bars,now);
     const report = { bars, elapsedMs:Math.round(this.elapsedMs+(this.runStart === null ? 0 : Math.max(0,now-this.runStart))) };
-    return { version:1, at:Date.now(), activity:this.phrase.rhythm ? 'rhythm' : 'sight', style:this.guided ? 'guided' : 'continuous', total:notes.length, pitch:this.phrase.rhythm ? null : percent('pitch'), onset:this.guided ? null : percent('onset'), holds:this.tapOnly ? null : percent('duration'), extras:this.extras, retries:this.retries, missed:values.filter(r => !r || r.status === 'missed').length, restTotal:rests.length, restErrors:failedRests.length, meanError:errors.length ? Math.round(errors.reduce((a,b)=>a+b,0) / errors.length) : null, report };
+    const timing = bars.map(bar=>bar.timing);
+    const measured = timing.reduce((sum,bar)=>sum+bar.early+bar.centered+bar.late,0);
+    return { version:1, at:Date.now(), activity:this.phrase.rhythm ? 'rhythm' : 'sight', style:this.guided ? 'guided' : 'continuous', total:notes.length, pitch:this.phrase.rhythm ? null : percent('pitch'), onset:this.guided ? null : percent('onset'), holds:this.tapOnly ? null : percent('duration'), extras:this.extras, retries:this.retries, missed:values.filter(r => !r || r.status === 'missed').length, restTotal:rests.length, restErrors:failedRests.length, meanError:errors.length ? Math.round(errors.reduce((a,b)=>a+b,0) / errors.length) : null, report,
+      ...(this.clap && { onset:Math.round(100*this.clap.matched/notes.length), extras:this.clap.totalExtras,
+        missed:bars.reduce((sum,bar)=>sum+bar.issues.missed,0), restErrors:bars.reduce((sum,bar)=>sum+bar.issues.rest,0),
+        meanError:measured ? Math.round(timing.reduce((sum,bar)=>sum+bar.absoluteMs,0)/measured) : null }) };
   }
 }

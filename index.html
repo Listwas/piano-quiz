@@ -53,7 +53,7 @@
                 <button id="home-training-notes" type="button" class="text-button">Notes &amp; octaves ↗</button>
               </div>
               <div id="setup-rhythmAction-row" class="quick-controls" hidden>
-                <label id="setup-rhythmAction-label">Rhythm input style<select id="setup-rhythmAction"><option value="tap">Tap to the beat</option><option value="hold">Tap &amp; hold</option></select></label>
+                <label id="setup-rhythmAction-label">Rhythm input style<select id="setup-rhythmAction"><option value="tap">Clap rhythm</option><option value="hold">Tap &amp; hold</option></select></label>
               </div>
               <p id="setup-input-status" class="small muted" role="status"></p>
               <div id="setup-quick-controls" class="quick-controls">
@@ -115,10 +115,10 @@
           <h1 id="training-title">Metronome</h1><span id="reading-style-badge" class="studio-tag" hidden>Practice</span>
           <div id="training-beats" class="beat-dots" aria-label="Beat indicator"></div>
           <div id="metronome-display"><strong id="metronome-number">1</strong><span id="metronome-tempo" class="muted">60 BPM</span><div class="tempo-controls"><button data-tempo-step="-5" class="secondary" aria-label="Slower by five BPM">−</button><label for="live-bpm" class="sr-only">Tempo in BPM</label><input id="live-bpm" type="number" min="40" max="200" step="1" value="60"><button data-tempo-step="5" class="secondary" aria-label="Faster by five BPM">+</button><select id="live-meter" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option></select></div></div>
-          <div id="exercise-score" hidden></div><div id="hold-coach" hidden><label id="hold-label" for="hold-progress">Hold for two beats</label><progress id="hold-progress" max="1" value="0"></progress></div><div id="training-summary" tabindex="-1" role="region" aria-label="Session summary" hidden></div>
-          <p id="training-live-status" class="muted" role="status">Ready when you are.</p>
+          <div id="exercise-score" tabindex="-1" hidden></div><div id="hold-coach" hidden><label id="hold-label" for="hold-progress">Hold for two beats</label><progress id="hold-progress" max="1" value="0"></progress></div><div id="training-summary" tabindex="-1" role="region" aria-label="Session summary" hidden></div>
+          <div id="training-live-row"><p id="training-live-status" class="muted" role="status">Ready when you are.</p><button type="button" id="training-move-on" class="secondary" hidden>Move on</button></div>
         </div>
-        <div id="training-actions"><button id="training-visual" class="secondary" hidden>Use visual beat</button><button id="training-touchpad" type="button" hidden>Press and hold</button><button id="training-recheck" class="text-button" hidden>Recheck MIDI</button><div class="training-action-row"><button id="training-toggle" class="primary">Start</button><button id="training-sound" class="secondary" aria-pressed="false">Mute clicks</button><button id="training-details" class="secondary" hidden>Session details</button></div><p id="training-footnote" class="small muted">A steady beat. A little more fluent.</p></div>
+        <div id="training-actions"><button id="training-visual" class="secondary" hidden>Use visual beat</button><button id="training-touchpad" type="button" hidden>Press and hold</button><button id="training-recheck" class="text-button" hidden>Recheck MIDI</button><div class="training-action-row"><button id="training-toggle" class="primary">Start</button><button id="training-sound" class="secondary" aria-pressed="false">Mute clicks</button><button id="training-listen" class="secondary" hidden>Listen</button><button id="training-details" class="secondary" hidden>Session details</button></div><p id="training-footnote" class="small muted">A steady beat. A little more fluent.</p></div>
       </section>
 
       <section id="result-screen" class="screen result-screen" hidden>
@@ -152,7 +152,7 @@
           <label data-sight-setting hidden>Reading style<select id="training-behavior"><option value="retry-bar">Practice · retry a failed bar</option><option value="continue">Flow · keep playing through mistakes</option></select></label>
           <label data-exercise-setting hidden>Timing tolerance<select id="training-accuracy"><option value="beginner">Beginner · forgiving</option><option value="strict">Strict · precise</option></select></label>
           <label data-exercise-setting hidden>Between bars<select id="training-pace"><option value="practice">Count in · time to read</option><option value="flow">Keep playing · no break</option></select></label>
-          <label data-rhythm-setting hidden>Rhythm input style<select id="training-rhythmAction"><option value="tap">Tap to the beat</option><option value="hold">Tap &amp; hold</option></select></label>
+          <label data-rhythm-setting hidden>Rhythm input style<select id="training-rhythmAction"><option value="tap">Clap rhythm</option><option value="hold">Tap &amp; hold</option></select></label>
           <label data-rhythm-setting hidden>Answer with<select id="training-input"><option value="touch">Touch pad</option><option value="midi">MIDI keyboard</option></select></label>
         </div>
         <p id="training-setup-help" class="small muted"></p>

@@ -15,12 +15,14 @@ export function practiceDuration(milliseconds) {
 }
 
 export function firstTryBars(result) {
-  return result.report.bars.filter(bar=>!bar.retries).length;
+  return result.report.bars.filter(bar=>bar.outcome ? bar.outcome === 'first-try' : !bar.retries).length;
 }
+
+export const isClapResult = result => result.activity === 'rhythm' && result.report.bars.some(bar=>bar.outcome);
 
 export function trainingHeadline(result) {
   if (isSightFlow(result)) return `${result.pitch}% pitch · ${result.onset}% on the beat`;
-  if (result.activity === 'sight') return `${firstTryBars(result)}/${result.report.bars.length} bars first try`;
+  if (result.activity === 'sight' || isClapResult(result)) return `${firstTryBars(result)}/${result.report.bars.length} bars first try`;
   return `${result.onset}% on the beat`;
 }
 
@@ -32,13 +34,15 @@ export function renderTrainingReport(result, drill = false) {
   const {bars,elapsedMs} = result.report;
   const flow = isSightFlow(result);
   const sight = result.activity === 'sight' && !flow;
+  const clap = isClapResult(result);
   const counts = bars.map(bar=>sight ? bar.retries : totalIssues(bar));
   const max = Math.max(1,...counts);
-  const cards = sight
+  const cards = clap ? [[`${firstTryBars(result)}/${bars.length}`,'First-try bars'],[result.retries,'Bar retries'],
+    [result.missed,'Missed notes'],[result.extras,'Extra taps'],[`${result.onset}%`,'Notes on time']] : sight
     ? [[`${firstTryBars(result)}/${bars.length}`,'First-try bars'],[result.retries,'Bar retries']]
     : flow ? [[`${result.pitch}%`,'Correct pitches'],[`${result.onset}%`,'On the beat'],[`${result.holds}%`,'Note lengths']] : [[`${result.onset}%`,'On the beat'],[`${result.holds}%`,'Note lengths']];
-  if (result.activity === 'rhythm' && result.holds === null) cards[1] = [result.missed,'Missed notes'];
-  if (!flow) cards.push([practiceDuration(elapsedMs),'Practice time']);
+  if (result.activity === 'rhythm' && result.holds === null && !clap) cards[1] = [result.missed,'Missed notes'];
+  if (!flow && !clap) cards.push([practiceDuration(elapsedMs),'Practice time']);
   const highlights = issueRows(bars);
   const practised = result.practisedBars?.filter(Boolean).length ?? 0;
   const difficult = bars.filter(bar=>sight ? bar.retries : totalIssues(bar)).length;
@@ -47,11 +51,17 @@ export function renderTrainingReport(result, drill = false) {
   const unit = sight ? 'retry' : 'mistake';
   const chart = counts.map((n,i)=>{
     const practice = result.practisedBars?.[i];
-    return `<button type="button" class="report-bar${n ? ' needs-work' : ''}${practice ? ' practised' : ''}" style="--fill:${Math.round(n/max*100)}%" data-report-bar="${i}" aria-label="Bar ${i+1}: ${n} ${n===1?unit:sight?'retries':'mistakes'}.${practice ? ` Practised at ${practice.bpm} BPM.` : ''} View details."><span>Bar ${i+1}</span><strong>${n || '✓'}${practice && n ? '<small aria-hidden="true"> ✓</small>' : ''}</strong></button>`;
+    const outcome = barOutcome(bars[i]);
+    const improved = practice || bars[i].outcome === 'retried';
+    return `<button type="button" class="report-bar${n ? ' needs-work' : ''}${improved ? ' practised' : ''}" style="--fill:${Math.round(n/max*100)}%" data-report-bar="${i}" aria-label="Bar ${i+1}${outcome ? '. '+outcome : ': '}${n} ${n===1?unit:sight?'retries':'mistakes'}.${practice ? ` Practised at ${practice.bpm} BPM.` : ''} View details."><span>Bar ${i+1}</span><strong>${n || '✓'}${improved && n ? '<small aria-hidden="true"> ✓</small>' : ''}</strong>${bars[i].outcome === 'skipped' ? '<small>Moved on</small>' : ''}</button>`;
   }).join('');
-  return `<div class="training-metrics">${cards.map(([value,label])=>`<div><strong>${value}</strong><span>${label}</span></div>`).join('')}</div>
+  return `<div class="training-metrics"${clap ? ' data-clap-metrics' : ''}>${cards.map(([value,label])=>`<div><strong>${value}</strong><span>${label}</span></div>`).join('')}</div>
     ${drill ? '' : `<section class="report-chart" aria-label="${sight?'Retries':'Mistakes'} by bar"><div class="report-chart-heading"><h2>${sight?'Retries':'Mistakes'} by bar</h2><button type="button" class="text-button report-all-details" data-all-details>All details</button></div><div class="report-bars" data-dense="${bars.length>4}" style="--bars:${bars.length}">${chart}</div></section>`}
     <div class="report-focus">${highlights.length ? `<ul>${highlights.slice(0,3).map(row=>`<li>${row.label} <strong>${row.count}</strong></li>`).join('')}</ul><p class="muted">${practiceMessage || highlights[0].tip}</p>` : `<p class="muted">${practised ? `${practised} bar${practised===1?'':'s'} practised after this session ✓` : 'No mistakes recorded.'}</p>`}</div>`;
+}
+
+function barOutcome(bar) {
+  return { 'first-try':'Clean on the first try. ', retried:'Clean after a retry. ', skipped:'Moved on. ' }[bar.outcome] ?? '';
 }
 
 export function renderTrainingDetails(result, selected = -1) {
@@ -64,7 +74,7 @@ export function renderTrainingDetails(result, selected = -1) {
     return sum;
   },{early:0,centered:0,late:0,absoluteMs:0});
   const attacks = timing.early+timing.centered+timing.late;
-  const scope = selected < 0 ? `${result.total} notes in the score · ${practiceDuration(elapsedMs)} practice time` : result.activity==='sight' && !isSightFlow(result) ? `${selection[0].retries} bar ${selection[0].retries===1?'retry':'retries'}` : `${totalIssues(selection[0])} mistakes`;
+  const scope = selected < 0 ? `${result.total} notes in the score · ${practiceDuration(elapsedMs)} practice time` : result.activity==='sight' && !isSightFlow(result) ? `${selection[0].retries} bar ${selection[0].retries===1?'retry':'retries'}` : `${barOutcome(selection[0])}${totalIssues(selection[0])} mistakes`;
   const practice = result.practisedBars?.[selected];
   return `${practice ? `<p class="report-practice-status">✓ Practised at ${practice.bpm} BPM${practice.bpm < result.replay.bpm ? ' · slower tempo' : ' · original tempo'}. Original session stats below.</p>` : ''}<p class="small muted">${scope}</p>
     <section class="report-detail-section"><h3>Mistakes</h3>${breakdown.length ? `<ul class="report-issue-list">${breakdown.map(row=>`<li><span>${row.label}</span><strong>${row.count}</strong><meter min="0" max="${highest}" value="${row.count}" aria-label="${row.label}: ${row.count}"></meter></li>`).join('')}</ul><p class="report-tip">${breakdown[0].tip}</p>` : '<p class="small muted">No mistakes recorded here.</p>'}</section>

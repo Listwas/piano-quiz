@@ -16,7 +16,7 @@ MIDI keyboard.
 | --- | --- | --- |
 | **Notes / Chords** | Recognise notes and chords | Tap answers or MIDI |
 | **Metronome** | A steady beat at your own tempo | Listen and follow along |
-| **Rhythm** | When to press, hold, and release | Touch pad or any MIDI key |
+| **Rhythm** | Read and tap rhythms in time | Touch pad, Spacebar, or any MIDI key |
 | **Sight-reading** | Read pitches and note lengths together | MIDI keyboard |
 
 ## Start in a minute
@@ -60,31 +60,21 @@ Tempo changes during playback take effect at the next bar.
 
 ### Rhythm exercises
 
-Choose **Rhythm** to practise when to press, how long to hold, and when to rest.
-Choose **Touch pad** or **MIDI keyboard** in setup before starting.
-Use the pad or any MIDI key. A half note lasts two
-beats; letting go after one beat counts as too short. The music keeps moving
-through mistakes, and the results show beat timing and note lengths separately.
+Choose **Rhythm** to practise reading and tapping rhythms. Use the on-screen
+pad, press **Space**, or select **MIDI keyboard** and strike any key.
 
-Choose a **Rhythm level** directly in **Practice**:
+In **Clap rhythm**, tap once at the start of each note. For a whole note, tap
+on beat one and count through beats two, three, and four. For four beamed
+sixteenths, tap four times in one beat. Stay silent during rests.
 
-| Level | What it adds |
-| --- | --- |
-| **Starter** | Quarter and half notes |
-| **Steady** | Longer holds and rests |
-| **Moving** | Pairs of eighth notes |
-| **Challenge** | Dotted notes, offbeats, and more rests |
+1. Choose the note values and rests you want under **Rhythm patterns**.
+2. Follow the count-in and moving playhead. Select **Listen** to hear the bar
+   before playing it.
+3. Finish the bar even if you miss a tap. Read the feedback, then retry with a
+   fresh count-in or choose **Move on**.
 
-Bars use different patterns before repeating, with repeats spread apart. The
-same level choices apply to Sight-reading. Naturals, sharps, and flats control
-which pitches you practise; they do not limit the rhythm patterns. Selecting
-more notes also gives melodies more variety.
-The hold meter shows when to release; green appears after a correct release.
-A valid release briefly keeps the meter completely full before the next note.
-Beginner timing is more forgiving, and a full-bar count-in between bars gives
-you time to read ahead. Choose **Strict** timing or **Keep playing** in **More options**, and adjust the tempo and exercise length directly in **Practice**.
-Pausing restarts the interrupted
-bar with a count-in. Rhythm results save separately from your quiz history.
+Your results show first-try bars, retries, missed notes, extra taps, and timing.
+Choose **Tap & hold** in the rhythm input style to also practise note releases.
 
 ### Sight-reading
 
@@ -110,7 +100,8 @@ Recent results save on this device and appear in **Progress**.
 
 Sight-reading shows how many bars you cleared without a retry, how many times
 you retried, and how long you practised. Earlier mistakes stay in the report
-after a successful replay. Rhythm also shows your timing and hold scores.
+after a successful replay. Rhythm shows timing, plus release accuracy when
+you practise with Tap & hold.
 
 Tap a bar or **Session details** to see the mistake breakdown and how often
 matched presses were early, near the beat, or late. The report suggests what

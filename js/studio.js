@@ -1,3 +1,4 @@
+import { isClapResult, firstTryBars } from './training-report.js';
 import {
   loadStudio,
   recommend,
@@ -434,7 +435,7 @@ export class Studio {
         .slice(0, 15)
         .map(
           (r, i) =>
-            `<button class="session-row" data-training-report="${i}"><span><strong>${r.activity === 'sight' ? `Sight-reading · ${r.comparison?.behavior === 'continue' ? 'Flow' : 'Practice'}` : 'Rhythm'}</strong><small>${date(r.at)} · ${r.replay.bpm} BPM · ${r.replay.bars.length} bars</small></span><span class="session-result">${r.activity === 'sight' && r.comparison?.behavior !== 'continue' ? r.report.bars.filter((b) => !b.retries).length + '/' + r.report.bars.length : r.activity === 'sight' ? r.pitch + '%' : r.onset + '%'}</span></button>`,
+            `<button class="session-row" data-training-report="${i}"><span><strong>${r.activity === 'sight' ? `Sight-reading · ${r.comparison?.behavior === 'continue' ? 'Flow' : 'Practice'}` : 'Rhythm'}</strong><small>${date(r.at)} · ${r.replay.bpm} BPM · ${r.replay.bars.length} bars</small></span><span class="session-result">${r.activity === 'sight' && r.comparison?.behavior !== 'continue' ? r.report.bars.filter((b) => !b.retries).length + '/' + r.report.bars.length : r.activity === 'sight' ? r.pitch + '%' : isClapResult(r) ? firstTryBars(r) + '/' + r.report.bars.length : r.onset + '%'}</span></button>`,
         )
         .join('')
     }</div><button class="text-button" id="progress-full-history">Compare training sessions ↗</button></section>`;

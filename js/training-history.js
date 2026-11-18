@@ -1,5 +1,5 @@
 import { RHYTHM_LEVELS, NOTE_PATTERNS, isSightFlow } from './training.js';
-import { firstTryBars, practiceDuration } from './training-report.js';
+import { firstTryBars, isClapResult, practiceDuration } from './training-report.js';
 
 export function groupSessions(history, activity) {
   const groups = new Map();
@@ -7,7 +7,7 @@ export function groupSessions(history, activity) {
     if (result.activity!==activity || !result.comparison || !result.replay) return;
     const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
     const {level,pace,notes,octaves,noteValues} = result.comparison;
-    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,noteValues ?? level,pace,accuracy,offset,result.replay.tapOnly===true,activity==='sight'?clef:input,notes,octaves]);
+    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,noteValues ?? level,pace,accuracy,offset,result.replay.tapOnly===true,isClapResult(result),activity==='sight'?clef:input,notes,octaves]);
     if (!groups.has(key)) groups.set(key,[]);
     groups.get(key).push({result,index});
   });
@@ -17,19 +17,20 @@ export function groupSessions(history, activity) {
 export function historyLabel(result) {
   const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
   const {level,pace,notes,octaves,noteValues} = result.comparison;
-  const source = result.activity==='sight' ? `${clef} · ${notes.join(' ')} · octave ${octaves.join('/')}` : `${input==='midi'?'MIDI':'Touch'} · ${result.replay.tapOnly?'Tap to the beat':'Tap & hold'}`;
+  const source = result.activity==='sight' ? `${clef} · ${notes.join(' ')} · octave ${octaves.join('/')}` : `${input==='midi'?'MIDI':'Touch'} · ${isClapResult(result)?'Clap rhythm':result.replay.tapOnly?'Tap to the beat':'Tap & hold'}`;
   return `${isSightFlow(result)?'Flow · ':result.activity==='sight'?'Practice · ':''}${bpm} BPM · ${noteValues ? NOTE_PATTERNS.filter(pattern=>noteValues.includes(pattern.id)).map(pattern=>pattern.name).join(', ') : RHYTHM_LEVELS[level].description} · ${meter}/4 · ${bars.length} bars · ${source} · ${accuracy} · ${pace==='flow'?'keep playing':'count in'} · ${offset} ms`;
 }
 
 const date = new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const sessionDate = at => date.format(Math.min(at,8640000000000000));
-const score = result => result.activity==='sight' && !isSightFlow(result) ? Math.round(100*firstTryBars(result)/result.report.bars.length) : result.onset ?? 0;
-const label = result => result.activity==='sight' && !isSightFlow(result) ? `${firstTryBars(result)}/${result.report.bars.length} bars first try` : `${result.onset}% on beat${result.holds === null ? "" : ` · ${result.holds}% holds`}`;
+const byBar = result => isClapResult(result) || result.activity==='sight' && !isSightFlow(result);
+const score = result => byBar(result) ? Math.round(100*firstTryBars(result)/result.report.bars.length) : result.onset ?? 0;
+const label = result => byBar(result) ? `${firstTryBars(result)}/${result.report.bars.length} bars first try` : `${result.onset}% on beat${result.holds === null ? "" : ` · ${result.holds}% holds`}`;
 
 export function renderHistoryGroup(group) {
   const trend = group.slice(0,5).reverse();
   const delta = group.length>1 ? score(group[0].result)-score(group[1].result) : null;
-  const title = group[0].result.activity==='sight' && !isSightFlow(group[0].result) ? 'Bars first try' : 'On the beat';
+  const title = byBar(group[0].result) ? 'Bars first try' : 'On the beat';
   const points = trend.map(({result,index})=>`<button type="button" class="history-point" data-history-result="${index}" aria-label="${sessionDate(result.at)}: ${label(result)}. Open report."><span class="history-column"><span style="--score:${score(result)}%"></span></span><strong>${score(result)}%</strong></button>`).join('');
   const rows = group.map(({result,index})=>`<li><button type="button" class="history-row" data-history-result="${index}"><span><strong>${label(result)}</strong><small>${sessionDate(result.at)} · ${practiceDuration(result.report.elapsedMs)}</small></span><span aria-hidden="true">↗</span></button></li>`).join('');
   return `<section class="report-detail-section"><div class="report-chart-heading"><h3>${title}</h3><span class="small muted">Latest ${trend.length} · oldest first</span></div>

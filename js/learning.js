@@ -226,7 +226,7 @@ export const LESSONS = {
   },
   rhythm: {
     title: 'Play each note on the beat',
-    text: 'A quarter note lasts one beat, a half note two. Two eighth notes share one beat: count “1 and, 2 and”. In Tap to the beat, tap once at the start of each note. In Tap & hold, also release at its end. Stay silent during rests.',
+    text: 'A quarter note lasts one beat, a half note two. Two eighth notes share one beat: count “1 and, 2 and”. In Clap rhythm, tap once at the start of each note. Count the remaining beats of long notes and stay silent during rests. In Tap & hold, also release at the end of each note.',
     example:
       'At 60 BPM: a quarter lasts 1 second; an eighth lasts half a second.',
   },

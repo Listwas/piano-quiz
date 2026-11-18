@@ -103,9 +103,19 @@ export class BeatClock {
   }
 
   click(time, accent) {
+    this.sound(time,accent ? 1320 : 880,this.volume * (accent ? .45 : .28),'sine');
+  }
+
+  clap(time = this.context?.currentTime, demo = false) {
+    if (!this.running || !this.context || this.muted || this.volume <= 0) return;
+    this.sound(time,demo ? 510 : 345,this.volume * (demo ? .48 : .24),'triangle');
+  }
+
+  sound(time, frequency, volume, waveform) {
     const source = this.context.createOscillator(), gain = this.context.createGain();
-    source.frequency.value = accent ? 1320 : 880;
-    gain.gain.setValueAtTime(Math.max(.0001, this.volume * (accent ? .45 : .28)), time);
+    source.frequency.value = frequency;
+    source.type = waveform;
+    gain.gain.setValueAtTime(Math.max(.0001,volume), time);
     gain.gain.exponentialRampToValueAtTime(.0001, time + .035);
     source.connect(gain); gain.connect(this.context.destination);
     this.nodes.add(source);
