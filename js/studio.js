@@ -13,7 +13,7 @@ import { saveTraining, slowerReplayTempo, TRAINING_KEY } from './training.js';
 import { canSaveProgress, RESET_KEY, restoreState, STORAGE_KEY } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
-const QUICK_TRAINING_FIELDS = ['bpm', 'meter', 'bars', 'complexity', 'behavior', 'accuracy', 'pace', 'volume'];
+const QUICK_TRAINING_FIELDS = ['bpm', 'meter', 'bars', 'complexity', 'behavior', 'accuracy', 'pace', 'volume', 'rhythmAction'];
 const NUMERIC_TRAINING_FIELDS = new Set(['bpm', 'meter', 'bars', 'volume']);
 const esc = (s) =>
   String(s).replace(
@@ -166,7 +166,7 @@ export class Studio {
     const cards = [
       ['quiz', 'notes', '♩', 'Notes', 'Read and name each note'],
       ['quiz', 'chords', '♬', 'Chords', 'Recognise roots and shapes'],
-      ['rhythm', '', '◷', 'Rhythm', 'Press, hold and release'],
+      ['rhythm', '', '◷', 'Rhythm', 'Play each note on the beat'],
       ['sight', '', '♫', 'Sight-reading', 'Bring pitch and pulse together'],
       ['metronome', '', '◴', 'Metronome', 'Find a steady pulse'],
     ];
@@ -334,6 +334,8 @@ export class Studio {
     $('setup-behavior-label').hidden = a.activity !== 'sight';
     for (const key of QUICK_TRAINING_FIELDS) $(`setup-${key}`).value = a.settings[key];
     $('setup-complexity').value = a.complexity;
+    $('setup-rhythmAction-row').hidden = a.activity !== 'rhythm';
+    $('setup-rhythmAction').value = a.rhythmAction;
     $('setup-pace-label').hidden = !a.exercise || a.flow;
     $('setup-volume-label').hidden = a.activity !== 'metronome';
     const wantsMidi =

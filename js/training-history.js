@@ -7,7 +7,7 @@ export function groupSessions(history, activity) {
     if (result.activity!==activity || !result.comparison || !result.replay) return;
     const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
     const {level,pace,notes,octaves} = result.comparison;
-    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,level,pace,accuracy,offset,activity==='sight'?clef:input,notes,octaves]);
+    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,level,pace,accuracy,offset,result.replay.tapOnly===true,activity==='sight'?clef:input,notes,octaves]);
     if (!groups.has(key)) groups.set(key,[]);
     groups.get(key).push({result,index});
   });
@@ -17,14 +17,14 @@ export function groupSessions(history, activity) {
 export function historyLabel(result) {
   const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
   const {level,pace,notes,octaves} = result.comparison;
-  const source = result.activity==='sight' ? `${clef} · ${notes.join(' ')} · octave ${octaves.join('/')}` : input==='midi'?'MIDI':'Touch';
+  const source = result.activity==='sight' ? `${clef} · ${notes.join(' ')} · octave ${octaves.join('/')}` : `${input==='midi'?'MIDI':'Touch'} · ${result.replay.tapOnly?'Tap to the beat':'Tap & hold'}`;
   return `${isSightFlow(result)?'Flow · ':result.activity==='sight'?'Practice · ':''}${bpm} BPM · ${RHYTHM_LEVELS[level].name} · ${meter}/4 · ${bars.length} bars · ${source} · ${accuracy} · ${pace==='flow'?'keep playing':'count in'} · ${offset} ms`;
 }
 
 const date = new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const sessionDate = at => date.format(Math.min(at,8640000000000000));
 const score = result => result.activity==='sight' && !isSightFlow(result) ? Math.round(100*firstTryBars(result)/result.report.bars.length) : result.onset ?? 0;
-const label = result => result.activity==='sight' && !isSightFlow(result) ? `${firstTryBars(result)}/${result.report.bars.length} bars first try` : `${result.onset}% on beat · ${result.holds}% holds`;
+const label = result => result.activity==='sight' && !isSightFlow(result) ? `${firstTryBars(result)}/${result.report.bars.length} bars first try` : `${result.onset}% on beat${result.holds === null ? "" : ` · ${result.holds}% holds`}`;
 
 export function renderHistoryGroup(group) {
   const trend = group.slice(0,5).reverse();

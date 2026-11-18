@@ -225,8 +225,8 @@ export const LESSONS = {
     example: 'C major: C · E · G. C minor: C · E♭ · G.',
   },
   rhythm: {
-    title: 'Press. Hold. Release.',
-    text: 'A quarter note lasts one beat, a half note two. Two eighth notes share one beat: count “1 and, 2 and”. Press each note on its start and release at its end. A rest means silence for its full value.',
+    title: 'Play each note on the beat',
+    text: 'A quarter note lasts one beat, a half note two. Two eighth notes share one beat: count “1 and, 2 and”. In Tap to the beat, tap once at the start of each note. In Tap & hold, also release at its end. Stay silent during rests.',
     example:
       'At 60 BPM: a quarter lasts 1 second; an eighth lasts half a second.',
   },

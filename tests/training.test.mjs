@@ -436,3 +436,25 @@ test('missing a sixteenth leaves its neighbors playable and dense replays surviv
  const [saved] = loadTraining({getItem:()=>stored}).history;
  assert.deepEqual(replayPhrase(saved,0).events.map(event=>event.durationBeats),Array(16).fill(.25));
 });
+
+test('tap scoring accepts short presses, ignores releases and records taps during rests', () => {
+ const events = [
+  {id:0,bar:0,beat:0,durationBeats:2,rest:false},
+  {id:1,bar:0,beat:2,durationBeats:1,rest:true},
+  {id:2,bar:0,beat:3,durationBeats:1,rest:false},
+ ];
+ const tapPhrase = {events,bars:1,meter:4,totalBeats:4,rhythm:true};
+ const session = new ExerciseSession(tapPhrase,{tapOnly:true});
+ session.startTime = 1000;
+ note(session,'on',60,1000);
+ assert.equal(session.results.get(0).status,'correct');
+ note(session,'off',60,1010);
+ note(session,'on',60,3100);
+ note(session,'off',60,3110);
+ session.tick(5400);
+ assert.equal(session.results.get(2).status,'missed');
+ const report = session.summary(5400);
+ assert.equal(report.holds,null);
+ assert.equal(report.restErrors,1);
+ assert.equal(report.report.bars[0].issues.rest,1);
+});

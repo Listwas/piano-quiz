@@ -84,6 +84,9 @@ export class Activities {
     $('live-bpm').onchange = event => tempo(event.target.value);
     document.querySelectorAll('[data-tempo-step]').forEach(button => { button.onclick = () => tempo(this.settings.bpm + Number(button.dataset.tempoStep)); });
     $('live-meter').onchange = event => { this.settings.meter = Number(event.target.value); this.clock.change(this.settings.bpm, this.settings.meter); saveTraining(this.state); this.refresh(); };
+    $('training-input').onchange = event => {
+      $('training-rhythmAction').value = this.settings.rhythmActions[event.target.value];
+    };
     $('training-form').onsubmit = event => {
       event.preventDefault();
       const fields = [...$('training-form').querySelectorAll('input, select')];
@@ -118,6 +121,11 @@ export class Activities {
 
   updateSettings(updates) {
     const settings = { ...this.state.settings, ...updates };
+    if (updates.rhythmAction) {
+      const input = ['touch','midi'].includes(settings.input) ? settings.input : this.settings.input;
+      settings.rhythmActions = { ...settings.rhythmActions, [input]: updates.rhythmAction };
+      delete settings.rhythmAction;
+    }
     if (this.exercise && updates.complexity) {
       settings.patterns = { ...settings.patterns, [this.activity]: updates.complexity };
     }
@@ -131,6 +139,8 @@ export class Activities {
     this.calibration.sync();
   }
 
+  get rhythmAction() { return this.settings.rhythmActions[this.settings.input]; }
+  get tapsOnly() { return this.activity === 'rhythm' && (this.drill ? this.drill.tapOnly : this.rhythmAction === 'tap'); }
   get flow() { return this.activity === 'sight' && !this.drill && this.settings.behavior === 'continue'; }
   get exercise() { return this.activity === 'rhythm' || this.activity === 'sight'; }
   get requiresMidi() { return this.activity === 'sight' || this.activity === 'rhythm' && this.settings.input === 'midi'; }
@@ -138,7 +148,7 @@ export class Activities {
 
   inputStatus() {
     const status = this.midi.status;
-    if (!this.requiresMidi) return status.connected ? 'Touch mode · MIDI is connected; select MIDI keyboard to use it.' : 'Touch mode · press and hold the pad below.';
+    if (!this.requiresMidi) return status.connected ? 'Touch mode · MIDI is connected; select MIDI keyboard to use it.' : this.tapsOnly ? 'Touch mode · tap the pad on the beat.' : 'Touch mode · press and hold the pad below.';
     return status.connected ? `MIDI mode · connected to ${status.selectedName}` : status.state === 'unsupported' ? 'MIDI unavailable in this browser.' : 'MIDI mode · keyboard not connected.';
   }
   inputControls() {
@@ -183,6 +193,7 @@ export class Activities {
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
     $('training-complexity').value = this.complexity;
+    $('training-rhythmAction').value = this.rhythmAction;
     $('training-pace').closest('label').hidden = !this.exercise || this.flow;
     $('training-setup-help').textContent = this.activity === 'metronome' ? 'Tempo changes apply on the next bar.' : '';
     this.openDialog('training-dialog');
@@ -223,7 +234,7 @@ export class Activities {
     $('training-beats').hidden = Boolean(this.completed);
     $('training-summary').hidden = !this.completed;
     $('exercise-score').hidden = !exercise || Boolean(this.completed);
-    $('hold-coach').hidden = !exercise || Boolean(this.completed);
+    $('hold-coach').hidden = !exercise || this.tapsOnly || Boolean(this.completed);
     $('training-touchpad').hidden = this.activity !== 'rhythm' || this.settings.input !== 'touch' || Boolean(this.completed);
     $('training-touchpad').disabled = !this.clock.running;
     $('training-recheck').hidden = !this.requiresMidi || !this.supported || Boolean(this.completed);
@@ -232,7 +243,7 @@ export class Activities {
     $('training-details').textContent = this.drill ? 'Back to report' : this.recommendedBar() >= 0 ? 'Practise hardest bar' : 'Session details';
     $('training-live-status').hidden = Boolean(this.completed);
     $('training-footnote').hidden = Boolean(this.completed);
-    $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
+    $('training-footnote').textContent = this.activity === 'metronome' ? 'Tempo changes start at the next bar.' : this.tapsOnly ? 'Play each note once on the beat. Stay silent during rests.' : this.requiresMidi ? 'Physical key holds · keyboard supplies piano sound' : 'Press on the beat. Hold for the full note value.';
     this.sound();
     this.inputControls();
   }
@@ -251,7 +262,7 @@ export class Activities {
           this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,complexity:this.complexity,pace:this.flow?'flow':this.settings.pace},quizSettings);
           this.phraseHistory.set(key,this.phrase);
         }
-        this.session = new ExerciseSession(this.phrase,{...this.settings,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});
+        this.session = new ExerciseSession(this.phrase,{...this.settings,tapOnly:this.tapsOnly,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }
     this.drawSignature = null;
@@ -317,7 +328,7 @@ export class Activities {
       this.message(`Read bar ${position.bar+1} · count in ${Math.ceil(position.remaining)}`);
       return;
     }
-    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.guided ? 'Read the note, then hold for its full value.' : this.flow ? 'Keep the pulse. Read the next bar ahead.' : this.activity === 'sight' ? 'Follow the beat. Complete this bar to move on.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Wrong note|Try |Between|Rest here|Rest means/.test(this.session.feedback));
+    this.message(this.session.feedback || (this.session.current?.rest ? 'Rest — release the keys.' : this.session.tapOnly ? 'Tap each note on the beat.' : this.session.guided ? 'Read the note, then hold for its full value.' : this.flow ? 'Keep the pulse. Read the next bar ahead.' : this.activity === 'sight' ? 'Follow the beat. Complete this bar to move on.' : 'Follow the cursor. Keep going through mistakes.'), /Too |Wrong note|Try |Between|Rest here|Rest means/.test(this.session.feedback));
   }
 
   draw(time) {
@@ -336,11 +347,15 @@ export class Activities {
       cursor.style.visibility = visible ? 'visible' : 'hidden';
       if (visible) cursor.setAttribute('transform',`translate(${scoreX(Math.max(0,Math.min(this.phrase.meter,progress-bar*this.phrase.meter)),this.phrase.meter)} 0)`);
     }
-    const held = [...this.session.holding.values()][0];
-    const coach = this.session.holdDisplay(time);
-    $('hold-progress').value = coach.value;
-    $('hold-label').textContent = coach.label;
-    $('training-touchpad').textContent = held ? coach.releasing ? 'Release now' : 'Keep holding…' : 'Press and hold';
+    if (this.session.tapOnly) {
+      $('training-touchpad').textContent = 'Tap to the beat';
+    } else {
+      const held = [...this.session.holding.values()][0];
+      const coach = this.session.holdDisplay(time);
+      $('hold-progress').value = coach.value;
+      $('hold-label').textContent = coach.label;
+      $('training-touchpad').textContent = held ? coach.releasing ? 'Release now' : 'Keep holding…' : 'Press and hold';
+    }
     for (const measure of $('exercise-score').children) {
       for (const note of measure.querySelectorAll('[data-event]')) {
         const holding = [...this.session.holding.values()].some(value => value.target.id === Number(note.dataset.event));
@@ -460,7 +475,7 @@ export class Activities {
     this.state.activity = result.activity;
     const fromSummary = this.active && this.completed && result === this.state.lastResult;
     const input = this.midi.status.state === 'unsupported' ? 'touch' : replay.input;
-    this.drill = {bar,fromSummary,result,fromHistory:this.reportFromHistory,phrase:replayPhrase(result,bar),
+    this.drill = {bar,fromSummary,result,tapOnly:replay.tapOnly === true,fromHistory:this.reportFromHistory,phrase:replayPhrase(result,bar),
       settings:{...this.state.settings,bpm,meter:replay.meter,input,accuracy:replay.accuracy}};
     $('training-report-dialog').close();
     this.showTraining();
@@ -483,7 +498,7 @@ export class Activities {
     const result = this.session.summary(time);
     this.clock.stop(); this.completed = true; this.paused = false;
     if (!this.drill) {
-      result.replay = saveReplay(this.phrase,{...this.settings,offset:this.session.offset});
+      result.replay = saveReplay(this.phrase,{...this.settings,offset:this.session.offset,tapOnly:this.session.tapOnly});
       result.comparison = this.sessionComparison;
       rememberTrainingResult(this.state,result); saveTraining(this.state);
     } else if (recordBarPractice(this.state,this.drill.result,this.drill.bar,result,this.settings.bpm)) {

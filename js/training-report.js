@@ -37,6 +37,7 @@ export function renderTrainingReport(result, drill = false) {
   const cards = sight
     ? [[`${firstTryBars(result)}/${bars.length}`,'First-try bars'],[result.retries,'Bar retries']]
     : flow ? [[`${result.pitch}%`,'Correct pitches'],[`${result.onset}%`,'On the beat'],[`${result.holds}%`,'Note lengths']] : [[`${result.onset}%`,'On the beat'],[`${result.holds}%`,'Note lengths']];
+  if (result.activity === 'rhythm' && result.holds === null) cards[1] = [result.missed,'Missed notes'];
   if (!flow) cards.push([practiceDuration(elapsedMs),'Practice time']);
   const highlights = issueRows(bars);
   const practised = result.practisedBars?.filter(Boolean).length ?? 0;

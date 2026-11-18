@@ -84,7 +84,7 @@ try{
   }
  });
  await check('rhythm touch holds distinguish a one-beat release from a required two-beat half note',async()=>{
-  const page=await setup(true);await selectActivity(page,'rhythm');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await running(page);
+  const page=await setup(true);await selectActivity(page,'rhythm');await page.selectOption('#setup-rhythmAction','hold');await setPracticeTempo(page, 200);await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');await page.locator('#start-button').click();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)-performance.now()<150);
   const data=await page.locator('#exercise-score').evaluate(e=>({start:Number(e.dataset.startTime),events:[...e.querySelectorAll('[data-event]')].filter(n=>n.dataset.rest==='false').map(n=>({beat:Number(n.dataset.beat),duration:Number(n.dataset.duration)}))}));
   const pad=await page.locator('#training-touchpad').boundingBox();await page.mouse.move(pad.x+pad.width/2,pad.y+pad.height/2);
@@ -294,6 +294,7 @@ try{
   await selectActivity(page,'rhythm');await setPracticeTempo(page,100);
   await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');
   await page.selectOption('#setup-complexity','sixteenths');
+  assert.equal(await page.locator('#setup-rhythmAction').inputValue(),'tap');
   const exerciseStart = () => page.evaluate(()=>Number(document.getElementById('exercise-score').dataset.startTime));
   const until = async at => {
    const remaining = await page.evaluate(time=>time-performance.now(),at);
@@ -319,7 +320,7 @@ try{
    await until(at);
    if(cdp) await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
    else await page.mouse.down();
-   await until(at+118);
+   await until(at+28);
    if(cdp) await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
    else await page.mouse.up();
   }
@@ -333,10 +334,13 @@ try{
   await page.locator('#report-practise').tap();await running(page);
   assert.deepEqual(await group(),beats);
   assert.match(await page.locator('#training-progress').innerText(),/80 BPM/);
+  assert.equal(await page.locator('#training-touchpad').innerText(),'Tap to the beat');
+  assert.equal(await page.locator('#hold-coach').isVisible(),false);
   await page.locator('#training-back').tap();
   if(await page.locator('#training-report-dialog').isVisible()) await page.locator('[data-close="training-report-dialog"]').tap();
 
   await selectActivity(page,'rhythm');await page.locator('#home-training-input [data-training-input=midi]').tap();
+  assert.equal(await page.locator('#setup-rhythmAction').inputValue(),'hold');
   await page.locator('#start-button').tap();
   await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));
   await page.locator('#training-toggle').tap();await running(page);
