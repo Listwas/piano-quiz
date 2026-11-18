@@ -1,0 +1,17 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "5df001207a9ff6",
+  "testedAt": "2026-11-18T14:55:03.425Z",
+  "checks": [
+    "a stalled audio clock on a Rhythm bar replay falls back to a working count-in",
+    "long presses cancel native menus without interrupting the touch hold",
+    "MIDI eighths reach the full hold meter and accept articulated releases at 200 BPM"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed",
+  "filter": "stalled audio clock|long presses|MIDI eighths"
+}
