@@ -32,7 +32,7 @@ export function installChoicePicker() {
 
     const describe = () => {
       const value = select.multiple ? select.dataset.choiceSummary : select.selectedOptions[0]?.label;
-      if (select.multiple) button.textContent = value || 'Choose note values';
+      if (select.multiple && button.textContent !== value) button.textContent = value || 'Choose note values';
       button.setAttribute('aria-label', value ? `${name}, ${value}` : name);
       button.hidden = select.disabled || !select.getClientRects().length;
     };
