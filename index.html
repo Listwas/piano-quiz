@@ -63,7 +63,7 @@
                 <label data-practice-timed>Tempo (BPM)<input id="setup-bpm" type="number" min="40" max="200" value="60"></label>
                 <label data-practice-timed>Meter<select id="setup-meter"><option value="4">4/4</option><option value="3">3/4</option></select></label>
                 <label data-practice-exercise>Bars<select id="setup-bars"><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label>
-                <label class="pattern-field" data-practice-exercise>Rhythm patterns<select id="setup-complexity"></select></label>
+                <label class="pattern-field" data-practice-exercise>Rhythm patterns<select id="setup-complexity" multiple></select></label>
                 <label data-practice-exercise>Timing tolerance<select id="setup-accuracy"><option value="beginner">Forgiving</option><option value="strict">Precise</option></select></label>
                 <label id="setup-pace-label">Between bars<select id="setup-pace"><option value="practice">Count in</option><option value="flow">Keep playing</option></select></label>
                 <label id="setup-volume-label">Click volume<input id="setup-volume" type="range" min="0" max="1" step="0.05"></label>
@@ -148,7 +148,7 @@
           <label>Tempo · BPM<input id="training-bpm" type="number" min="40" max="200" step="1" required></label>
           <label>Time signature<select id="training-meter"><option value="4">4/4</option><option value="3">3/4</option></select></label>
           <label data-exercise-setting hidden>Length<select id="training-bars"><option value="2">2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option></select></label>
-          <label data-exercise-setting hidden>Rhythm patterns<select id="training-complexity"></select></label>
+          <label data-exercise-setting hidden>Rhythm patterns<select id="training-complexity" multiple></select></label>
           <label data-sight-setting hidden>Reading style<select id="training-behavior"><option value="retry-bar">Practice · retry a failed bar</option><option value="continue">Flow · keep playing through mistakes</option></select></label>
           <label data-exercise-setting hidden>Timing tolerance<select id="training-accuracy"><option value="beginner">Beginner · forgiving</option><option value="strict">Strict · precise</option></select></label>
           <label data-exercise-setting hidden>Between bars<select id="training-pace"><option value="practice">Count in · time to read</option><option value="flow">Keep playing · no break</option></select></label>
@@ -217,6 +217,10 @@
   <dialog id="choice-dialog" aria-labelledby="choice-title">
     <div class="dialog-heading"><h2 id="choice-title"></h2><button type="button" data-close="choice-dialog" class="icon-button" aria-label="Close choices">✕</button></div>
     <div id="choice-options" class="dialog-scroll" role="group" aria-labelledby="choice-title"></div>
+    <div id="choice-apply" class="dialog-actions" hidden>
+      <button id="choice-all" type="button" class="text-button">Select all</button>
+      <button id="choice-done" type="button" class="primary">Apply</button>
+    </div>
   </dialog>
 </body>
 </html>

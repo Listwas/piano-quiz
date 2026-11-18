@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice, RHYTHM_LEVELS } from '../js/training.js';
+import { generatePhrase, ExerciseSession, heldCorrectly, normalizeTraining, loadTraining, patternFits, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice, RHYTHM_LEVELS } from '../js/training.js';
 import { groupSessions } from '../js/training-history.js';
 import { copyDefaults } from '../js/quiz.js';
 import { makeTone } from '../js/notes.js';
@@ -368,9 +368,9 @@ test('dotted notes and rests render their dots with the correct open or filled h
 
 test('previous rhythm level initializes both pattern choices and separate choices survive storage', () => {
   const legacy = normalizeTraining({complexity:'eighths'});
-  assert.deepEqual(legacy.patterns,{rhythm:'eighths',sight:'eighths'});
+  assert.deepEqual(legacy.patterns,{rhythm:['half','quarter','eighths','rests'],sight:['half','quarter','eighths','rests']});
   const data = JSON.stringify({activity:'sight',settings:{...legacy,patterns:{rhythm:'mixed',sight:'steady'}}});
-  assert.deepEqual(loadTraining({getItem:()=>data}).settings.patterns,{rhythm:'mixed',sight:'steady'});
+  assert.deepEqual(loadTraining({getItem:()=>data}).settings.patterns,{rhythm:['whole','dotted-half','half','dotted-quarter','quarter','eighths','rests'],sight:['whole','half','quarter','rests']});
 });
 
 test('Mix uses every note duration that fits the meter across eight bars', () => {
@@ -457,4 +457,20 @@ test('tap scoring accepts short presses, ignores releases and records taps durin
  assert.equal(report.holds,null);
  assert.equal(report.restErrors,1);
  assert.equal(report.report.bars[0].issues.rest,1);
+});
+
+test('selected patterns preserve complete eighth-note pairs and can add quarter rests independently', () => {
+ const noteValues = ['eighths','rests'];
+ const settings = { ...normalizeTraining({meter:3,bars:4}), noteValues };
+ const custom = generatePhrase(settings,copyDefaults(),{rhythm:true,random:()=>0});
+ assert.ok(custom.events.some(event=>event.rest));
+ for (const event of custom.events) {
+  assert.equal(event.durationBeats,event.rest ? 1 : .5);
+  if (!event.rest && Number.isInteger(event.beat)) {
+   assert.ok(custom.events.some(other=>other.beat===event.beat+.5 && !other.rest));
+  }
+ }
+ assert.equal(patternFits(['whole'],3),false);
+ assert.equal(patternFits(['whole'],4),true);
+ assert.equal(patternFits(['eighths'],3),true);
 });

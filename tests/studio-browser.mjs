@@ -207,35 +207,40 @@ try {
   assert.match(await quick.page.locator('#setup-chord-summary').innerText(), /3 selected/);
   await tap(quick.page, '.activity-card[data-activity=rhythm]');
   await quick.page.locator('#setup-bars').selectOption('8');
-  await quick.page.locator('#setup-complexity').selectOption('eighths');
+  await tap(quick.page,'#setup-complexity-choices');
+  await tap(quick.page,'#choice-options [data-value="eighths"]');
+  await tap(quick.page,'#choice-options [data-value="sixteenths"]');
+  assert.equal(await quick.page.locator('#choice-dialog').isVisible(),true);
+  await tap(quick.page,'#choice-done');
+  const selectedPatterns = () => quick.page.locator('#setup-complexity').evaluate(field=>Array.from(field.selectedOptions,option=>option.value));
   assert.equal(await quick.page.locator('#customize-button').isVisible(), false);
   await quick.page.locator('#setup-accuracy').selectOption('strict');
   await quick.page.locator('#setup-pace').selectOption('flow');
   await tap(quick.page, '.activity-card[data-activity=sight]');
-  assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'simple');
+  assert.deepEqual(await selectedPatterns(),['half','quarter']);
   assert.match(await quick.page.locator('#home-sight-tools').innerText(), /MIDI keyboard only/);
-  await quick.page.locator('#setup-complexity').selectOption('mixed');
+  await quick.page.locator('#setup-complexity').selectOption(['dotted-quarter','eighths']);
   await tap(quick.page, '.activity-card[data-activity=rhythm]');
   await quick.page.reload();
   await tap(quick.page, '[data-tab=home]');
   assert.equal(await quick.page.locator('#setup-bars').inputValue(), '8');
-  assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'eighths');
+  assert.deepEqual(await selectedPatterns(),['half','quarter','eighths','sixteenths']);
   assert.equal(await quick.page.locator('#setup-accuracy').inputValue(), 'strict');
   assert.equal(await quick.page.locator('#setup-pace').inputValue(), 'flow');
   await tap(quick.page, '.activity-card[data-activity=sight]');
-  assert.equal(await quick.page.locator('#setup-complexity').inputValue(), 'mixed');
+  assert.deepEqual(await selectedPatterns(),['dotted-quarter','eighths']);
   await tap(quick.page, '#settings-button');
   const exported = quick.page.waitForEvent('download');
   await tap(quick.page, '#data-export');
   const exportPath = await (await exported).path();
   await tap(quick.page, '#settings-dialog [data-close]');
-  await quick.page.locator('#setup-complexity').selectOption('steady');
+  await quick.page.locator('#setup-complexity').selectOption(['whole']);
   await tap(quick.page, '#settings-button');
   await quick.page.locator('#data-import').setInputFiles({
     name: 'progress.json', mimeType: 'application/json', buffer: await readFile(exportPath),
   });
   await quick.page.locator('#recommendation-start').waitFor();
-  assert.deepEqual((await read(quick.page, 'training.v1')).settings.patterns, {rhythm:'eighths',sight:'mixed'});
+  assert.deepEqual((await read(quick.page, 'training.v1')).settings.patterns, {rhythm:['half','quarter','eighths','sixteenths'],sight:['dotted-quarter','eighths']});
   await quick.context.close();
   checks.push('Inline choices persist, including distinct Rhythm and Sight-reading patterns, and Today resumes an unfinished quiz');
 

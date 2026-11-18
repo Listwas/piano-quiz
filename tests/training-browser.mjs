@@ -457,19 +457,24 @@ try{
   }
   await page.locator('#settings-button').click();await page.screenshot({path:`docs/images/midi-settings-${engine}.png`});
  });
- await check('four rhythm levels save, introduce their own note values, and keep a single readable bar',async()=>{
+ await check('selected note types generate only those written rhythms and persist',async()=>{
   const page=await setup(true);await selectActivity(page,'rhythm');
-  for(const level of ['simple','steady','eighths','mixed']){
-   await page.selectOption('#setup-complexity',level);await page.selectOption('#setup-bars','8');
+  for(const [selected,expected] of [
+   [['quarter','half'],[1,2]],
+   [['quarter','rests'],[1]],
+   [['eighths'],[.5]],
+   [['dotted-quarter','quarter'],[1,1.5]],
+  ]){
+   await page.selectOption('#setup-complexity',selected);await page.selectOption('#setup-bars','8');
    await page.locator('#start-button').click();await running(page);assert.equal(await page.locator('.measure').count(),1);
    const notes=await page.locator('[data-event]').evaluateAll(nodes=>nodes.map(n=>({duration:Number(n.dataset.duration),rest:n.dataset.rest==='true'})));
-   if(level==='simple')assert.ok(notes.every(n=>[1,2].includes(n.duration)&&!n.rest));
-   if(level==='steady')assert.ok(notes.some(n=>n.rest));
-   if(level==='eighths')assert.ok(notes.some(n=>n.duration===.5));
-   if(level==='mixed'){assert.ok(notes.some(n=>[1.5,3].includes(n.duration)));assert.ok(await page.locator('.score-dot').count());await page.screenshot({path:`docs/images/rhythm-challenge-${engine}.png`});}
+   assert.ok(notes.every(note=>expected.includes(note.duration)));
+   assert.equal(notes.some(note=>note.rest),selected.includes('rests'));
+   if(selected.includes('dotted-quarter')) assert.ok(await page.locator('.score-dot').count());
    await page.locator('#training-back').click();
   }
-  await page.reload();await openPractice(page);assert.equal(await page.locator('#setup-complexity').inputValue(),'mixed');
+  await page.reload();await openPractice(page);
+  assert.deepEqual(await page.locator('#setup-complexity').evaluate(field=>Array.from(field.selectedOptions,option=>option.value)),['dotted-quarter','quarter']);
  });
  await check('eight-bar rhythm report stays tappable on compact layouts and explains a session with no presses',async()=>{
   const page=await setup(true);await selectActivity(page,'rhythm');await setPracticeTempo(page, 200);

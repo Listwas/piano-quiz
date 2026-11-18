@@ -1,5 +1,5 @@
 import { BeatClock } from './timing.js';
-import { loadTraining, saveTraining, normalizeTraining, RHYTHM_LEVELS, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
+import { loadTraining, saveTraining, normalizeTraining, NOTE_PATTERNS, normalizePatternSelection, patternFits, generatePhrase, ExerciseSession, hardestBar, saveReplay, replayPhrase, slowerReplayTempo, comparisonSetup, rememberTrainingResult, recordBarPractice } from './training.js';
 import { renderMeasure, scoreX } from './score.js';
 import { renderTrainingDetails, renderTrainingReport } from './training-report.js';
 import { groupSessions, historyLabel, renderHistoryGroup } from './training-history.js';
@@ -14,13 +14,12 @@ export class Activities {
     this.state = loadTraining();
     for (const id of ['setup-complexity', 'training-complexity']) {
       $(id).dataset.choiceGrid = '';
-      $(id).replaceChildren(...Object.entries(RHYTHM_LEVELS).map(([value, level]) => {
-        const option = new Option(value === 'mix' ? level.name : level.description, value);
-        if (value === 'mix') option.dataset.choiceWide = '';
-        option.dataset.choiceTitle = level.name;
-        option.dataset.choiceDetail = level.description;
+      $(id).replaceChildren(...NOTE_PATTERNS.map(pattern => {
+        const option = new Option(pattern.name,pattern.id);
+        if (!pattern.beats) option.dataset.choiceExtra = '';
         return option;
       }));
+      $(id).addEventListener('change', () => this.describePatterns($(id)));
     }
     for (const [id, key] of [['click-volume-setting', 'volume'], ['timing-offset-setting', 'offset']]) {
       $(id).onchange = event => {
@@ -90,9 +89,14 @@ export class Activities {
     $('training-form').onsubmit = event => {
       event.preventDefault();
       const fields = [...$('training-form').querySelectorAll('input, select')];
-      this.updateSettings(Object.fromEntries(fields.filter(field => !field.closest('[hidden]')).map(field => [
-        field.id.replace('training-', ''), field.tagName === 'INPUT' || ['meter', 'bars'].includes(field.id.replace('training-', '')) ? Number(field.value) : field.value,
-      ])));
+      const updates = Object.fromEntries(fields.filter(field => !field.closest('[hidden]')).map(field => [
+        field.id.replace('training-', ''), field.multiple ? Array.from(field.selectedOptions,option=>option.value) : field.tagName === 'INPUT' || ['meter', 'bars'].includes(field.id.replace('training-', '')) ? Number(field.value) : field.value,
+      ]));
+      if (this.exercise && !patternFits(updates.complexity,updates.meter)) {
+        $('training-setup-help').textContent = 'Choose note values that fit the selected meter.';
+        return;
+      }
+      this.updateSettings(updates);
       $('training-dialog').close(); renderHome();
       if (this.active) { this.session = null; this.paused = true; this.completed = false; this.refresh(); this.message('Setup saved. Start a new exercise when ready.'); }
     };
@@ -117,7 +121,17 @@ export class Activities {
 
   get activity() { return this.state.activity; }
   get settings() { return this.drill?.settings ?? this.state.settings; }
-  get complexity() { return this.settings.patterns[this.activity] ?? this.settings.complexity; }
+  get noteValues() { return this.settings.patterns[this.activity] ?? normalizePatternSelection(this.settings.complexity); }
+
+  describePatterns(field) {
+    const selected = Array.from(field.selectedOptions, option=>option.label);
+    field.dataset.choiceSummary = selected.length === 1 ? selected[0] : `${selected.length} selected`;
+  }
+
+  renderPatternSelection(field) {
+    for (const option of field.options) option.selected = this.noteValues.includes(option.value);
+    this.describePatterns(field);
+  }
 
   updateSettings(updates) {
     const settings = { ...this.state.settings, ...updates };
@@ -129,6 +143,7 @@ export class Activities {
     if (this.exercise && updates.complexity) {
       settings.patterns = { ...settings.patterns, [this.activity]: updates.complexity };
     }
+    if (Array.isArray(updates.complexity)) settings.complexity = this.state.settings.complexity;
     this.state.settings = normalizeTraining(settings);
     return saveTraining(this.state);
   }
@@ -139,6 +154,7 @@ export class Activities {
     this.calibration.sync();
   }
 
+  get invalidPattern() { return this.exercise && !patternFits(this.noteValues,this.settings.meter); }
   get rhythmAction() { return this.settings.rhythmActions[this.settings.input]; }
   get tapsOnly() { return this.activity === 'rhythm' && (this.drill ? this.drill.tapOnly : this.rhythmAction === 'tap'); }
   get flow() { return this.activity === 'sight' && !this.drill && this.settings.behavior === 'continue'; }
@@ -174,13 +190,14 @@ export class Activities {
 
   home() {
     const quiz = this.activity === 'quiz';
-    $('start-button').disabled = !this.supported;
+    const invalidPattern = this.invalidPattern;
+    $('start-button').disabled = !this.supported || invalidPattern;
     document.querySelector('.practice-card .input-mode-options').hidden = !quiz;
     this.inputControls();
     $('customize-button').hidden = !quiz;
     if (quiz) return;
     $('practice-title').textContent = labels[this.activity];
-    $('practice-detail').textContent = this.supported ? '' : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
+    $('practice-detail').textContent = invalidPattern ? 'Choose note values that fit the selected meter.' : this.supported ? '' : 'This activity needs Web MIDI. Use a compatible browser, or choose Rhythm with touch input.';
     $('start-button').innerHTML = `Start ${labels[this.activity].toLowerCase()} <span aria-hidden="true">→</span>`;
     $('resume-note').hidden = true;
   }
@@ -192,7 +209,7 @@ export class Activities {
     document.querySelectorAll('[data-exercise-setting]').forEach(element => { element.hidden = !this.exercise; });
     document.querySelectorAll('[data-sight-setting]').forEach(element => { element.hidden = this.activity !== 'sight'; });
     document.querySelectorAll('[data-rhythm-setting]').forEach(element => { element.hidden = this.activity !== 'rhythm'; });
-    $('training-complexity').value = this.complexity;
+    this.renderPatternSelection($('training-complexity'));
     $('training-rhythmAction').value = this.rhythmAction;
     $('training-pace').closest('label').hidden = !this.exercise || this.flow;
     $('training-setup-help').textContent = this.activity === 'metronome' ? 'Tempo changes apply on the next bar.' : '';
@@ -256,10 +273,10 @@ export class Activities {
       try {
         if (this.drill) this.phrase = this.drill.phrase;
         else {
-          const key = `${this.activity}:${this.complexity}:${this.settings.meter}`;
+          const key = `${this.activity}:${this.noteValues.join(",")}:${this.settings.meter}`;
           const quizSettings = this.getQuizSettings();
-          this.phrase = generatePhrase({...this.settings, complexity:this.complexity},quizSettings,{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
-          this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,complexity:this.complexity,pace:this.flow?'flow':this.settings.pace},quizSettings);
+          this.phrase = generatePhrase({...this.settings, noteValues:this.noteValues},quizSettings,{rhythm:this.activity==='rhythm',clefIndex:this.phraseIndex++,previousPhrase:this.phraseHistory.get(key)});
+          this.sessionComparison = comparisonSetup(this.phrase,{...this.settings,noteValues:this.noteValues,pace:this.flow?'flow':this.settings.pace},quizSettings);
           this.phraseHistory.set(key,this.phrase);
         }
         this.session = new ExerciseSession(this.phrase,{...this.settings,tapOnly:this.tapsOnly,pace:this.flow?'flow':this.settings.pace,retryOnError:this.activity==='sight'&&!this.flow});

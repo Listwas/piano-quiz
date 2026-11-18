@@ -188,7 +188,7 @@ export class Studio {
     for (const key of QUICK_TRAINING_FIELDS) {
       $(`setup-${key}`).onchange = event => {
         const a = this.getActivities();
-        const value = NUMERIC_TRAINING_FIELDS.has(key) ? Number(event.target.value) : event.target.value;
+        const value = event.target.multiple ? Array.from(event.target.selectedOptions, option=>option.value) : NUMERIC_TRAINING_FIELDS.has(key) ? Number(event.target.value) : event.target.value;
         a.updateSettings({ [key]: value });
         this.renderHome();
       };
@@ -196,7 +196,7 @@ export class Studio {
     $('lesson-button').onclick = () => this.lesson();
     $('lesson-practise').onclick = () => {
       $('lesson-dialog').close();
-      this.start();
+      if (!this.getActivities().invalidPattern) this.start();
     };
     $('data-export').onclick = () => this.exportData();
     $('data-delete').onclick = () => {
@@ -295,7 +295,8 @@ export class Studio {
     $('recommendation-title').textContent = recommendation.title;
     $('recommendation-reason').textContent = recommendation.reason;
     $('recommendation-detail').textContent = recommendation.detail;
-    $('recommendation-start').textContent = recommendation.action + ' →';
+    const needsPattern = recommendation.kind === 'practice' && a.invalidPattern;
+    $('recommendation-start').textContent = (needsPattern ? 'Choose rhythm patterns' : recommendation.action) + ' →';
     $('recommendation-start').disabled =
       (recommendation.kind === 'practice' && !a.supported) ||
       (recommendation.result?.activity === 'sight' &&
@@ -332,8 +333,10 @@ export class Studio {
     $('setup-chord-summary').textContent = types.length <= 2 ? types.map(quality => quality.name).join(', ') : `${types.length} selected`;
     for (const field of document.querySelectorAll('[data-practice-exercise]')) field.hidden = !a.exercise;
     $('setup-behavior-label').hidden = a.activity !== 'sight';
-    for (const key of QUICK_TRAINING_FIELDS) $(`setup-${key}`).value = a.settings[key];
-    $('setup-complexity').value = a.complexity;
+    for (const key of QUICK_TRAINING_FIELDS) {
+      if (key !== 'complexity') $(`setup-${key}`).value = a.settings[key];
+    }
+    a.renderPatternSelection($('setup-complexity'));
     $('setup-rhythmAction-row').hidden = a.activity !== 'rhythm';
     $('setup-rhythmAction').value = a.rhythmAction;
     $('setup-pace-label').hidden = !a.exercise || a.flow;
@@ -365,7 +368,8 @@ export class Studio {
       saveTraining(a.state);
       a.showReport(r.bar, r.result);
       a.startDrill(r.bar, slowerReplayTempo(r.result.replay.bpm));
-    } else this.start();
+    } else if (a.invalidPattern) this.open('home');
+    else this.start();
   }
   lesson() {
     const a = this.getActivities();

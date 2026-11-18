@@ -3,6 +3,9 @@ export function installChoicePicker() {
   const dialog = document.getElementById('choice-dialog');
   const title = document.getElementById('choice-title');
   const options = document.getElementById('choice-options');
+  const actions = document.getElementById('choice-apply');
+  const apply = document.getElementById('choice-done');
+  const all = document.getElementById('choice-all');
   let trigger;
   const observer = new ResizeObserver(entries => {
     for (const { target } of entries) {
@@ -28,7 +31,8 @@ export function installChoicePicker() {
     button.setAttribute('aria-haspopup', 'dialog');
 
     const describe = () => {
-      const value = select.selectedOptions[0]?.label;
+      const value = select.multiple ? select.dataset.choiceSummary : select.selectedOptions[0]?.label;
+      if (select.multiple) button.textContent = value || 'Choose note values';
       button.setAttribute('aria-label', value ? `${name}, ${value}` : name);
       button.hidden = select.disabled || !select.getClientRects().length;
     };
@@ -49,28 +53,50 @@ export function installChoicePicker() {
       trigger = button;
       title.textContent = name;
       options.classList.toggle('choice-grid', select.hasAttribute('data-choice-grid'));
+      const draft = new Set(Array.from(select.selectedOptions, option => option.value));
+      actions.hidden = !select.multiple;
+      const notify = () => {
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      };
       const choices = Array.from(select.options).filter(option => !option.hidden).map(option => {
         const choice = document.createElement('button');
         choice.type = 'button';
         choice.className = 'choice-option';
-        if (option.dataset.choiceWide !== undefined) choice.classList.add('choice-option-wide');
-        choice.textContent = option.dataset.choiceTitle ?? option.label;
-        if (option.dataset.choiceDetail) {
-          const detail = document.createElement('small');
-          detail.textContent = option.dataset.choiceDetail;
-          choice.append(detail);
-        }
+        choice.textContent = option.label;
         choice.disabled = option.disabled;
+        choice.dataset.value = option.value;
         choice.setAttribute('aria-pressed', String(option.selected));
         choice.addEventListener('click', () => {
+          if (select.multiple) {
+            if (draft.has(option.value)) draft.delete(option.value);
+            else draft.add(option.value);
+            updateDraft();
+            return;
+          }
           dialog.close();
           if (select.selectedIndex === option.index) return;
           select.selectedIndex = option.index;
-          select.dispatchEvent(new Event('input', { bubbles: true }));
-          select.dispatchEvent(new Event('change', { bubbles: true }));
+          notify();
         });
         return choice;
       });
+      function updateDraft() {
+        for (const choice of choices) choice.setAttribute('aria-pressed',String(draft.has(choice.dataset.value)));
+        apply.disabled = !Array.from(select.options).some(option => draft.has(option.value) && !option.hasAttribute('data-choice-extra'));
+      }
+      if (select.multiple) {
+        updateDraft();
+        all.onclick = () => {
+          for (const choice of choices) if (!choice.disabled) draft.add(choice.dataset.value);
+          updateDraft();
+        };
+        apply.onclick = () => {
+          for (const option of select.options) option.selected = draft.has(option.value);
+          dialog.close();
+          notify();
+        };
+      }
       options.replaceChildren(...choices);
       dialog.showModal();
       (choices.find(choice => choice.getAttribute('aria-pressed') === 'true' && !choice.disabled) ??

@@ -13,7 +13,7 @@ export function normalizeTraining(raw) {
   }
   settings.patterns = Object.fromEntries(['rhythm', 'sight'].map(activity => {
     const pattern = raw?.patterns?.[activity];
-    return [activity, Object.hasOwn(RHYTHM_LEVELS, pattern) ? pattern : settings.complexity];
+    return [activity, normalizePatternSelection(pattern, settings.complexity)];
   }));
   settings.rhythmActions = {
     touch: raw?.rhythmActions?.touch === 'hold' ? 'hold' : 'tap',
@@ -82,12 +82,13 @@ export function replayPhrase(result, bar) {
 export const slowerReplayTempo = bpm => Math.max(40,Math.round(bpm*.8));
 const HISTORY_LIMIT = 60;
 export function comparisonSetup(phrase, settings, quizSettings) {
-  return {level:settings.complexity,pace:settings.pace,behavior:phrase.rhythm?'continue':settings.behavior ?? 'retry-bar',
+  return {level:settings.complexity, ...(settings.noteValues ? {noteValues:settings.noteValues} : {}), pace:settings.pace,behavior:phrase.rhythm?'continue':settings.behavior ?? 'retry-bar',
     notes:phrase.rhythm ? [] : [...selectedNamesFor(quizSettings)].sort(),
     octaves:phrase.rhythm ? [] : [...octavesFor(quizSettings,phrase.clef)].sort()};
 }
 function validComparison(value) {
   return value && Object.hasOwn(RHYTHM_LEVELS,value.level) && ['practice','flow'].includes(value.pace) &&
+    (value.noteValues === undefined || Array.isArray(value.noteValues) && value.noteValues.some(id => NOTE_PATTERNS.some(pattern => pattern.id === id && pattern.beats)) && value.noteValues.every(id => NOTE_PATTERNS.some(pattern => pattern.id === id))) &&
     (value.behavior === undefined || ['retry-bar','continue'].includes(value.behavior)) &&
     Array.isArray(value.notes) && value.notes.length<=NOTE_OPTIONS.length && value.notes.every(name=>NOTE_OPTIONS.some(note=>note.name===name)) &&
     Array.isArray(value.octaves) && value.octaves.length<=4 && value.octaves.every(octave=>[1,2,3,4,5,6].includes(octave));
@@ -148,19 +149,48 @@ export const RHYTHM_LEVELS = {
   sixteenths: { name:'Sixteenths', description:'Groups of four fast notes', values:[1,.5,.25], restChance:0, paired:true },
   mix: { name:'Mix', description:'All note values and rests', values:[4,3,2,1.5,1,.5,.25], restChance:.4, paired:false },
 };
+export const NOTE_PATTERNS = [
+  { id:'whole', name:'Whole notes', beats:4 },
+  { id:'dotted-half', name:'Dotted half notes', beats:3 },
+  { id:'half', name:'Half notes', beats:2 },
+  { id:'dotted-quarter', name:'Dotted quarter notes', beats:1.5 },
+  { id:'quarter', name:'Quarter notes', beats:1 },
+  { id:'eighths', name:'Eighth-note pairs', beats:.5 },
+  { id:'sixteenths', name:'Sixteenth-note groups', beats:.25 },
+  { id:'rests', name:'Quarter rests', beats:0 },
+];
+export function normalizePatternSelection(selection, fallback = 'simple') {
+  if (Array.isArray(selection)) {
+    const chosen = NOTE_PATTERNS.filter(pattern => selection.includes(pattern.id));
+    if (chosen.some(pattern => pattern.beats)) return chosen.map(pattern => pattern.id);
+  }
+  const level = Object.hasOwn(RHYTHM_LEVELS,selection) ? RHYTHM_LEVELS[selection] : RHYTHM_LEVELS[fallback];
+  return NOTE_PATTERNS.filter(pattern=>pattern.beats ? level.values.includes(pattern.beats) : level.restChance>0).map(pattern=>pattern.id);
+}
+const patternConfig = selection => ({
+  values:NOTE_PATTERNS.filter(pattern=>pattern.beats && selection.includes(pattern.id)).map(pattern=>pattern.beats),
+  paired:true, restChance:0, quarterRest:selection.includes('rests'), selected:true,
+  prioritizeVariety:selection.some(id=>id !== 'quarter' && id !== 'half'),
+});
+export const patternFits = (selection,meter) => rhythmPatterns(patternConfig(selection),meter).length > 0;
 const patternCache = new Map();
-function rhythmPatterns(level, meter) {
-  const key = `${level}:${meter}`;
+function rhythmPatterns(config, meter) {
+  const key = JSON.stringify([config.values,config.paired,config.selected,config.quarterRest,meter]);
   if (!patternCache.has(key)) {
-    const config = RHYTHM_LEVELS[level], patterns = [];
+    const patterns = [];
     function fill(position, values) {
-      if (position === meter) { patterns.push(values); return; }
+      if (position === meter) { if (values.some(value=>value>0)) patterns.push(values); return; }
+      if (config.quarterRest && position + 1 <= meter && !values.includes(-1)) fill(position+1,[...values,-1]);
       for (const value of config.values) {
         if (value === .25) {
           if (Number.isInteger(position)) fill(position+1,[...values,.25,.25,.25,.25]);
           continue;
         }
-        if (value > meter-position || config.paired && position % 1 !== 0 && value !== .5) continue;
+        if (config.selected && value === .5) {
+          if (Number.isInteger(position) && position + 1 <= meter) fill(position+1,[...values,.5,.5]);
+          continue;
+        }
+        if (value > meter-position || config.paired && !config.selected && position % 1 !== 0 && value !== .5) continue;
         fill(position+value,[...values,value]);
       }
     }
@@ -171,18 +201,21 @@ function rhythmPatterns(level, meter) {
 const patternKey = values => values.join(',');
 const sixteenthStart = values => {
   const index = values.indexOf(.25);
-  return index < 0 ? -1 : values.slice(0,index).reduce((sum,value) => sum+value,0);
+  return index < 0 ? -1 : values.slice(0,index).reduce((sum,value) => sum+Math.abs(value),0);
 };
 
 export function generatePhrase(settings, quizSettings, { rhythm = false, clefIndex = 0, random = Math.random, previousPhrase = null } = {}) {
   const clef = quizSettings.clef === 'mixed' ? clefIndex % 2 ? 'bass' : 'treble' : quizSettings.clef;
   const pool = rhythm ? [] : poolFor({ ...quizSettings, mode:'notes', clef });
   if (!rhythm && !pool.length) throw new Error('Choose at least one note and octave first.');
-  const level = RHYTHM_LEVELS[settings.complexity] ? settings.complexity : 'simple';
-  const config = RHYTHM_LEVELS[level], patterns = rhythmPatterns(level,settings.meter);
+  const level = Object.hasOwn(RHYTHM_LEVELS,settings.complexity) ? settings.complexity : 'simple';
+  const config = settings.noteValues ? patternConfig(settings.noteValues) : RHYTHM_LEVELS[level];
+  const patterns = rhythmPatterns(config,settings.meter);
+  if (!patterns.length) throw new Error('Choose note values that fit the selected meter.');
+  const patternSetup = settings.noteValues?.join(',') ?? level;
   const pick = items => items[Math.min(items.length-1,Math.floor(random()*items.length))];
   const usage = new Map(), pitchUsage = new Map(), events = [];
-  const history = previousPhrase?.complexity === level && previousPhrase.meter === settings.meter && previousPhrase.rhythm === rhythm
+  const history = previousPhrase?.complexity === patternSetup && previousPhrase.meter === settings.meter && previousPhrase.rhythm === rhythm
     ? previousPhrase.patterns?.slice(-2) || [] : [];
   const chosen = [];
   const heardValues = new Set();
@@ -193,17 +226,21 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
     let candidates = patterns.filter(values=>(usage.get(patternKey(values)) || 0) === least);
     const fresh = candidates.filter(values=>!history.includes(patternKey(values)));
     if (fresh.length) candidates = fresh;
-    if (level === 'sixteenths') {
+    if (!config.selected && level === 'sixteenths') {
       const hasGroup = candidates.filter(values => values.includes(.25));
       if (hasGroup.length) candidates = hasGroup;
       const shifted = candidates.filter(values => sixteenthStart(values) !== previousGroupBeat);
       if (shifted.length) candidates = shifted;
     }
-    if (bar === 0) {
+    if (bar === 0 && !config.selected) {
       const featured = candidates.filter(values=>level === 'steady' ? values.length > 1 : level === 'eighths' ? values.includes(.5) : level === 'mixed' ? values.some(value=>[1.5,3].includes(value)) : true);
       if (featured.length) candidates = featured;
     }
-    if (level === 'mix') {
+    if (config.selected && bar === 0 && config.values.includes(.25)) {
+      const beamed = candidates.filter(values=>values.includes(.25));
+      if (beamed.length) candidates = beamed;
+    }
+    if (config.prioritizeVariety || !config.selected && level === 'mix') {
       const best = Math.max(...candidates.map(variety));
       candidates = candidates.filter(values => variety(values) === best);
     }
@@ -221,12 +258,12 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
         if (extra.length) rests.add(pick(extra));
       }
     }
-    if (level === 'mix') {
+    if (config.prioritizeVariety || !config.selected && level === 'mix') {
       values.forEach((value, index) => { if (!rests.has(index)) heardValues.add(value); });
     }
     let position = 0, barStart;
     for (let index = 0; index < values.length; index++) {
-      const durationBeats = values[index], rest = rests.has(index);
+      const durationBeats = Math.abs(values[index]), rest = values[index] === -1 || rests.has(index);
       let tone = null;
       if (!rest && !rhythm) {
         const different = previous ? pool.filter(item=>item.tones[0].midi !== previous.midi) : pool;
@@ -245,7 +282,7 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
     }
     previousStart = barStart;
   }
-  return { events, meter:settings.meter, bars:settings.bars, clef, rhythm, complexity:level, patterns:chosen, totalBeats:settings.meter*settings.bars };
+  return { events, meter:settings.meter, bars:settings.bars, clef, rhythm, complexity:patternSetup, patterns:chosen, totalBeats:settings.meter*settings.bars };
 }
 
 export const holdTolerance = (milliseconds, accuracy = 'strict') => accuracy === 'beginner' ? Math.min(milliseconds * .4, Math.max(140, milliseconds * .3)) : Math.max(60, milliseconds * .15);

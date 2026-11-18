@@ -1,4 +1,4 @@
-import { RHYTHM_LEVELS, isSightFlow } from './training.js';
+import { RHYTHM_LEVELS, NOTE_PATTERNS, isSightFlow } from './training.js';
 import { firstTryBars, practiceDuration } from './training-report.js';
 
 export function groupSessions(history, activity) {
@@ -6,8 +6,8 @@ export function groupSessions(history, activity) {
   history.forEach((result,index)=>{
     if (result.activity!==activity || !result.comparison || !result.replay) return;
     const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
-    const {level,pace,notes,octaves} = result.comparison;
-    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,level,pace,accuracy,offset,result.replay.tapOnly===true,activity==='sight'?clef:input,notes,octaves]);
+    const {level,pace,notes,octaves,noteValues} = result.comparison;
+    const key = JSON.stringify([isSightFlow(result),bpm,meter,bars.length,noteValues ?? level,pace,accuracy,offset,result.replay.tapOnly===true,activity==='sight'?clef:input,notes,octaves]);
     if (!groups.has(key)) groups.set(key,[]);
     groups.get(key).push({result,index});
   });
@@ -16,9 +16,9 @@ export function groupSessions(history, activity) {
 
 export function historyLabel(result) {
   const {bpm,meter,clef,bars,input,accuracy,offset} = result.replay;
-  const {level,pace,notes,octaves} = result.comparison;
+  const {level,pace,notes,octaves,noteValues} = result.comparison;
   const source = result.activity==='sight' ? `${clef} · ${notes.join(' ')} · octave ${octaves.join('/')}` : `${input==='midi'?'MIDI':'Touch'} · ${result.replay.tapOnly?'Tap to the beat':'Tap & hold'}`;
-  return `${isSightFlow(result)?'Flow · ':result.activity==='sight'?'Practice · ':''}${bpm} BPM · ${RHYTHM_LEVELS[level].name} · ${meter}/4 · ${bars.length} bars · ${source} · ${accuracy} · ${pace==='flow'?'keep playing':'count in'} · ${offset} ms`;
+  return `${isSightFlow(result)?'Flow · ':result.activity==='sight'?'Practice · ':''}${bpm} BPM · ${noteValues ? NOTE_PATTERNS.filter(pattern=>noteValues.includes(pattern.id)).map(pattern=>pattern.name).join(', ') : RHYTHM_LEVELS[level].description} · ${meter}/4 · ${bars.length} bars · ${source} · ${accuracy} · ${pace==='flow'?'keep playing':'count in'} · ${offset} ms`;
 }
 
 const date = new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
