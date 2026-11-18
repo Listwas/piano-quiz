@@ -1,0 +1,16 @@
+{
+  "engine": "chromium",
+  "origin": "http://127.0.0.1:8421/",
+  "build": "a7784b6c8a7159",
+  "testedAt": "2026-11-18T15:33:02.184Z",
+  "checks": [
+    "double-beamed sixteenths score individually on touch and MIDI and survive a slower replay",
+    "selected note types generate only those written rhythms and persist"
+  ],
+  "errors": [],
+  "limits": [
+    "Device sizes and safe areas are simulated. No physical MIDI keyboard or mobile device is attached."
+  ],
+  "result": "passed",
+  "filter": "selected note types|double-beamed sixteenths"
+}

@@ -1,5 +1,7 @@
 # Verification
 
+Release `a7784b6c8a7159` replaces rhythm presets with a multi-select picker for individual note values and quarter rests. All 117 unit tests passed. Chromium and WebKit each passed all 12 Studio scenarios, including independent selections and export/import. Chromium training checks verified the chosen note values and their saved replays. All 51 served assets matched the build. [Release reports](rhythm-selection-checks/) · [Production deployment](https://75873d7b.piano-quiz.pages.dev/)
+
 Release `bd64061a3a39a6` defaults touch Rhythm to Tap to the beat and keeps Tap & hold as the MIDI default. All 116 unit tests passed. Chromium verified quick touch sixteenths, touch and MIDI hold scoring, saved replay, and the stalled audio fallback. The 12 Studio scenarios passed. A live phone viewport check confirmed the tap default, and all 51 served assets matched the build. [Release reports](tap-rhythm-checks/) · [Production deployment](https://21d76530.piano-quiz.pages.dev/)
 
 Release `c8bffa0a76bf5c` adds a Sixteenths preset and includes the new note groups in Mix. All 115 unit tests passed. Chromium and WebKit verified individual touch and MIDI grading, phone and tablet notation bounds, and replay after reload at a slower tempo. The Chromium Studio suite passed all 12 scenarios. All 51 served assets matched the build, and selection and double-beam rendering passed a live browser check. [Release reports](sixteenth-notes-checks/) · [Production deployment](https://022ec2fd.piano-quiz.pages.dev/)
