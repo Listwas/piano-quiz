@@ -13,7 +13,14 @@ export class Activities {
     Object.assign(this, { goHome, showTraining, openDialog, openNotes, renderHome, getQuizSettings, midi });
     this.state = loadTraining();
     for (const id of ['setup-complexity', 'training-complexity']) {
-      $(id).replaceChildren(...Object.entries(RHYTHM_LEVELS).map(([value, level]) => new Option(level.description, value)));
+      $(id).dataset.choiceGrid = '';
+      $(id).replaceChildren(...Object.entries(RHYTHM_LEVELS).map(([value, level]) => {
+        const option = new Option(value === 'mix' ? level.name : level.description, value);
+        if (value === 'mix') option.dataset.choiceWide = '';
+        option.dataset.choiceTitle = level.name;
+        option.dataset.choiceDetail = level.description;
+        return option;
+      }));
     }
     for (const [id, key] of [['click-volume-setting', 'volume'], ['timing-offset-setting', 'offset']]) {
       $(id).onchange = event => {
@@ -29,7 +36,7 @@ export class Activities {
       return saved;
     }});
     $('midi-calibrate').onclick = () => this.calibration.open('settings-dialog');
-    this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: () => this.pause('Audio stopped. Tap Resume when ready.',true) });
+    this.clock = new BeatClock({ onFrame: frame => this.frame(frame), onSuspended: ({countingIn}) => this.audioInterrupted(countingIn) });
     this.active = false;
     this.starting = false;
     this.lastBeat = null;
@@ -99,7 +106,6 @@ export class Activities {
     };
     $('training-touchpad').onpointercancel = () => this.pause('Touch was interrupted. Resume to retry this bar.');
     $('training-touchpad').onlostpointercapture = () => { if (this.pointer !== undefined) this.pause('Touch was interrupted. Resume to retry this bar.'); };
-    $('training-touchpad').oncontextmenu = event => event.preventDefault();
     $('training-touchpad').onselectstart = event => event.preventDefault();
     // Android can start its long-press gesture independently of Pointer Events.
     // Keep the pointer stream for grading while cancelling the native gesture.
@@ -249,6 +255,7 @@ export class Activities {
       } catch (error) { this.starting = false; this.refresh(); this.message(error.message,true); return; }
     }
     this.drawSignature = null;
+    $('training-visual').hidden = true;
     this.refresh();
     if (this.exercise) {
       this.session.startTime = Infinity;
@@ -262,8 +269,12 @@ export class Activities {
       return;
     }
     this.message('Getting your beat ready…');
-    const running = await this.clock.start({ ...this.settings, countIn:this.exercise ? this.settings.meter : 0, visualOnly:this.visualOnly });
+    const running = await this.clock.start({ ...this.settings, countIn:this.exercise ? this.settings.meter : 0, visualOnly:this.visualOnly || this.drill?.visualOnly });
     if (request !== this.request) return;
+    if (!running && this.drill && !this.drill.visualOnly && !this.visualOnly) {
+      this.drill.visualOnly = true;
+      return this.start(true);
+    }
     this.starting = false;
     if (this.session && running) {
       this.session.startTime = this.clock.exerciseStart;
@@ -273,6 +284,16 @@ export class Activities {
     if (!this.active) return;
     $('training-visual').hidden = Boolean(running);
     this.message(running ? this.exercise ? 'Count in, then follow the score.' : this.visualOnly ? 'Visual beat · audio unavailable' : 'Find your beat. Take your time.' : 'Audio could not start. Try Start again, or use the visual beat.');
+  }
+
+  audioInterrupted(countingIn) {
+    if (countingIn && this.drill) {
+      this.drill.visualOnly = true;
+      void this.start(true);
+      return;
+    }
+    this.pause('Audio stopped. Tap Resume when ready.', true);
+    $('training-visual').hidden = false;
   }
 
   frame({ time, beat, meterBeat = beat, startTime }) {
@@ -344,7 +365,8 @@ export class Activities {
     const retry = this.session.retryReason;
     const remaining = Math.max(1, Math.ceil((this.session.startTime-time)/this.session.beatMs));
     const count = retry ? remaining : Math.min(this.clock.countIn, remaining);
-    this.message(retry ? `${retry} · get ready to play in ${count} beat${count === 1 ? '' : 's'}` : `Get ready · ${count}`, Boolean(retry));
+    const visual = this.drill?.visualOnly ? 'Visual beat · ' : '';
+    this.message(retry ? `${retry} · get ready to play in ${count} beat${count === 1 ? '' : 's'}` : `${visual}Get ready · ${count}`, Boolean(retry));
     if (retry) $('training-progress').textContent = `${this.settings.bpm} BPM · Retry in ${count}`;
   }
   retryFailure(time) {

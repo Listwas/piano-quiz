@@ -1,5 +1,7 @@
 import { prepareAudio } from './audio.js';
 
+const AUDIO_STALL_MS = 400;
+
 export function outputTime(context, audioTime, now = performance.now()) {
   const stamp = context.getOutputTimestamp?.();
   if (stamp && stamp.performanceTime > 0 && Number.isFinite(stamp.contextTime)) return stamp.performanceTime + (audioTime - stamp.contextTime) * 1000;
@@ -24,10 +26,13 @@ export class BeatClock {
     if (!visualOnly && !context) return false;
     Object.assign(this, { context, bpm, meter, countIn, step: 60 / bpm, nextTick: 0, running: true });
     this.barOrigin = countIn;
+    this.lastAudioTime = context?.currentTime;
+    this.lastAudioProgress = this.now();
     this.anchor = context ? context.currentTime + .12 : this.now() + 120;
     this.performanceAnchor = null;
     this.pending = null;
     this.schedule();
+    if (!this.running || epoch !== this.epoch) return false;
     this.timer = setInterval(() => this.schedule(), 25);
     const frame = () => {
       if (!this.running) return;
@@ -60,8 +65,20 @@ export class BeatClock {
 
   schedule() {
     if (!this.running) return;
-    if (this.context && this.context.state !== 'running') { this.stop(); this.onSuspended(); return; }
-    const now = this.context ? this.context.currentTime : this.now();
+    const time = this.now();
+    const now = this.context ? this.context.currentTime : time;
+    if (this.context) {
+      if (now > this.lastAudioTime) {
+        this.lastAudioTime = now;
+        this.lastAudioProgress = time;
+      }
+      if (this.context.state !== 'running' || time - this.lastAudioProgress >= AUDIO_STALL_MS) {
+        const countingIn = time < this.exerciseStart;
+        this.stop();
+        this.onSuspended({ countingIn });
+        return;
+      }
+    }
     const unit = this.context ? 1 : 1000;
     while (this.anchor + this.nextTick * this.step * unit < now + .1 * unit) {
       if (this.pending && this.nextTick > this.countIn && (this.nextTick - this.barOrigin) % this.meter === 0) {

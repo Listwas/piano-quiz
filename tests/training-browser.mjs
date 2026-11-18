@@ -31,7 +31,7 @@ async function setup(deterministic = false, midi = false, mockAudio = false){
   window.calibrationClicks=[];
   window.AudioContext=class {
    state='suspended';origin=performance.now();destination={};
-   get currentTime(){return (performance.now()-this.origin)/1000;}
+   get currentTime(){return window.trainingAudioStalled ? 0 : (performance.now()-this.origin)/1000;}
    async resume(){this.state='running';} async suspend(){this.state='suspended';}
    createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
    createOscillator(){return {frequency:{},connect(){},disconnect(){},start:time=>window.calibrationClicks.push(this.origin+time*1000),stop(){}};}
@@ -289,9 +289,32 @@ try{
   assert.equal(await page.locator('#training-touchpad').isVisible(),true);
   assert.equal(await page.locator('#training-input-row').isVisible(),false);
  });
+ await check('a stalled audio clock on a Rhythm bar replay falls back to a working count-in',async()=>{
+  const page=await setup(true,false,true);
+  await selectActivity(page,'rhythm');await setPracticeTempo(page,200);
+  await page.selectOption('#setup-bars','2');await page.selectOption('#setup-pace','flow');
+  await page.selectOption('#setup-complexity','eighths');
+  await page.locator('#start-button').tap();await running(page);
+  await page.locator('.score-beam').first().waitFor({state:'attached'});
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  await page.locator('#training-details').tap();
+  await page.evaluate(()=>window.trainingAudioStalled=true);
+  await page.selectOption('#report-practise-tempo','200');await page.locator('#report-practise').tap();
+  await page.getByText(/Visual beat · Get ready/).waitFor({timeout:5000});
+  await page.waitForFunction(()=>{
+   const score=document.getElementById('exercise-score');
+   return Number(score.dataset.startTime)>0 && Number(score.dataset.startTime)<=performance.now();
+  });
+  await page.waitForFunction(()=>document.getElementById('training-screen').dataset.complete==='true');
+  await page.locator('#training-toggle').tap();
+  await page.getByText(/Visual beat · Get ready/).waitFor({timeout:5000});
+ });
  await check('long presses cancel native menus without interrupting the touch hold',async()=>{
   const page=await setup(true);await selectActivity(page,'rhythm');await page.locator('#start-button').tap();await running(page);
   await page.waitForFunction(()=>Number(document.getElementById('exercise-score').dataset.startTime)<=performance.now());
+  assert.equal(await page.locator('#training-toggle').evaluate(button => {
+   return !button.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));
+  }),true);
   const rect=await page.locator('#training-touchpad').boundingBox(),x=rect.x+rect.width/2,y=rect.y+rect.height/2;
   let cdp;
   if(engine==='chromium'){

@@ -372,3 +372,22 @@ test('previous rhythm level initializes both pattern choices and separate choice
   const data = JSON.stringify({activity:'sight',settings:{...legacy,patterns:{rhythm:'mixed',sight:'steady'}}});
   assert.deepEqual(loadTraining({getItem:()=>data}).settings.patterns,{rhythm:'mixed',sight:'steady'});
 });
+
+test('Mix uses every note duration that fits the meter across eight bars', () => {
+ for (const meter of [3,4]) {
+  for (const value of [0,.25,.5,.75,.999]) {
+   const settings = normalizeTraining({complexity:'mix',meter,bars:8});
+   const phrase = generatePhrase(settings,{}, {rhythm:true,random:()=>value});
+   const durations = new Set(phrase.events.filter(event=>!event.rest).map(event=>event.durationBeats));
+   assert.deepEqual(durations,new Set(RHYTHM_LEVELS.mix.values.filter(beats=>beats<=meter)));
+  }
+ }
+});
+
+test('on-beat eighths share a beam and remain separate scoring events', () => {
+ const events = [0,.5,1,1.5].map((beat,id)=>({id,bar:0,beat,durationBeats:.5,rest:id===3}));
+ const markup = renderScore({events,rhythm:true,meter:4},0);
+ assert.equal((markup.match(/class="score-beam"/g) || []).length,1);
+ assert.equal((markup.match(/data-event=/g) || []).length,4);
+ assert.match(markup,/c0 9 15 10/);
+});

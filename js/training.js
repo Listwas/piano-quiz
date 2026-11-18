@@ -8,7 +8,7 @@ export function normalizeTraining(raw) {
   const settings = { ...TRAINING_DEFAULTS };
   if (raw && typeof raw === 'object') {
     for (const [key, min, max] of [['bpm',40,200],['offset',-250,250],['volume',0,1]]) if (Number.isFinite(raw[key])) settings[key] = Math.max(min, Math.min(max, key === 'volume' ? raw[key] : Math.round(raw[key])));
-    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:['simple','steady','eighths','mixed'], style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], behavior:['retry-bar','continue'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
+    for (const [key, values] of Object.entries({ meter:[3,4], bars:[2,4,8], complexity:Object.keys(RHYTHM_LEVELS), style:['guided','continuous'], input:['touch','midi'], pace:['practice','flow'], behavior:['retry-bar','continue'], accuracy:['beginner','strict'] })) if (values.includes(raw[key])) settings[key] = raw[key];
     if (typeof raw.muted === 'boolean') settings.muted = raw.muted;
   }
   settings.patterns = Object.fromEntries(['rhythm', 'sight'].map(activity => {
@@ -125,6 +125,7 @@ export const RHYTHM_LEVELS = {
   steady: { name:'Steady', description:'Long holds and rests', values:[4,2,1], restChance:.3, paired:false },
   eighths: { name:'Moving', description:'Eighth-note pairs', values:[2,1,.5], restChance:.3, paired:true },
   mixed: { name:'Challenge', description:'Dotted notes and offbeats', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
+  mix: { name:'Mix', description:'All note values and rests', values:[4,3,2,1.5,1,.5], restChance:.4, paired:false },
 };
 const patternCache = new Map();
 function rhythmPatterns(level, meter) {
@@ -155,6 +156,8 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
   const history = previousPhrase?.complexity === level && previousPhrase.meter === settings.meter && previousPhrase.rhythm === rhythm
     ? previousPhrase.patterns?.slice(-2) || [] : [];
   const chosen = [];
+  const heardValues = new Set();
+  const variety = values => new Set(values.filter(value => !heardValues.has(value))).size;
   let previous, beforePrevious, previousStart;
   for (let bar = 0; bar < settings.bars; bar++) {
     const least = Math.min(...patterns.map(values=>usage.get(patternKey(values)) || 0));
@@ -164,6 +167,10 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
     if (bar === 0) {
       const featured = candidates.filter(values=>level === 'steady' ? values.length > 1 : level === 'eighths' ? values.includes(.5) : level === 'mixed' ? values.some(value=>[1.5,3].includes(value)) : true);
       if (featured.length) candidates = featured;
+    }
+    if (level === 'mix') {
+      const best = Math.max(...candidates.map(variety));
+      candidates = candidates.filter(values => variety(values) === best);
     }
     const values = pick(candidates), signature = patternKey(values);
     usage.set(signature,(usage.get(signature) || 0)+1);
@@ -177,6 +184,9 @@ export function generatePhrase(settings, quizSettings, { rhythm = false, clefInd
         const extra = places.filter(i=>!rests.has(i) && !rests.has(i-1) && !rests.has(i+1));
         if (extra.length) rests.add(pick(extra));
       }
+    }
+    if (level === 'mix') {
+      values.forEach((value, index) => { if (!rests.has(index)) heardValues.add(value); });
     }
     let position = 0, barStart;
     for (let index = 0; index < values.length; index++) {

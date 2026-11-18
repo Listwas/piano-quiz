@@ -313,12 +313,7 @@ export class Studio {
     const todayItem = state.active?.current ?? item;
     $('today-staff').innerHTML = renderStaff(todayItem, todayItem.clef);
     const example = mode === 'mixed' ? pool.find(note => note.kind === 'chord') ?? item : item;
-    $('home-staff').innerHTML = renderStaff(example, example.clef);
-    const root = example.tones[0];
-    const quality = QUALITIES.find(option => option.id === example.qualityId);
-    const name = quality ? `${root.name} ${quality.name.toLowerCase()}` : `${root.name}${root.octave}`;
-    const clef = example.clef === 'bass' ? 'Bass clef' : 'Treble clef';
-    $('setup-example-caption').textContent = `Example from your selection · ${name} · ${clef}`;
+    this.lessonStaff = renderStaff(example, example.clef);
     const recent = this.state.sessions.find(session => session.input === state.settings.inputMode);
     const facts = recent ? [[`${recent.correct}/${recent.total}`, 'First tries in your last quiz']] : [];
     if (a.state.history.length) facts.push([a.state.history.length, 'Timed sessions saved']);
@@ -345,7 +340,7 @@ export class Studio {
       a.activity === 'sight' ||
       (a.activity === 'rhythm' && a.settings.input === 'midi') ||
       (a.activity === 'quiz' && state.settings.inputMode === 'midi');
-    $('setup-example').hidden = training;
+    $('setup-quick-controls').dataset.activity = a.activity;
     $('setup-input-status').textContent = wantsMidi
       ? a.midi.status.connected
         ? `MIDI connected · ${a.midi.status.selectedName}`
@@ -384,7 +379,7 @@ export class Studio {
     $('lesson-title').textContent = lesson.title;
     $('lesson-text').textContent = lesson.text;
     $('lesson-example').textContent = lesson.example;
-    $('lesson-staff').innerHTML = $('home-staff').innerHTML;
+    $('lesson-staff').innerHTML = this.lessonStaff;
     $('lesson-dialog').showModal();
   }
   progress() {
@@ -457,7 +452,7 @@ export class Studio {
         const s = sessions[Number(q.dataset.quizReport)];
         $('lesson-title').textContent =
           `${s.correct}/${s.total} independent first tries`;
-        $('lesson-staff').innerHTML = $('home-staff').innerHTML;
+        $('lesson-staff').innerHTML = this.lessonStaff;
         $('lesson-text').textContent =
           `${date(s.at)} · ${s.input === 'midi' ? 'MIDI keyboard' : s.input === 'mixed' ? 'Touch + MIDI' : 'Tap names'}. Hints and revealed answers do not count as independent recall.`;
         $('lesson-example').textContent =

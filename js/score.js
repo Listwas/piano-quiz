@@ -9,6 +9,25 @@ function rest(x, duration) {
   return `<path d="M${x-5} 28l9 12 -6 7 7 10q-13 -7 -10 6q-10 -9 2 -13l-7 -10 7 -7z" fill="currentColor"/>`;
 }
 
+function eighthNoteBeams(events, phrase) {
+  const stems = new Map();
+  const beams = [];
+  for (let i = 0; i < events.length - 1; i++) {
+    const first = events[i], second = events[i + 1];
+    if (!Number.isInteger(first.beat) || second.beat !== first.beat + .5 ||
+        [first, second].some(event => event.rest || event.durationBeats !== .5)) continue;
+    const ys = [first, second].map(event => phrase.rhythm ? 48 : staffY(event.tone.staffStep, phrase.clef));
+    const up = ys[0] + ys[1] >= 96;
+    const end = up ? Math.min(...ys) - 29 : Math.max(...ys) + 29;
+    const xs = [first, second].map(event => scoreX(event.beat % phrase.meter, phrase.meter) + (up ? 6 : -6));
+    stems.set(first.id, { up, end });
+    stems.set(second.id, { up, end });
+    beams.push(`<path class="score-beam" d="M${xs[0]} ${end}H${xs[1]}" fill="none" stroke="currentColor" stroke-width="4"/>`);
+    i++;
+  }
+  return { stems, drawing: beams.join('') };
+}
+
 export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
   const events = phrase.events.filter(event => event.bar === bar);
   const ys = events.filter(e => e.tone).map(e => staffY(e.tone.staffStep, phrase.clef));
@@ -16,6 +35,7 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
   const bottom = phrase.rhythm ? 80 : Math.max(94,...ys.map(y=>y+40));
   const lines = phrase.rhythm ? [48] : [24,36,48,60,72];
   const alterations = new Map();
+  const beams = eighthNoteBeams(events, phrase);
   const notes = events.map(event => {
     const x = scoreX(event.beat % phrase.meter,phrase.meter);
     let drawing;
@@ -29,9 +49,11 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
       const whole = event.durationBeats === 4;
       drawing = `<ellipse cx="${x}" cy="${y}" rx="${whole?8:6.5}" ry="4.7" transform="rotate(${whole?0:-20} ${x} ${y})" class="${event.durationBeats>=2?'score-head-open':'score-head'}"/>`;
       if (dotted) drawing += `<circle cx="${x+12}" cy="${y%12===0?y-6:y}" r="2" fill="currentColor" class="score-dot"/>`;
-      const up = y >= 48, stemX = x + (up ? 6 : -6), end = y + (up ? -31 : 31);
+      const beam = beams.stems.get(event.id);
+      const up = beam?.up ?? y >= 48;
+      const stemX = x + (up ? 6 : -6), end = beam?.end ?? y + (up ? -31 : 31);
       if (!whole) drawing += `<path d="M${stemX} ${y}V${end}" fill="none" stroke="currentColor" stroke-width="1.3"/>`;
-      if (event.durationBeats === .5) drawing += up ? `<path d="M${stemX} ${end}c0 9 15 10 5 25c4 -14 -5 -10 -5 -17z" fill="currentColor"/>` : `<path d="M${stemX} ${end}c0 -9 -15 -10 -5 -25c-4 14 5 10 5 17z" fill="currentColor"/>`;
+      if (event.durationBeats === .5 && !beam) drawing += up ? `<path d="M${stemX} ${end}c0 9 15 10 5 25c4 -14 -5 -10 -5 -17z" fill="currentColor"/>` : `<path d="M${stemX} ${end}c0 -9 -15 -10 -5 -25c-4 14 5 10 5 17z" fill="currentColor"/>`;
       if (!phrase.rhythm) {
         const base = CLEFS[phrase.clef].bottomStep, step = event.tone.staffStep;
         for (let ledger = base - 2; ledger >= step; ledger -= 2) drawing += `<path d="M${x-11} ${staffY(ledger,phrase.clef)}h22" class="staff__line"/>`;
@@ -44,7 +66,7 @@ export function renderMeasure(phrase, bar, results = new Map(), current = -1) {
     const status = results.get(event.id)?.status || '';
     return `<g data-event="${event.id}" data-beat="${event.beat}" data-duration="${event.durationBeats}" data-midi="${event.tone?.midi ?? ''}" data-rest="${event.rest}" class="score-event ${status} ${current === event.id ? 'current' : ''}">${drawing}</g>`;
   }).join('');
-  return `<div class="measure" data-bar="${bar}"><span class="measure-label">${phrase.sourceBar ? `Bar ${phrase.sourceBar} · Drill` : `Bar ${bar+1} of ${phrase.bars}`}</span><svg class="exercise-staff" viewBox="0 ${top} ${width} ${bottom-top}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${phrase.rhythm?'Rhythm':phrase.clef+' clef'} bar ${bar+1}">${lines.map(y=>`<path d="M8 ${y}H${width-6}" class="staff__line"/>`).join('')}${phrase.rhythm?'':clefMarkup(phrase.clef)}<text x="${phrase.rhythm?36:65}" y="45" text-anchor="middle" class="score-meter">${phrase.meter}</text><text x="${phrase.rhythm?36:65}" y="65" text-anchor="middle" class="score-meter">4</text>${notes}<path d="M${width-6} ${phrase.rhythm?36:lines[0]}V${phrase.rhythm?60:lines.at(-1)}" class="staff__line"/><path data-cursor d="M0 ${top+4}V${bottom-4}" class="score-cursor" transform="translate(${scoreX(0,phrase.meter)} 0)"/></svg></div>`;
+  return `<div class="measure" data-bar="${bar}"><span class="measure-label">${phrase.sourceBar ? `Bar ${phrase.sourceBar} · Drill` : `Bar ${bar+1} of ${phrase.bars}`}</span><svg class="exercise-staff" viewBox="0 ${top} ${width} ${bottom-top}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${phrase.rhythm?'Rhythm':phrase.clef+' clef'} bar ${bar+1}">${lines.map(y=>`<path d="M8 ${y}H${width-6}" class="staff__line"/>`).join('')}${phrase.rhythm?'':clefMarkup(phrase.clef)}<text x="${phrase.rhythm?36:65}" y="45" text-anchor="middle" class="score-meter">${phrase.meter}</text><text x="${phrase.rhythm?36:65}" y="65" text-anchor="middle" class="score-meter">4</text>${beams.drawing}${notes}<path d="M${width-6} ${phrase.rhythm?36:lines[0]}V${phrase.rhythm?60:lines.at(-1)}" class="staff__line"/><path data-cursor d="M0 ${top+4}V${bottom-4}" class="score-cursor" transform="translate(${scoreX(0,phrase.meter)} 0)"/></svg></div>`;
 }
 
 export function renderScore(phrase, bar, results, current) {

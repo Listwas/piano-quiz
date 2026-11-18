@@ -48,11 +48,18 @@ export function installChoicePicker() {
     button.addEventListener('click', () => {
       trigger = button;
       title.textContent = name;
+      options.classList.toggle('choice-grid', select.hasAttribute('data-choice-grid'));
       const choices = Array.from(select.options).filter(option => !option.hidden).map(option => {
         const choice = document.createElement('button');
         choice.type = 'button';
         choice.className = 'choice-option';
-        choice.textContent = option.label;
+        if (option.dataset.choiceWide !== undefined) choice.classList.add('choice-option-wide');
+        choice.textContent = option.dataset.choiceTitle ?? option.label;
+        if (option.dataset.choiceDetail) {
+          const detail = document.createElement('small');
+          detail.textContent = option.dataset.choiceDetail;
+          choice.append(detail);
+        }
         choice.disabled = option.disabled;
         choice.setAttribute('aria-pressed', String(option.selected));
         choice.addEventListener('click', () => {

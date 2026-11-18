@@ -678,6 +678,9 @@ renderHome();
 for (const name of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
   document.addEventListener(name, event => event.preventDefault(), { passive: false });
 }
+document.addEventListener('contextmenu', event => {
+  if (event.target.closest?.('button, a, [role="button"]')) event.preventDefault();
+});
 document.addEventListener('touchmove', event => {
   if (event.touches.length > 1 || !event.target.closest?.('dialog[open], .scroll-region')) event.preventDefault();
 }, { passive: false });
