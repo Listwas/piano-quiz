@@ -74,8 +74,10 @@
               </button>
               <p id="resume-note" class="small muted" hidden>Your unfinished round is saved.</p>
             </div>
-            <button id="start-button" class="primary">Start session →</button>
-            <button id="lesson-button" class="text-button">How this exercise works ↗</button>
+            <div class="practice-actions">
+              <button id="start-button" class="primary">Start session →</button>
+              <button id="lesson-button" class="text-button" aria-label="How this exercise works"><span class="lesson-full">How this exercise works ↗</span><span class="lesson-compact">Guide ↗</span></button>
+            </div>
           </div>
         </div>
       </section>
@@ -116,9 +118,9 @@
           <div id="training-beats" class="beat-dots" aria-label="Beat indicator"></div>
           <div id="metronome-display"><strong id="metronome-number">1</strong><span id="metronome-tempo" class="muted">60 BPM</span><div class="tempo-controls"><button data-tempo-step="-5" class="secondary" aria-label="Slower by five BPM">−</button><label for="live-bpm" class="sr-only">Tempo in BPM</label><input id="live-bpm" type="number" min="40" max="200" step="1" value="60"><button data-tempo-step="5" class="secondary" aria-label="Faster by five BPM">+</button><select id="live-meter" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option></select></div></div>
           <div id="exercise-score" tabindex="-1" hidden></div><div id="hold-coach" hidden><label id="hold-label" for="hold-progress">Hold for two beats</label><progress id="hold-progress" max="1" value="0"></progress></div><div id="training-summary" tabindex="-1" role="region" aria-label="Session summary" hidden></div>
-          <div id="training-live-row"><p id="training-live-status" class="muted" role="status">Ready when you are.</p><button type="button" id="training-move-on" class="secondary" hidden>Move on</button></div>
+          <div id="training-live-row"><p id="training-bar-cue" role="status" hidden></p><p id="training-live-status" class="muted" role="status">Ready when you are.</p><button type="button" id="training-move-on" class="secondary" hidden>Move on</button></div>
         </div>
-        <div id="training-actions"><button id="training-visual" class="secondary" hidden>Use visual beat</button><button id="training-touchpad" type="button" hidden>Press and hold</button><button id="training-recheck" class="text-button" hidden>Recheck MIDI</button><div class="training-action-row"><button id="training-toggle" class="primary">Start</button><button id="training-sound" class="secondary" aria-pressed="false">Mute clicks</button><button id="training-listen" class="secondary" hidden>Listen</button><button id="training-details" class="secondary" hidden>Session details</button></div><p id="training-footnote" class="small muted">A steady beat. A little more fluent.</p></div>
+        <div id="training-actions"><button id="training-visual" class="secondary" hidden>Use visual beat</button><button id="training-touchpad" type="button" hidden>Press and hold</button><div class="training-action-row"><button id="training-toggle" class="primary">Start</button><button id="training-sound" class="secondary" aria-pressed="false">Mute clicks</button><button id="training-recheck" class="secondary" hidden>Recheck MIDI</button><button id="training-listen" class="secondary" hidden>Listen</button><button id="training-details" class="secondary" hidden>Session details</button></div><p id="training-footnote" class="small muted">A steady beat. A little more fluent.</p></div>
       </section>
 
       <section id="result-screen" class="screen result-screen" hidden>
@@ -144,6 +146,7 @@
     <form id="training-form">
       <div class="dialog-heading"><div><p class="eyebrow">YOUR OWN PACE</p><h2 id="training-setup-title">Metronome setup</h2></div><button type="button" data-close="training-dialog" class="icon-button" aria-label="Close training setup">✕</button></div>
       <div class="dialog-scroll">
+        <button id="training-notes" data-sight-setting type="button" class="secondary" hidden>Notes &amp; octaves ↗</button>
         <div class="training-fields">
           <label>Tempo · BPM<input id="training-bpm" type="number" min="40" max="200" step="1" required></label>
           <label>Time signature<select id="training-meter"><option value="4">4/4</option><option value="3">3/4</option></select></label>
@@ -156,7 +159,6 @@
           <label data-rhythm-setting hidden>Answer with<select id="training-input"><option value="touch">Touch pad</option><option value="midi">MIDI keyboard</option></select></label>
         </div>
         <p id="training-setup-help" class="small muted"></p>
-        <button id="training-notes" data-sight-setting type="button" class="secondary" hidden>Choose notes and octaves →</button>
       </div>
       <div class="dialog-actions"><button type="submit" class="primary">Save setup ✓</button></div>
     </form>

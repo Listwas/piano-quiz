@@ -7,26 +7,33 @@ const engine = process.env.BROWSER || 'chromium';
 const origin = process.env.PIANO_URL || 'http://127.0.0.1:8421/';
 const output = process.env.STUDIO_REPORT || '/tmp/piano-studio-test';
 const browser = await { chromium, firefox, webkit }[engine].launch(
-  engine === 'chromium' ? { executablePath: '/usr/bin/chromium', args: ['--mute-audio'] } : {},
+  engine === 'chromium' ? { executablePath: '/usr/bin/chromium', args: ['--mute-audio'] }
+    : engine === 'firefox' ? { firefoxUserPrefs: { 'full-screen-api.enabled': false } } : {},
 );
 const checks = [];
 const errors = [];
 const profiles = [
   ['small-phone',320,568,0,0,0],
+  ['small-phone-landscape',568,320,0,0,0],
   ['iphone',430,932,59,34,0],
+  ['iphone-zero-inset',430,873,0,34,0],
   ['iphone-landscape',932,430,0,21,59],
   ['honor-magicpad-2',800,1280,0,0,0],
   ['tablet-landscape',1280,800,0,0,0],
   ['compact-tablet',1024,600,0,0,0],
+  ['desktop-portrait',900,1440,0,0,0],
   ['desktop',1440,900,0,0,0],
 ];
 await mkdir(output,{recursive:true});
 const tap = (page, selector) => page.locator(selector).click();
 const read = (page, key) => page.evaluate(key=>JSON.parse(localStorage.getItem('pianoQuiz.'+key)),key);
-async function open(viewport, dark=false, midi=false, seed=false) {
+async function open(viewport, dark=false, midi=false, seed=false, iosHomeScreen=false) {
   const context = await browser.newContext({ viewport, hasTouch:true, colorScheme:dark?'dark':'light' });
   const page=await context.newPage();
   page.on('pageerror',error=>errors.push(error.message));
+  if(iosHomeScreen) await page.addInitScript(()=>{
+    Object.defineProperty(navigator,'standalone',{value:true,configurable:true});
+  });
   if(seed){
     const state=freshState();
     state.settings.theme='nocturne';
@@ -60,24 +67,73 @@ async function within(page, selector, edge) {
   },edge);
   assert.ok(result.visible&&result.within&&!result.scroll,selector+' '+JSON.stringify(result));
 }
+async function touchTarget(page, selector, { minWidth=44, minHeight=44, top=0, bottom=0, side=0 } = {}) {
+  const target=await page.locator(selector).evaluate((el,{minWidth,minHeight,top,bottom,side})=>{
+    const rect=el.getBoundingClientRect();
+    const x=rect.x+rect.width/2, y=rect.y+rect.height/2;
+    return { x,y,width:rect.width,height:rect.height,
+      usable:rect.width>=minWidth && rect.height>=minHeight && rect.top>=top && rect.bottom<=innerHeight-bottom+1 &&
+        rect.left>=side && rect.right<=innerWidth-side+1 && el.contains(document.elementFromPoint(x,y)) };
+  },{minWidth,minHeight,top,bottom,side});
+  assert.ok(target.usable,selector+' '+JSON.stringify(target));
+  return target;
+}
 try {
   for (const [device,width,height,top,bottom,side] of profiles) {
-    const {page,context}=await open({width,height},width>=1000);
+    const iphone=device.startsWith('iphone');
+    const dark=process.env.STUDIO_THEME ? process.env.STUDIO_THEME==='dark' : width>=1000||iphone;
+    const {page,context}=await open({width,height},dark,false,false,iphone);
+    const safeArea={top,bottom,side};
     await page.evaluate(([top,bottom,side])=>{
       for (const [edge,n] of Object.entries({top,bottom,left:side,right:side})) document.documentElement.style.setProperty('--safe-'+edge,n+'px');
     },[top,bottom,side]);
     await within(page,'#recommendation-start',bottom);
     if(engine==='chromium'&&['iphone','tablet-landscape'].includes(device))await page.screenshot({path:output+'/'+device+'-today.png'});
     await tap(page,'[data-tab=home]');
+    const layout=await page.locator('.practice-layout').evaluate(layout=>{
+      const rect=element=>element.getBoundingClientRect();
+      const picker=layout.querySelector('#activity-cards');
+      const panel=rect(layout.querySelector('.practice-card'));
+      const header=rect(document.querySelector('.topbar'));
+      const cards=Array.from(picker.children,rect);
+      return {header:header.top,panelLeft:panel.left,panelTop:panel.top,panelBottom:panel.bottom,
+        pickerLeft:rect(picker).left,pickerRight:rect(picker).right,pickerBottom:rect(picker).bottom,
+        cards:cards.map(({top,right,height})=>({top,right,height})),
+        lessonBottom:rect(document.querySelector('#lesson-button')).bottom,scrollY};
+    });
+    if(iphone) assert.ok(layout.header>=(width<height?Math.max(20,top+8):8),JSON.stringify({device,layout}));
+    if(width<height) {
+      assert.equal(layout.cards[0].top,layout.cards[2].top,device);
+      assert.equal(layout.cards[3].top,layout.cards[4].top,device);
+      assert.ok(Math.abs(layout.cards[2].right-layout.pickerRight)<=1 && Math.abs(layout.cards[4].right-layout.pickerRight)<=1,device);
+      assert.ok(layout.panelTop>=layout.pickerBottom,device);
+      if(layout.lessonBottom>0) assert.ok(layout.panelBottom-layout.lessonBottom<=25,device);
+    } else {
+      assert.ok(layout.panelLeft>layout.pickerRight,device);
+      assert.ok(Math.abs(layout.cards[4].right-layout.pickerRight)<=1,device);
+    }
+    assert.ok(layout.cards.every(card=>card.height>=44) && !layout.scrollY,JSON.stringify({device,layout}));
     for(const card of ['[data-quiz-mode=notes]','[data-quiz-mode=chords]','[data-activity=rhythm]','[data-activity=sight]','[data-activity=metronome]']){
       await tap(page,'.activity-card'+card);
       await within(page,'#start-button',bottom);
     }
     await tap(page,'.activity-card[data-quiz-mode=notes]');
-    if(engine==='chromium'&&device==='tablet-landscape')await page.screenshot({path:output+'/'+device+'-practice.png'});
+    const guide=await touchTarget(page,'#lesson-button',safeArea);
+    await page.touchscreen.tap(guide.x,guide.y);
+    assert.ok(await page.locator('#lesson-dialog').isVisible());
+    await tap(page,'[data-close="lesson-dialog"]');
+    if(['iphone','iphone-zero-inset','iphone-landscape','tablet-landscape'].includes(device))await page.screenshot({path:output+'/'+device+'-practice.png'});
     await tap(page,'#start-button');
     const item=(await read(page,'state.v1')).active.current;
     const box=await page.locator('#check-button').boundingBox();
+    for(const selector of ['#quiz-hint','#quiz-reveal']) await touchTarget(page,selector,safeArea);
+    for(let letter=0;letter<7;letter++){
+      const selector=`#letters [data-letter="${letter}"]`;
+      const target=await touchTarget(page,selector,{...safeArea,minWidth:width===320?38:44,minHeight:width<height?48:44});
+      await page.touchscreen.tap(target.x,target.y);
+      assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
+    }
+    await tap(page,'#unknown-button');
     await tap(page,`#letters [data-letter="${(item.tones[0].letter+1)%7}"]`);
     await tap(page,'#check-button');
     assert.match(await page.locator('#staff-caption').innerText(),/Try again/);
@@ -87,7 +143,7 @@ try {
     await tap(page,'#pause-button');
     await within(page,'#resume-button',bottom);
     await tap(page,'#resume-button');
-    if(engine==='chromium'&&device==='iphone')await page.screenshot({path:output+'/'+device+'-quiz.png'});
+    if(['iphone','iphone-landscape','honor-magicpad-2','tablet-landscape'].includes(device))await page.screenshot({path:output+'/'+device+'-quiz.png'});
     await context.close();
     checks.push(device+' setup, safe areas, fixed feedback and pause controls');
   }

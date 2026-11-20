@@ -243,9 +243,14 @@ export class Activities {
     this.openDialog('training-dialog');
   }
 
-  message(text, wrong = false) {
-    if ($('training-live-status').textContent !== text) $('training-live-status').textContent = text;
-    $('training-live-status').classList.toggle('mistake',wrong);
+  message(text, wrong = false, barCue = '') {
+    const status = $('training-live-status');
+    const cue = $('training-bar-cue');
+    if (status.textContent !== text) status.textContent = text;
+    if (cue.textContent !== barCue) cue.textContent = barCue;
+    if (cue.hidden !== !barCue) cue.hidden = !barCue;
+    status.classList.toggle('mistake',wrong && !barCue);
+    cue.classList.toggle('mistake',wrong && Boolean(barCue));
   }
 
   sound() {
@@ -398,7 +403,7 @@ export class Activities {
       const count = Math.min(this.phrase.meter,Math.ceil(position.remaining));
       const cue = clap.retry || (time < clap.noticeUntil ? clap.notice : '');
       const visual = this.drill?.visualOnly ? 'Visual beat · ' : '';
-      this.message(`${visual}${cue ? cue + ' · ' : ''}Get ready · ${count}`,Boolean(clap.retry));
+      this.message(`${visual}Get ready · ${count}`,Boolean(clap.retry),cue);
     } else this.message(time < clap.noticeUntil ? clap.notice : 'Your turn');
   }
 

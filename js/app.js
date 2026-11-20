@@ -193,6 +193,8 @@ function resume() {
 
 function renderQuestion() {
   clearTimeout(nextTimer);
+  clearTimeout(questionCueTimer);
+  for (const button of $('letters').querySelectorAll('.answer-wrong')) button.classList.remove('answer-wrong');
   midi.phrase.resetPhrase();
   const round = state.active;
   if (isMidiMode() && round?.feedback?.answer) {
@@ -291,7 +293,7 @@ function submit(value, revealed = false) {
     retryQuestion(state.active);persist();renderQuestion();startClock();
     $('staff-caption').textContent=`You chose ${answerName(feedback.answer,feedback.item.kind)} · Try again`;
     const wrong=$('letters').querySelector(`[data-letter="${feedback.answer.letter}"]`);wrong?.classList.add('answer-wrong');
-    clearTimeout(questionCueTimer);questionCueTimer=setTimeout(()=>wrong?.classList.remove('answer-wrong'),2000);
+    questionCueTimer=setTimeout(()=>wrong?.classList.remove('answer-wrong'),2000);
   }else{persist();renderQuestion();}
   if (state.settings.sound) void playItem(feedback.item).catch(() => {});
 }

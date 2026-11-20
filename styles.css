@@ -422,7 +422,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 #training-live-status.mistake{color:var(--wrong)}
 #training-touchpad{width:100%;height:88px;min-height:48px;border:1px solid var(--accent);border-radius:14px;background:var(--accent-soft);color:var(--accent);font:inherit;font-size:19px;font-weight:650;margin-bottom:10px;touch-action:none}
 #training-touchpad.pressed{background:var(--accent);color:var(--bg);box-shadow:inset 0 0 0 3px var(--surface)}
-#training-recheck{width:100%;min-height:36px}
 #hold-coach{flex-shrink:0;text-align:center;width:100%;max-width:350px;font-size:12px;color:var(--muted)}
 #hold-progress{width:100%;height:8px;display:block;margin-top:7px;accent-color:var(--accent)}
 #training-summary{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(10px,2.5dvh,24px);width:100%;max-width:760px;text-align:center}
@@ -489,7 +488,6 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 @media(orientation:landscape) and (max-height:600px){
  #training-screen:not([data-activity=metronome]) #training-title,#training-screen:not([data-activity=metronome]) #training-beats{display:none}
  #training-touchpad{height:48px;margin-bottom:6px;font-size:16px}
- #training-recheck{min-height:28px;font-size:11px}
  #training-screen:not([data-activity=metronome]) #training-body{gap:5px}
  .measure{padding:13px 8px 2px;border-radius:10px}
  .measure-label{font-size:8px;top:3px}
@@ -615,17 +613,10 @@ body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 }
 
 .score-beat-shade{fill:var(--accent-soft);pointer-events:none}
-#training-screen[data-clap=true] .measure{background:var(--surface);padding-inline:clamp(6px,2vw,20px)}
-#training-screen[data-clap=true] .score-cursor{stroke-width:2;opacity:1}
-#training-screen[data-clap=true] .score-event.correct{color:var(--success,var(--accent))}
-#training-screen[data-clap=true] .score-event.correct .score-head-open{fill:var(--accent-soft)}
 #training-live-row{width:100%;flex-shrink:0}
-#training-screen[data-clap=true] #training-live-row{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
-#training-screen[data-clap=true] #training-live-status{min-height:0;font-weight:650}
 #training-screen[data-clap=true] .measure-label{display:none}
 #training-screen[data-clap=true] #training-touchpad{min-height:48px;margin-bottom:8px}
 #training-screen[data-clap=true] .training-action-row{gap:6px}
 #training-screen[data-clap=true] .training-action-row button{min-height:44px;padding:4px;font-size:clamp(11px,2.8vw,14px)}
 #training-summary [data-clap-metrics]>div:first-child{grid-column:span 2;background:var(--accent-soft)}
-#training-screen[data-clap=true] #training-move-on{min-height:44px;padding-inline:9px;flex-shrink:0;font-size:12px}
 #training-screen[data-clap=true] .measure{min-height:48px}

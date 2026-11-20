@@ -9,6 +9,12 @@ export function fitViewport() {
   function fit() {
     const height = Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight);
     if (height > 0) root.style.setProperty('--app-height', `${Math.floor(height)}px`);
+    const nativeFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    const iosHomeScreen = typeof navigator.standalone === 'boolean' && (
+      navigator.standalone || matchMedia('(display-mode: standalone)').matches ||
+      (!nativeFullscreen && matchMedia('(display-mode: fullscreen)').matches)
+    );
+    root.toggleAttribute('data-ios-home-screen', iosHomeScreen);
     root.toggleAttribute('data-compact-viewport', window.innerWidth > height && height < 365);
     root.toggleAttribute('data-short-viewport', window.innerWidth > height && height < 420);
     if (!document.querySelector('dialog[open]') && (window.scrollX || window.scrollY)) window.scrollTo(0, 0);

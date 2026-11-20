@@ -19,6 +19,40 @@ async function open(item,viewport={width:1280,height:800}){
 }
 const active=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('pianoQuiz.state.v1')).active);
 try{
+ {
+  const item=pool.find(item=>item.id==='note:treble:1:0:3');
+  const {page,context}=await open(item);
+  await page.clock.install();
+  const letter=name=>page.locator('#letters').getByRole('button',{name,exact:true});
+  const submit=async name=>{
+   await letter(name).tap();
+   await page.locator('#check-button').tap();
+  };
+  await submit('A');
+  assert.match(await letter('A').getAttribute('class'),/\banswer-wrong\b/);
+  assert.equal(await letter('A').getAttribute('aria-pressed'),'false');
+  await submit('D');
+  await page.locator('#next-button').tap();
+  assert.match(await page.locator('#question-count').innerText(),/Question 2/);
+  assert.equal(await page.locator('#letters .answer-wrong').count(),0,'Previous wrong background must clear on Next');
+
+  const nextItem=(await active(page)).current;
+  const wrongLetters=['A','B','C'].filter(name=>name!==nextItem.tones[0].name[0]);
+  for(const name of wrongLetters.slice(0,2)){
+   await submit(name);
+   assert.deepEqual(await page.locator('#letters .answer-wrong').allTextContents(),[name]);
+  }
+  await letter(nextItem.tones[0].name[0]).tap();
+  await page.locator(`#accidentals [data-alteration="${nextItem.tones[0].alteration}"]`).tap();
+  await page.locator('#check-button').tap();
+  await page.clock.fastForward(1000);
+  assert.match(await page.locator('#question-count').innerText(),/Question 3/);
+  assert.equal(await page.locator('#letters .answer-wrong').count(),0,'Automatic advance must also clear wrong backgrounds');
+  assert.equal(await page.locator('#letters [aria-pressed="true"]').count(),0);
+  assert.equal(await page.locator('#check-button').isDisabled(),true);
+  report.checks.push('Wrong A background clears across manual and automatic advance; only the latest mistake is highlighted');
+  await context.close();
+ }
  for(const item of pool.filter(item=>process.env.TOUCH_MATRIX!=='sample'||item.tones[0].letter===1)){
   const {page,context}=await open(item),tone=item.tones[0];
   await page.locator(`#letters [data-letter="${tone.letter}"]`).tap();

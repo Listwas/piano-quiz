@@ -17,7 +17,11 @@ const profiles = [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'compact-tablet', width: 1024, height: 600 },
 ];
-const browser = await { chromium, firefox, webkit }[engine].launch({ headless: true, ...(engine === 'chromium' ? { executablePath: '/usr/bin/chromium', args: ['--mute-audio'] } : {}) });
+const browser = await { chromium, firefox, webkit }[engine].launch({
+  headless: true,
+  ...(engine === 'chromium' ? { executablePath: '/usr/bin/chromium', args: ['--mute-audio'] }
+    : engine === 'firefox' ? { firefoxUserPrefs: { 'full-screen-api.enabled': false } } : {}),
+});
 let activePage;
 
 async function touch(page, selector) {

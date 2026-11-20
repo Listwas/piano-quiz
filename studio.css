@@ -11,6 +11,7 @@
   font-display: swap;
 }
 :root {
+  --header-inset: var(--safe-top);
   --bg: #f5f3ef;
   --surface: #fffefa;
   --ink: #222d38;
@@ -29,6 +30,15 @@
   --radius: 18px;
   color-scheme: light;
   background: var(--bg);
+}
+/* The iOS Home Screen overlay can extend into a viewport that reports no inset. */
+:root[data-ios-home-screen] {
+  --header-inset: max(20px, calc(var(--safe-top) + 8px));
+}
+@media (orientation: landscape) {
+  :root[data-ios-home-screen] {
+    --header-inset: max(8px, calc(var(--safe-top) + 4px));
+  }
 }
 :root[data-theme='dark'] {
   --bg: #111923;
@@ -445,59 +455,147 @@ h1 em {
 .practice-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 28px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(12px, 2.4vw, 28px);
   flex: 1;
   min-height: 0;
 }
 .activity-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
+  min-height: 0;
 }
 .activity-card {
-  position: relative;
+  display: grid;
+  grid-template-columns: 1.5em minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 3px 10px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 17px;
+  padding: 12px;
   text-align: left;
-  min-height: 120px;
+  min-height: 72px;
   color: var(--ink);
 }
 .activity-card[aria-pressed='true'] {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
   background: var(--accent-soft);
+  color: var(--accent);
 }
 .activity-card .activity-symbol {
+  grid-row: 1 / span 2;
   font-family: Newsreader, Georgia, serif;
-  font-size: 32px;
+  font-size: 23px;
   line-height: 1;
-  display: block;
   color: var(--accent);
-  margin-bottom: 10px;
+  text-align: center;
 }
 .activity-card strong {
-  display: block;
   font-size: 14px;
-  margin-bottom: 5px;
+  line-height: 1.2;
 }
 .activity-card small {
-  display: block;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.4;
 }
 .activity-card:last-child {
   grid-column: 1/-1;
-  min-height: 72px;
-  padding-left: 68px;
 }
-.activity-card:last-child .activity-symbol {
-  position: absolute;
-  left: 22px;
-  top: 22px;
+@media (orientation: portrait) and (max-width: 900px) {
+  .practice-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .activity-cards {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+    flex-shrink: 0;
+  }
+  .activity-card {
+    grid-column: span 2;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 4px;
+    padding: 8px 5px;
+    min-height: 60px;
+    text-align: center;
+    border-radius: 12px;
+  }
+  .activity-card:nth-last-child(-n+2) {
+    grid-column: span 3;
+  }
+  .activity-card .activity-symbol {
+    grid-row: auto;
+    font-size: 21px;
+  }
+  .activity-card strong {
+    font-size: clamp(12px, 3.3vw, 15px);
+  }
+  .activity-card small {
+    display: none;
+  }
+  #home-screen .practice-card {
+    align-self: stretch;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+}
+@media (orientation: portrait) and (max-width: 699px) {
+  #home-screen .studio-stamp {
+    display: none;
+  }
+}
+@media (orientation: portrait) and (max-height: 690px) {
+  .activity-card {
+    min-height: 44px;
+  }
+  .activity-card .activity-symbol {
+    display: none;
+  }
+}
+@media (orientation: landscape) and (max-height: 530px) {
+  .practice-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  }
+  .activity-cards {
+    gap: 6px;
+  }
+  .activity-card {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 44px;
+    justify-items: center;
+    text-align: center;
+    padding: 6px;
+    border-radius: 10px;
+  }
+  .activity-card strong {
+    font-size: 12px;
+  }
+  .activity-card :is(.activity-symbol, small) {
+    display: none;
+  }
+}
+@media (orientation: landscape) and (max-height: 530px) and (min-width: 760px) {
+  .activity-card {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 8px;
+    justify-items: start;
+    padding-inline: 10px;
+    text-align: left;
+  }
+  .activity-card .activity-symbol {
+    display: block;
+    grid-row: auto;
+    justify-self: center;
+    font-size: 18px;
+  }
 }
 .practice-card {
   grid-column: auto;
@@ -537,8 +635,11 @@ h1 em {
   margin: 0;
   flex-shrink: 0;
 }
-.practice-card > .primary {
-  margin-top: auto;
+.practice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  margin-top: 6px;
   flex-shrink: 0;
 }
 .setup-staff {
@@ -613,8 +714,14 @@ h1 em {
   min-height: 17px;
 }
 .practice-card #lesson-button {
-  min-height: 28px;
-  padding: 2px;
+  min-height: 44px;
+  padding: 4px 8px;
+}
+.practice-card #lesson-button span {
+  margin: 0;
+}
+.lesson-compact {
+  display: none;
 }
 .training-history-links {
   display: none;
@@ -979,9 +1086,10 @@ h1 em {
   font-weight: 450;
 }
 .training-heading {
-  min-height: 40px;
+  min-height: 44px;
 }
 .training-heading .text-button {
+  min-height: 44px;
   font-size: 12px;
 }
 #reading-style-badge {
@@ -1050,6 +1158,82 @@ h1 em {
 #training-live-status.mistake {
   color: var(--wrong);
 }
+#training-screen[data-clap='true'] .measure {
+  background: var(--surface);
+  padding-block: 4px;
+  padding-inline: clamp(6px, 2vw, 20px);
+}
+#training-screen[data-clap='true'] .exercise-staff {
+  color: var(--ink);
+}
+#training-screen[data-clap='true'] .score-head-open {
+  fill: var(--surface);
+}
+#training-screen[data-clap='true'] .score-cursor {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 1;
+}
+#training-screen[data-clap='true'] .score-event.current {
+  color: var(--accent);
+}
+#training-screen[data-clap='true'] .score-event.correct {
+  color: var(--success);
+}
+#training-screen[data-clap='true'] .score-event.correct .score-head-open {
+  fill: var(--success-soft);
+}
+#training-screen[data-clap='true'] .score-event:is(.wrong, .missed) {
+  color: var(--wrong);
+  opacity: 1;
+}
+#training-screen[data-clap='true'] #training-live-row {
+  display: grid;
+  grid-template-columns: minmax(76px, 1fr) minmax(0, 3fr) minmax(76px, 1fr);
+  grid-template-rows: minmax(28px, auto) 44px;
+  align-items: center;
+  font-size: 12px;
+}
+#training-bar-cue {
+  grid-area: 1 / 1 / 2 / -1;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.2;
+}
+#training-bar-cue.mistake {
+  color: var(--wrong);
+}
+#training-screen[data-clap='true'] #training-live-status {
+  grid-area: 2 / 2;
+  color: var(--ink);
+  min-height: 0;
+  font-size: clamp(12px, 2vw, 15px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+#training-screen[data-clap='true'] #training-move-on {
+  grid-area: 2 / 3;
+  justify-self: end;
+  width: auto;
+  min-width: 76px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) {
+  #training-screen[data-clap='true'] #training-live-row {
+    grid-template-rows: 24px 20px;
+  }
+  #training-screen[data-clap='true'] #training-bar-cue {
+    grid-area: 1 / 2;
+    font-size: 11px;
+    line-height: 1.05;
+  }
+  #training-screen[data-clap='true'] #training-move-on {
+    grid-area: 1 / 3 / 3 / 4;
+  }
+}
 #training-actions {
   padding-top: 10px;
   flex-shrink: 0;
@@ -1069,10 +1253,6 @@ h1 em {
 #training-footnote {
   min-height: 30px;
   font-size: 10px;
-}
-#training-recheck {
-  min-height: 36px;
-  font-size: 11px;
 }
 .beat-dots {
   gap: 13px;
@@ -1393,7 +1573,7 @@ dialog::backdrop {
     .studio-nav {
     position: absolute;
     left: 20px;
-    top: 105px;
+    top: calc(105px + var(--header-inset));
     bottom: 30px;
     width: 145px;
     border: 0;
@@ -1477,42 +1657,6 @@ dialog::backdrop {
   }
   .today-aside .progress-overview {
     display: none;
-  }
-  .practice-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .activity-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    flex-shrink: 0;
-  }
-  .activity-card {
-    min-height: 60px;
-    padding: 10px 9px;
-    border-radius: 10px;
-  }
-  .activity-card strong {
-    font-size: 11px;
-    line-height: 1.2;
-    margin: 0;
-  }
-  .activity-card .activity-symbol {
-    font-size: 21px;
-    margin-bottom: 5px;
-  }
-  .activity-card small {
-    display: none;
-  }
-  .activity-card:last-child {
-    grid-column: auto;
-    min-height: 60px;
-    padding: 10px 9px;
-  }
-  .activity-card:last-child .activity-symbol {
-    position: static;
   }
   .practice-card {
     padding: 16px;
@@ -1604,16 +1748,6 @@ dialog::backdrop {
     padding: 14px;
     gap: 7px;
   }
-  .activity-card {
-    min-height: 100px;
-    padding: 12px;
-  }
-  .activity-card:last-child {
-    min-height: 65px;
-  }
-  .activity-card small {
-    font-size: 10px;
-  }
   .setup-staff {
     max-height: 70px;
     min-height: 30px;
@@ -1626,9 +1760,6 @@ dialog::backdrop {
   }
   .practice-card .segmented button {
     min-height: 40px;
-  }
-  .practice-card #lesson-button {
-    min-height: 24px;
   }
   .recommendation {
     padding: 18px;
@@ -1726,17 +1857,6 @@ dialog::backdrop {
   .studio-heading h1 {
     font-size: 32px;
   }
-  .activity-card,
-  .activity-card:last-child {
-    min-height: 48px;
-    padding: 8px;
-  }
-  .activity-card .activity-symbol {
-    display: none !important;
-  }
-  .activity-cards {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .practice-card {
     gap: 6px;
     padding: 12px;
@@ -1795,31 +1915,6 @@ dialog::backdrop {
   .studio-heading {
     display: none;
   }
-  .practice-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    gap: 16px;
-    flex: 1;
-  }
-  .activity-cards {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-  .activity-card,
-  .activity-card:last-child {
-    min-height: 46px;
-    padding: 10px;
-  }
-  .activity-card .activity-symbol,
-  .activity-card small {
-    display: none !important;
-  }
-  .activity-card strong {
-    font-size: 12px;
-  }
-  .activity-card:last-child {
-    grid-column: 1/-1;
-  }
   .practice-card {
     padding: 10px 14px;
     gap: 5px;
@@ -1831,7 +1926,6 @@ dialog::backdrop {
     min-height: 25px;
   }
   .practice-card .setup-staff,
-  .practice-card #lesson-button,
   .practice-card #resume-note {
     display: none !important;
   }
@@ -1920,18 +2014,8 @@ dialog::backdrop {
   #quiz-screen {
     padding-top: 3px;
   }
-  #quiz-content {
-    display: flex;
-    flex-direction: column;
-  }
-  .quiz-heading .text-button {
-    min-height: 30px;
-  }
   .quiz-heading .small {
     font-size: 10px;
-  }
-  #quiz-content > .quiz-heading {
-    min-height: 30px;
   }
   .round-progress {
     margin: 2px 0 4px;
@@ -1964,13 +2048,6 @@ dialog::backdrop {
   }
   .quiz-staff .staff {
     max-height: 100px;
-  }
-  #quiz-learning-tools {
-    min-height: 27px;
-  }
-  #quiz-learning-tools button {
-    min-height: 27px;
-    font-size: 10px;
   }
   .answer-heading {
     display: none;
@@ -2038,11 +2115,7 @@ dialog::backdrop {
   #training-screen {
     padding: 0;
   }
-  .training-heading {
-    min-height: 32px;
-  }
   .training-heading .text-button {
-    min-height: 32px;
     font-size: 10px;
   }
   #training-input-row {
@@ -2111,19 +2184,15 @@ dialog::backdrop {
     padding-top: 4px;
   }
   .training-action-row > * {
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px;
     font-size: 12px;
   }
   #training-touchpad {
     height: 42px;
-    min-height: 40px;
+    min-height: 44px;
     margin-bottom: 5px;
     font-size: 14px;
-  }
-  #training-recheck {
-    min-height: 24px;
-    padding: 2px;
   }
   #training-footnote {
     display: none !important;
@@ -2195,43 +2264,6 @@ dialog::backdrop {
 [hidden] {
   display: none !important;
 }
-.activity-card[aria-pressed='true'] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.activity-symbol {
-  display: block;
-  color: var(--accent);
-  font-size: 29px;
-  line-height: 1.2;
-  margin-bottom: 12px;
-}
-.activity-card strong {
-  display: block;
-  font-size: 15px;
-  line-height: 1.3;
-}
-.activity-card small {
-  display: block;
-  line-height: 1.5;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 6px;
-}
-.activity-card:last-child {
-  grid-column: 1/-1;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.activity-card:last-child .activity-symbol {
-  margin: 0;
-}
-.activity-card:last-child small {
-  margin: 0;
-  margin-left: auto;
-}
 .recall-trend {
   display: flex;
   gap: 10px;
@@ -2278,8 +2310,13 @@ dialog::backdrop {
   line-height: 1.4;
 }
 #quiz-learning-tools .text-button {
+  min-width: 44px;
+  min-height: 44px;
   font-size: 11px;
-  padding-left: 0;
+  padding: 0 8px;
+}
+#quiz-assistance:empty {
+  display: none;
 }
 #quiz-learning-tools .text-button:disabled {
   opacity: 0.4;
@@ -2304,51 +2341,10 @@ dialog::backdrop {
     transform: translateX(3px);
   }
 }
-@media (max-width: 699px) {
-  .activity-symbol {
-    font-size: 21px;
-    margin-bottom: 4px;
-  }
-  .activity-card strong {
-    font-size: 11px;
-  }
-  .activity-card small {
-    display: none;
-  }
-  .activity-card:last-child {
-    display: block;
-    grid-column: auto;
-  }
-  .activity-card:last-child .activity-symbol {
-    margin-bottom: 4px;
-  }
-}
-@media (max-height: 760px) and (max-width: 699px) {
-  .activity-symbol {
-    display: none;
-  }
-  .activity-card strong {
-    font-size: 11px;
-  }
-}
-@media (orientation: landscape) and (max-height: 530px) {
-  .activity-card:last-child {
-    grid-column: 1/-1;
-  }
-  .activity-card strong {
-    font-size: 12px;
-  }
-  .activity-card small {
-    display: none;
-  }
-  .activity-symbol {
-    display: none;
-  }
-}
-
 /* Keep the full viewport covered, including the Home Screen safe areas. */
-.app-shell {
-  padding-top: var(--safe-top);
+.app-shell,
+.app-shell[data-screen='quiz'] {
+  padding-top: var(--header-inset);
 }
 .studio-nav button[aria-current='page'] {
   background: var(--accent-soft);
@@ -2379,22 +2375,15 @@ dialog::backdrop {
 }
 .practice-card {
   align-self: start;
-  min-height: min(100%, 325px);
 }
 .practice-card .setup-staff {
   flex: 1 1 68px;
-}
-.practice-card > .primary {
-  margin-top: 6px;
 }
 .app-shell #quiz-actions {
   padding-bottom: 3px;
 }
 #quiz-screen .staff-caption {
   display: block;
-}
-#exercise-score .measure:first-child > svg {
-  color: var(--paper-ink);
 }
 @media (max-width: 699px) {
   .recommendation {
@@ -2417,9 +2406,6 @@ dialog::backdrop {
   }
   #home-screen .studio-stamp {
     display: none;
-  }
-  .practice-card #lesson-button {
-    min-height: 25px;
   }
   .practice-card #home-sight-tools {
     margin: 0;
@@ -2445,10 +2431,6 @@ dialog::backdrop {
     padding: 9px;
     gap: 5px;
   }
-  .activity-card,
-  .activity-card:last-child {
-    min-height: 44px;
-  }
 }
 @media (orientation: landscape) and (max-height: 530px) {
   .recommendation {
@@ -2457,9 +2439,6 @@ dialog::backdrop {
   }
   .practice-card {
     min-height: 0;
-  }
-  #quiz-content .quiz-heading .text-button {
-    min-height: 30px;
   }
 }
 
@@ -2517,7 +2496,37 @@ dialog::backdrop {
 }
 @media (orientation: landscape) and (max-height: 530px) {
   #quiz-screen #quiz-content {
-    gap: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 44px auto minmax(58px, 1fr) auto auto;
+    grid-template-areas:
+      'heading help'
+      'progress progress'
+      'score score'
+      'answers answers'
+      'midi midi';
+    gap: 0 8px;
+    padding-bottom: 0;
+  }
+  #quiz-content > .quiz-heading {
+    grid-area: heading;
+    min-height: 44px;
+  }
+  #quiz-content #pause-button {
+    min-height: 44px;
+  }
+  #quiz-content > #quiz-learning-tools {
+    grid-area: help;
+    gap: 4px;
+  }
+  #quiz-content > .round-progress {
+    grid-area: progress;
+  }
+  #quiz-content > #question-visual {
+    grid-area: score;
+  }
+  #quiz-content > #quiz-midi-panel {
+    grid-area: midi;
   }
   #quiz-screen #question-visual {
     min-height: 62px;
@@ -2526,14 +2535,24 @@ dialog::backdrop {
     min-height: 62px;
   }
   #quiz-screen #answer-controls {
+    grid-area: answers;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    justify-self: center;
+    align-self: end;
+    width: min(100%, 480px);
     gap: 4px 8px;
   }
   #quiz-screen #letters {
     grid-column: 1/-1;
+    gap: 6px;
+  }
+  #quiz-screen #letters button {
+    height: 44px;
   }
   #quiz-screen #accidentals {
+    width: 100%;
+    max-width: none;
     margin: 0;
   }
   #quiz-screen #quiz-content[data-kind='note'] #accidentals {
@@ -2541,8 +2560,8 @@ dialog::backdrop {
   }
   #quiz-screen #accidentals button,
   #quiz-screen #answer-quality-picker {
-    min-height: 38px;
-    height: 38px;
+    min-height: 44px;
+    height: 44px;
     margin: 0;
   }
   #quiz-screen :is(#answer-actions, #pause-actions) {
@@ -2570,12 +2589,6 @@ dialog::backdrop {
   }
   #quiz-screen .feedback-action-row {
     min-height: 44px;
-  }
-  #quiz-screen #quiz-learning-tools {
-    min-height: 25px;
-  }
-  #quiz-screen #quiz-learning-tools button {
-    min-height: 25px;
   }
 }
 
@@ -2678,19 +2691,12 @@ dialog::backdrop {
 
 /* Short visible viewport when mobile browser chrome expands after rotation. */
 :root[data-compact-viewport] #quiz-screen #quiz-content { padding-bottom: 0; }
-:root[data-compact-viewport] #quiz-screen #quiz-content > .quiz-heading { min-height: 26px; }
-:root[data-compact-viewport] #quiz-screen .quiz-heading .text-button { min-height: 26px; padding-block: 3px; }
 :root[data-compact-viewport] #quiz-screen .score-pill { padding-block: 3px; }
 :root[data-compact-viewport] #quiz-screen .round-progress { margin: 1px 0 2px; }
 :root[data-compact-viewport] #quiz-screen #question-visual,
 :root[data-compact-viewport] #quiz-screen #question-visual .score-card { min-height: 58px; }
 :root[data-compact-viewport] #quiz-screen .quiz-staff { min-height: 30px; padding-block: 2px; }
 :root[data-compact-viewport] #quiz-screen #staff-caption { min-height: 20px; }
-:root[data-compact-viewport] #quiz-screen #quiz-learning-tools,
-:root[data-compact-viewport] #quiz-screen #quiz-learning-tools button { min-height: 22px; }
-:root[data-compact-viewport] #quiz-screen .letters button { height: 40px; }
-:root[data-compact-viewport] #quiz-screen #accidentals button,
-:root[data-compact-viewport] #quiz-screen #answer-quality-picker { min-height: 34px; height: 34px; }
 #staff-caption[data-outcome=correct] { color: #227346; }
 #staff-caption[data-outcome=wrong] { color: #b02b39; }
 
@@ -2760,7 +2766,28 @@ dialog::backdrop {
 @media (max-width: 699px) and (max-height: 690px) {
   #home-screen .studio-heading { display: none; }
   #home-screen .practice-card { gap: 5px; }
-  #home-screen .practice-card #lesson-button { display: none; }
+}
+@media (max-width: 699px) and (max-height: 690px), (orientation: landscape) and (max-height: 530px) {
+  .practice-actions {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .practice-actions .primary {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+  }
+  .practice-actions #lesson-button {
+    min-width: 64px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .lesson-full {
+    display: none;
+  }
+  .lesson-compact {
+    display: inline;
+  }
 }
 @media (orientation: landscape) and (max-height: 530px) {
   .practice-card .quick-controls { gap: 5px; }

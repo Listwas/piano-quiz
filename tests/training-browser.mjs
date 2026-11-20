@@ -56,7 +56,11 @@ async function setupSight(page){
  assert.equal(await page.locator('.measure').count(),1);
  assert.ok((await page.locator('[data-event]').evaluateAll(elements=>elements.every(n=>n.dataset.rest==='true'||n.dataset.midi==='72'))));
 }
-const profiles=[{width:430,height:932,top:59,bottom:34},{width:932,height:430,left:59,right:59,bottom:21},{width:320,height:568},{width:800,height:1280},{width:1280,height:800},{width:1024,height:600}];
+const profiles=[
+ {width:430,height:932,top:59,bottom:34},{width:932,height:430,left:59,right:59,bottom:21},
+ {width:932,height:334,left:59,right:59,bottom:21},{width:320,height:568},{width:568,height:320},
+ {width:800,height:1280},{width:1280,height:800},{width:1024,height:600},{width:900,height:1440},{width:1440,height:900},
+];
 try{
  await mkdir('docs/images',{recursive:true});
  await check('metronome starts scheduled accented clicks, pauses, resumes, mutes and saves setup',async()=>{
@@ -79,7 +83,7 @@ try{
   const page=await setup();await selectActivity(page,'metronome');await page.locator('#start-button').click();await running(page);
   for(const size of profiles){await page.setViewportSize({width:size.width,height:size.height});await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
    const layout=await page.locator('#training-screen').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(layout.scroll<=layout.height+1,JSON.stringify({size,layout}));
-   for(const selector of ['#training-toggle','#training-sound','#training-back','#training-configure']){const b=await page.locator(selector).boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
+   for(const selector of ['#training-toggle','#training-sound','#training-back','#training-configure']){const b=await page.locator(selector).boundingBox();assert.ok(b.height>=44&&b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
    await page.locator('#training-toggle').tap();await page.locator('#training-toggle').tap();await running(page);
   }
  });
@@ -100,7 +104,7 @@ try{
   const page=await setup(true);await selectActivity(page,'rhythm');await page.locator('#start-button').click();await running(page);await page.locator('#training-toggle').click();
   for(const size of profiles){await page.setViewportSize({width:size.width,height:size.height});await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
    const rects=await page.locator('#training-screen').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(rects.scroll<=rects.height+1,JSON.stringify({size,rects}));
-   for(const selector of ['#training-toggle','#training-touchpad','#training-back']){const b=await page.locator(selector).boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
+   for(const selector of ['#training-toggle','#training-touchpad','#training-back']){const b=await page.locator(selector).boundingBox();assert.ok(b.height>=44&&b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1,JSON.stringify({size,selector,b}));}
    assert.equal(await page.locator('.measure').count(),1);
    assert.ok((await page.locator('.measure').first().boundingBox()).height>=30,JSON.stringify({size,measure:await page.locator('.measure').first().boundingBox()}));
   }
@@ -254,8 +258,21 @@ try{
   await page.evaluate(()=>window.trainingMidi.drop());assert.equal(await page.locator('#training-screen').getAttribute('data-running'),'false');await page.evaluate(()=>window.trainingMidi.plug());await page.locator('#training-recheck').click();await page.waitForFunction(()=>document.getElementById('midi-status').textContent.startsWith('Connected'));await page.locator('#training-toggle').click();await running(page);await page.locator('#training-toggle').click();
   for(const size of profiles){await page.setViewportSize({width:size.width,height:size.height});await page.evaluate(s=>{for(const edge of ['top','bottom','left','right'])document.documentElement.style.setProperty('--safe-'+edge,(s[edge]||0)+'px');},size);await page.waitForFunction(h=>Math.abs(document.body.getBoundingClientRect().height-h)<1,size.height);
    const rects=await page.locator('#training-screen').evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));assert.ok(rects.scroll<=rects.height+1,JSON.stringify({size,rects}));
-   const b=await page.locator('#training-toggle').boundingBox();assert.ok(b.y>=(size.top||0)&&b.y+b.height<=size.height-(size.bottom||0)+1);assert.ok((await page.locator('.measure').first().boundingBox()).height>=30,JSON.stringify({size,measure:await page.locator('.measure').first().boundingBox()}));
+   const dock=await page.locator('.training-action-row button:visible').evaluateAll(buttons=>buttons.map(button=>{
+    const box=button.getBoundingClientRect();
+    return {id:button.id,y:box.y,height:box.height,bottom:box.bottom,
+     tappable:button.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))};
+   }));
+   assert.deepEqual(dock.map(button=>button.id),['training-toggle','training-sound','training-recheck']);
+   assert.ok(dock.every(button=>button.tappable && button.height>=44 && button.y===dock[0].y &&
+    button.bottom<=size.height-(size.bottom||0)+1),JSON.stringify({size,dock}));
+   assert.ok((await page.locator('.measure').first().boundingBox()).height>=30,JSON.stringify({size,measure:await page.locator('.measure').first().boundingBox()}));
   }
+  await page.setViewportSize({width:568,height:320});
+  await page.locator('#training-configure').tap();
+  await page.locator('#training-notes').tap();
+  assert.equal(await page.locator('#customize-dialog').isVisible(),true);
+  await page.locator('[data-close="customize-dialog"]').tap();
   await page.screenshot({path:`docs/images/sight-tablet-${engine}.png`});await page.reload();await openPractice(page);assert.equal(await page.locator('.activity-card[data-activity=sight]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#home-screen').isVisible(),true);
  });
  await check('missing MIDI does not block touch rhythm, metronome or the original quiz',async()=>{
@@ -313,7 +330,8 @@ try{
   await page.keyboard.up('Space');
   await page.locator('#training-touchpad').click();
   assert.equal(await page.locator('#training-move-on').isVisible(),false);
-  await page.getByText(/Extra tap on beat 3.*Get ready/).waitFor();
+  await page.locator('#training-bar-cue').getByText(/Extra tap on beat 3/).waitFor();
+  assert.match(await page.locator('#training-live-status').innerText(),/^Get ready · [1-4]$/);
   assert.ok(await page.locator('#training-move-on').evaluate(button=>{
    const rect=button.getBoundingClientRect();
    return button === document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
@@ -337,6 +355,46 @@ try{
   await page.reload();await openPractice(page);await openLastTrainingReport(page);
   await page.selectOption('#report-bar-select','0');
   assert.match(await page.locator('#training-report-details').innerText(),/Clean after a retry/);
+ });
+ await check('dark rhythm score is readable and the retry countdown stays centered',async()=>{
+  const page=await setup(true,false,true);
+  await page.emulateMedia({colorScheme:'dark'});
+  await selectActivity(page,'rhythm');await setPracticeTempo(page,200);
+  await page.selectOption('#setup-complexity','sixteenths',{force:true});
+  await page.locator('#start-button').click();await running(page);
+  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+  const contrast=await page.locator('.measure').evaluate(measure=>{
+   const luminance=color=>{
+    const channels=color.match(/\d+/g).slice(0,3).map(value=>Number(value)/255)
+     .map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);
+    return .2126*channels[0]+.7152*channels[1]+.0722*channels[2];
+   };
+   const ink=luminance(getComputedStyle(measure.querySelector('.score-head')).fill);
+   const background=luminance(getComputedStyle(measure).backgroundColor);
+   return (Math.max(ink,background)+.05)/(Math.min(ink,background)+.05);
+  });
+  assert.ok(contrast>=4.5,`Score contrast was ${contrast}`);
+  for(const size of [{width:1280,height:800},{width:320,height:568},{width:568,height:320}]){
+   await page.setViewportSize(size);
+   await page.waitForFunction(height=>Math.abs(document.body.getBoundingClientRect().height-height)<1,size.height);
+   await page.locator('#training-move-on').waitFor({state:'visible'});
+   const layout=await page.locator('#training-live-row').evaluate(row=>{
+    const box=element=>element.getBoundingClientRect();
+    const status=box(row.querySelector('#training-live-status'));
+    const cue=box(row.querySelector('#training-bar-cue'));
+    const action=box(row.querySelector('#training-move-on'));
+    const pad=box(document.getElementById('training-touchpad'));
+    const frame=box(row);
+    return {center:Math.abs(status.x+status.width/2-(frame.x+frame.width/2)),
+     gap:action.x-status.right,actionWidth:action.width,actionRight:action.right,frameRight:frame.right,
+     cueBottom:cue.bottom,statusTop:status.top,cueRight:cue.right,actionLeft:action.left,
+     actionTop:action.top,padBottom:pad.bottom,viewportHeight:innerHeight};
+   });
+   assert.ok(layout.center<=1 && layout.gap>=0 && layout.actionWidth<=100 &&
+    layout.actionRight<=layout.frameRight+1 && layout.cueBottom<=layout.statusTop &&
+    (layout.cueBottom<=layout.actionTop || layout.cueRight<=layout.actionLeft) &&
+    layout.padBottom<=layout.viewportHeight,JSON.stringify({size,layout}));
+  }
  });
  await check('double-beamed sixteenths score individually on touch and MIDI and survive a slower replay',async()=>{
   const page=await setup(true,true,true);
